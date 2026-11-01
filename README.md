@@ -71,11 +71,62 @@ zappi/
 └── docs/       # Documentação do projeto
 ```
 
-> A estrutura será criada na primeira entrega de código.
-
 ## Como rodar localmente
 
-> Instruções serão adicionadas assim que a estrutura inicial e o Docker Compose estiverem prontos.
+> Por enquanto, o Docker Compose sobe apenas o banco de dados. O backend e o frontend entrarão nele quando seus projetos forem criados (ZAP-68 e ZAP-70).
+
+### Pré-requisitos
+
+- [Git](https://git-scm.com/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), ou Docker Engine com o plugin Compose
+
+### Passo a passo
+
+1. Clone o repositório e entre na pasta:
+
+   ```bash
+   git clone https://github.com/ChristianoMoura/Zappi.git
+   cd Zappi
+   ```
+
+2. Suba o ambiente:
+
+   ```bash
+   docker compose -f infra/docker-compose.yml up -d
+   ```
+
+3. Confira se o serviço `banco` aparece como `healthy`:
+
+   ```bash
+   docker compose -f infra/docker-compose.yml ps
+   ```
+
+Para parar o ambiente sem perder os dados:
+
+```bash
+docker compose -f infra/docker-compose.yml down
+```
+
+Para apagar também os dados do banco local e começar do zero:
+
+```bash
+docker compose -f infra/docker-compose.yml down -v
+```
+
+### Banco de dados
+
+Em desenvolvimento, cada pessoa usa um PostgreSQL próprio, em contêiner. Em produção, o banco é o Supabase.
+
+| Item | Valor local |
+|---|---|
+| Endereço | `localhost:5432` |
+| Banco | `zappi` |
+| Usuário | `zappi` |
+| Senha | `zappi_local` |
+
+Esses valores valem apenas para a máquina local. Para mudá-los, por exemplo se a porta 5432 já estiver em uso, copie `infra/.env.example` para `infra/.env` e edite o novo arquivo. Se mudar o usuário, a senha ou o nome do banco depois da primeira execução, recrie o banco com o comando `down -v`.
+
+As credenciais do Supabase nunca devem ser colocadas no repositório.
 
 ## Requisitos não funcionais
 
