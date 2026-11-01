@@ -1,0 +1,26 @@
+# Segredos e configuração local
+.env
+.env.*
+!.env.example
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# Backend (Java)
+target/
+build/
+.gradle/
+*.class
+*.log
+
+# Frontend (Node)
+node_modules/
+dist/
+coverage/
+*.local
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
