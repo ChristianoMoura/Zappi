@@ -1,0 +1,39 @@
+.pularParaConteudo {
+  position: absolute;
+  left: var(--mantine-spacing-md);
+  top: -100px;
+  z-index: 1000;
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  background: var(--mantine-color-white);
+  color: var(--mantine-color-zappi-9);
+  font-weight: 600;
+
+  &:focus {
+    top: var(--mantine-spacing-xs);
+  }
+}
+
+.barraInferior {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 100%;
+}
+
+.botaoBarra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+
+  &[data-ativo] {
+    color: var(--mantine-color-white);
+    background: var(--mantine-color-zappi-7);
+  }
+}
