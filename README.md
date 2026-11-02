@@ -73,7 +73,7 @@ zappi/
 
 ## Como rodar localmente
 
-> Por enquanto, o Docker Compose sobe apenas o banco de dados. O backend e o frontend entrarão nele quando seus projetos forem criados (ZAP-68 e ZAP-70).
+> Por enquanto, o Docker Compose sobe o banco de dados e o frontend. O backend entrará nele quando seu projeto for criado (ZAP-68).
 
 ### Pré-requisitos
 
@@ -95,11 +95,13 @@ zappi/
    docker compose -f infra/docker-compose.yml up -d
    ```
 
-3. Confira se o serviço `banco` aparece como `healthy`:
+3. Confira se o serviço `banco` aparece como `healthy` e o `frontend` como `running`:
 
    ```bash
    docker compose -f infra/docker-compose.yml ps
    ```
+
+4. Abra o painel em [http://localhost:5173](http://localhost:5173). Na primeira vez, o frontend leva alguns minutos para instalar as dependências; acompanhe com `docker compose -f infra/docker-compose.yml logs -f frontend`.
 
 Para parar o ambiente sem perder os dados:
 
@@ -127,6 +129,26 @@ Em desenvolvimento, cada pessoa usa um PostgreSQL próprio, em contêiner. Em pr
 Esses valores valem apenas para a máquina local. Para mudá-los, por exemplo se a porta 5432 já estiver em uso, copie `infra/.env.example` para `infra/.env` e edite o novo arquivo. Se mudar o usuário, a senha ou o nome do banco depois da primeira execução, recrie o banco com o comando `down -v`.
 
 As credenciais do Supabase nunca devem ser colocadas no repositório.
+
+### Frontend sem Docker
+
+Para desenvolver o frontend direto na máquina, com [Node.js](https://nodejs.org/) 24 ou mais recente:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Sobe o painel em `http://localhost:5173`, recarregando a cada alteração |
+| `npm run build` | Gera a versão de produção em `frontend/dist` |
+| `npm run lint` | Verifica o código com o oxlint |
+
+O frontend usa React 19, Vite, [Mantine](https://mantine.dev) (componentes) e React Router. O tema com as cores, os tamanhos e o foco visível fica em `frontend/src/tema.js` e `frontend/src/estilos.css`; use os componentes do Mantine para manter o padrão de acessibilidade em todas as telas.
+
+Enquanto a tela de login (ZAP-16) não existe, a página `/login` mostra o botão **"Entrar sem senha"**, que só aparece no modo de desenvolvimento.
 
 ## Requisitos não funcionais
 
