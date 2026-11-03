@@ -37,3 +37,21 @@
     background: var(--mantine-color-zappi-7);
   }
 }
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.marcaSimbolo {
+  height: 42px;
+  width: auto;
+  display: block;
+}
+
+.marcaNome {
+  height: 26px;
+  width: auto;
+  display: block;
+}

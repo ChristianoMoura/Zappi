@@ -1,9 +1,9 @@
 :root {
-  --zappi-cor-foco: #0f4724;
+  --zappi-cor-foco: #3d2b1f;
 }
 
 /* Foco visível em todas as telas (NBR 17225 5.1.1): borda grossa e afastada
-   do elemento, para ser percebida mesmo em botões verdes. */
+   do elemento, na cor cacau, visível sobre o creme e sobre os botões ciano. */
 .mantine-focus-auto:focus-visible,
 a:focus-visible,
 button:focus-visible {

@@ -7,7 +7,7 @@ export function PaginaEmConstrucao({ titulo, descricao }) {
 
   return (
     <Stack gap="sm">
-      <Title order={2} size="h1">
+      <Title order={1}>
         {titulo}
       </Title>
       <Text c="dimmed">{descricao}</Text>
