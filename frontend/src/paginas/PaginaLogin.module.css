@@ -1,0 +1,184 @@
+/* Celular: só o formulário. A partir de 64em (1024 px): ilustração à esquerda e
+   formulário à direita, como uma camada à frente (linha + sombra sobre a ilustração). */
+.tela {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: #fdf6ec;
+}
+
+.ilustracao {
+  display: none;
+}
+
+.ladoFormulario {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: 32px 22px;
+  background: #fdf6ec;
+}
+
+.cartao {
+  width: 100%;
+  max-width: 420px;
+  gap: 20px;
+}
+
+.marca {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.logo {
+  width: 132px;
+  height: auto;
+  display: block;
+}
+
+.slogan {
+  color: var(--mantine-color-dimmed);
+  font-size: 1.05rem;
+}
+
+.formulario {
+  display: grid;
+  gap: 18px;
+}
+
+.rotulo {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.campo {
+  height: 56px;
+  font-size: 1.1rem;
+  border-width: 2px;
+  border-color: #d9cbbe;
+  background: #ffffff;
+
+  &[data-error] {
+    border-color: var(--mantine-color-error);
+  }
+
+  /* Foco igual ao do resto do sistema: borda grossa e afastada (NBR 17225 5.1.1) */
+  &:focus-visible {
+    border-color: var(--mantine-color-zappi-7);
+    outline: 3px solid var(--zappi-cor-foco);
+    outline-offset: 3px;
+  }
+}
+
+.erroCampo {
+  font-size: 0.98rem;
+  font-weight: 500;
+  margin-top: 6px;
+}
+
+.verSenha {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--mantine-color-zappi-7);
+  font-weight: 600;
+  font-size: 0.95rem;
+
+  &:hover {
+    background: var(--mantine-color-zappi-0);
+  }
+}
+
+.botao {
+  height: 58px;
+  font-size: 1.2rem;
+}
+
+.alerta {
+  border-width: 2px;
+  background: #fef3f2;
+  font-size: 1rem;
+
+  &:focus {
+    outline: 3px solid var(--zappi-cor-foco);
+    outline-offset: 3px;
+  }
+}
+
+.somenteLeitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (min-width: 64em) {
+  .tela {
+    height: 100dvh;
+    grid-template-columns: minmax(0, 1.15fr) minmax(420px, 1fr);
+    background: #f7e7cc;
+  }
+
+  /* Ilustração 3D expandida para o formato do painel; cobre o lado esquerdo inteiro */
+  .ilustracao {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    background: #f7e7cc;
+
+    & img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .ladoFormulario {
+    position: relative;
+    z-index: 1;
+    padding: 20px 48px;
+    overflow: auto;
+    border-left: 1px solid rgb(61 43 31 / 0.14);
+    box-shadow:
+      -14px 0 32px rgb(61 43 31 / 0.14),
+      inset 1px 0 0 rgb(255 255 255 / 0.6);
+  }
+
+  .cartao {
+    max-width: 460px;
+    gap: 18px;
+  }
+
+  .logo {
+    width: 150px;
+  }
+
+  .slogan {
+    font-size: 1.15rem;
+  }
+
+  .rotulo {
+    font-size: 1.15rem;
+  }
+
+  .campo {
+    height: 60px;
+    font-size: 1.15rem;
+  }
+
+  .botao {
+    height: 62px;
+    font-size: 1.3rem;
+  }
+}

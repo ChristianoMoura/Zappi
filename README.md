@@ -148,7 +148,9 @@ npm run dev
 
 O frontend usa React 19, Vite, [Mantine](https://mantine.dev) (componentes) e React Router. O tema com as cores, os tamanhos e o foco visível fica em `frontend/src/tema.js` e `frontend/src/estilos.css`; use os componentes do Mantine para manter o padrão de acessibilidade em todas as telas.
 
-Enquanto a tela de login (ZAP-16) não existe, a página `/login` mostra o botão **"Entrar sem senha"**, que só aparece no modo de desenvolvimento.
+A identidade visual (paleta "Ciano com creme", fonte Lexend e logo) está nesses arquivos e em `frontend/src/assets/`.
+
+Enquanto o endpoint de login do backend (ZAP-31) não existe, o login é simulado **só no modo de desenvolvimento**, com o acesso fictício `lidia@casabelt.com` / `Bolo@2026`. A simulação fica em `frontend/src/autenticacao/servicoAutenticacao.js`, que é o único arquivo a mudar quando a ZAP-31 ficar pronta. Fora do modo de desenvolvimento, o login avisa que não está disponível.
 
 ## Requisitos não funcionais
 
