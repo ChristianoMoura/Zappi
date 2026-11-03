@@ -31,7 +31,7 @@
 | Comunidade atendida | **Casa Belt** — confeitaria artesanal autônoma da Lídia |
 | Equipe | Christiano Gomides Moura · Henrique José da Silva · Lucas G Beltrão dos Santos · Ryan Alexandrino da Silva |
 | Gestão do projeto | Jira: https://zappi.atlassian.net, projeto **ZAP** (estrutura mantida pelo Christiano) |
-| Repositório | GitHub: `ChristianoMoura/Zappi` (privado), integrado ao Jira; CI/CD no GitHub Actions |
+| Repositório | GitHub: `ChristianoMoura/Zappi` (privado), integrado ao Jira; CI no GitHub Actions; deploy automático pelo Render |
 | Prazo final dos artefatos | 22/11/2026 |
 
 Observações sobre a equipe:
@@ -147,7 +147,7 @@ O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado ap
 9. Mover o pedido para **Em produção** e **Concluído**.
 10. Geração da mensagem ao cliente (confirmação, recusa e pronto para retirada) e botão **"Enviar no WhatsApp"** com link `wa.me`.
 11. Registro de auditoria (logins e ações administrativas).
-12. Infraestrutura: Docker Compose, Nginx com HTTPS e deploy automático pelo GitHub Actions.
+12. Infraestrutura: Docker Compose no ambiente local; em produção, Render e Supabase com HTTPS gerenciado, CI no GitHub Actions e deploy automático do Render a cada merge na `main`.
 
 ### 5.3 Dados iniciais (seed)
 - Estabelecimento: **Casa Belt**.
@@ -241,11 +241,13 @@ O foco é **CDC (Lei nº 8.078/1990)** e **LGPD (Lei nº 13.709/2018)**. Aspecto
 | 5.15 Controle de acesso | Painel administrativo acessível só pela Lídia, mediante login | Spring Security; rotas `/api` protegidas, exceto login |
 | 5.16 Gestão de identidade | E-mail único como identificador da conta | `usuario.email` UNIQUE |
 | 5.17 Informações de autenticação | Senha com **mín. 8 caracteres, letras, números e ao menos 1 caractere especial** | Validação na aplicação |
-| 8.24 Uso de criptografia | Senhas em hash (nunca em texto puro); comunicação via HTTPS | BCrypt; HTTPS/TLS no Nginx (Let's Encrypt); TLS com o Supabase |
+| 8.24 Uso de criptografia | Senhas em hash (nunca em texto puro); comunicação via HTTPS | BCrypt; HTTPS/TLS gerenciado pelo Render; TLS com o Supabase |
 | 5.34 Privacidade e dados pessoais | Dados de clientes segregados e com acesso restrito | `estabelecimento_id` em tudo; RLS no Supabase; acesso ao banco só pelo backend |
 | 8.16 Monitoramento | Logs de login e de ações administrativas | Tabela `log_auditoria` |
 
-Autenticação por **token JWT** nas requisições depois do login.
+Autenticação por **token JWT** nas requisições depois do login. O token vale **8 horas**, sem refresh token: ao expirar, a Lídia faz login de novo. Ele vai no header `Authorization: Bearer`, e a chave de assinatura fica em variável de ambiente, nunca no código.
+
+**Bloqueio de login (RF02):** 5 falhas seguidas para o mesmo e-mail bloqueiam novos logins por 15 minutos. A contagem usa os registros `LOGIN_FALHA` do `log_auditoria` desde o último `LOGIN_SUCESSO`, sem alterar o DER. A mensagem é em linguagem simples e não revela se o e-mail existe.
 
 Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ESTABELECIMENTO_EDITADO`, `PRODUTO_CRIADO`, `PRODUTO_EDITADO`, `PRODUTO_EXCLUIDO`, `PEDIDO_CONFIRMADO`, `PEDIDO_RECUSADO`, `PEDIDO_STATUS_ALTERADO`. Cada registro guarda data, hora, IP de origem e user agent.
 
@@ -271,34 +273,42 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Camada | Tecnologia | Responsabilidade |
 |---|---|---|
 | Acesso | Navegador (computador ou celular) | Sistema web, sem instalar aplicativo |
-| Servidor | VM Linux em nuvem + **Docker Compose** | Cada componente em um contêiner |
-| Proxy / web | **Nginx** | Única porta exposta à internet; HTTPS/TLS (Let's Encrypt); serve o frontend; encaminha `/api` ao backend |
+| Hospedagem | **Render** (plano gratuito) | Frontend como Static Site e backend como Web Service (Docker); deploy automático a cada merge na `main`. O Docker Compose fica só no ambiente local |
+| Endereço e HTTPS | Render | Subdomínio gratuito `*.onrender.com`; HTTPS/TLS gerenciado, com HTTP redirecionando para HTTPS; regra de reescrita (`/*` → `/index.html`) para as rotas do React |
 | Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos, Kanban com filtro de recusados, botão "Enviar no WhatsApp". Futuro: cardápio público |
-| Backend | **Java 21 + Spring Boot 4** | API REST (JSON); regras de negócio; upload de fotos; geração das mensagens e links `wa.me`; isolamento por estabelecimento |
-| Persistência | **Spring Data JPA** | Acesso ao banco |
+| Backend | **Java 21 + Spring Boot 4** (build com **Maven**, com Maven Wrapper) | API REST (JSON); regras de negócio; upload de fotos; geração das mensagens e links `wa.me`; isolamento por estabelecimento; CORS liberado só para o endereço do frontend |
+| Persistência | **Spring Data JPA** + **Flyway** | Acesso ao banco; migrações em SQL puro em `backend/src/main/resources/db/migration`, só para frente |
 | Segurança | **Spring Security** | Login, BCrypt, JWT, política de senha |
 | Auditoria | Backend + `log_auditoria` | Logins e ações administrativas |
-| Banco | **PostgreSQL (Supabase)** | Banco relacional gerenciado; TLS; criptografia em repouso; RLS em todas as tabelas |
+| Banco | **PostgreSQL (Supabase)** | Banco relacional gerenciado; TLS; criptografia em repouso; RLS em todas as tabelas; o backend e o Flyway conectam pelo session pooler (IPv4, porta 5432) |
 | Arquivos | **Supabase Storage** | Bucket `produtos`; o banco guarda só o caminho; upload só pelo backend; leitura pública |
 | Mensagens (MVP) | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
 | Mensagens (Futuro) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS |
-| CI/CD | **GitHub Actions** | Build, testes e deploy automático |
+| Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
+| CI/CD | **GitHub Actions** + deploy automático do **Render** | Build e testes em cada pull request; o Render publica a cada merge na `main`, depois que o CI passar |
 | Gestão | GitHub, Jira | Versionamento e backlog |
 
 ### 12.2 Fluxo geral
 1. A Lídia acessa o painel pelo navegador via HTTPS.
-2. O Nginx entrega o React e repassa `/api` ao backend (REST/JSON).
+2. O Render entrega o React (Static Site), e o React chama a API do backend (REST/JSON) no Web Service.
 3. O backend valida e-mail e senha (BCrypt), registra o login no log e devolve o JWT.
 4. O backend lê e grava no PostgreSQL via TLS, em transações (status + mensagem + log juntos).
 5. A foto do produto vai para o Storage, e o caminho é salvo no banco.
 6. Ao confirmar, recusar ou concluir um pedido, o backend gera a mensagem e o link `wa.me`.
 7. A Lídia envia, e o cliente recebe no WhatsApp.
-8. O GitHub Actions testa e publica cada alteração aprovada no servidor.
+8. O GitHub Actions testa cada pull request, e o Render publica cada alteração aprovada na `main`.
 
 ### 12.3 Como funciona a mensagem no MVP
 - O backend monta o texto e um link no formato `https://wa.me/<telefone_destino>?text=<texto codificado em URL>`.
 - A Lídia clica em "Enviar no WhatsApp". O WhatsApp abre com a mensagem pronta e ela só aperta enviar.
 - O envio é **semiautomático**: o sistema prepara, a Lídia envia. O envio 100% automático (Cloud API) é **Futuro**; o campo `id_externo` já está reservado para ele.
+
+### 12.4 Limitações aceitas da hospedagem gratuita
+- O backend no Render (plano gratuito) **dorme após 15 minutos sem acesso**, e o primeiro acesso leva cerca de 1 minuto. Antes do ensaio, do vídeo e do treinamento, acordar o backend.
+- O Supabase (plano gratuito) **pausa o projeto após 1 semana sem uso** e **não faz backups automáticos**. Conferir antes da demonstração.
+- O Render não tem região em São Paulo. O projeto Supabase deve ficar na região mais próxima do Render (Virginia).
+- O workspace gratuito do Render tem 1 membro: uma pessoa da equipe é dona da conta.
+- A viabilidade do plano gratuito (0,1 CPU, 512 MB) é validada na ZAP-86: subir o backend, conectar ao Supabase pelo session pooler e rodar o Flyway.
 
 ---
 
@@ -502,15 +512,17 @@ Trilha de auditoria (ISO 8.16).
 5. **Salgados.** Confirmar com a Lídia se são vendidos por unidade ou por cento. Se for por cento, avaliar uma nova unidade de medida.
 6. **Consistência de tenant.** Garantir que o pedido e o cliente pertencem ao mesmo estabelecimento (validação no backend ou FK composta).
 7. **Geração do número do pedido** por estabelecimento: sequência por tenant ou `MAX + 1` com bloqueio.
-8. **Decisões técnicas ainda não registradas nas atividades:**
-   - build do backend (Maven ou Gradle);
-   - ferramenta de migração (Flyway ou Liquibase);
-   - biblioteca de UI e componentes do React;
-   - frameworks de teste;
-   - provedor da VM em nuvem e domínio;
-   - estratégia de armazenamento do JWT no frontend e tempo de expiração;
-   - bloqueio após várias tentativas de login falhas (RF02).
+8. **Decisões técnicas** (registradas na ZAP-62; histórico na seção 17):
+   - build do backend: **Maven**, com Maven Wrapper;
+   - ferramenta de migração: **Flyway**, com SQL puro;
+   - biblioteca de UI e componentes do React: **Mantine 9** (ZAP-70);
+   - frameworks de teste do backend: **JUnit 5, Mockito e Testcontainers**; frameworks de teste do frontend: **em aberto**, com o time de front;
+   - hospedagem e domínio: **Render + Supabase**, com subdomínio gratuito `*.onrender.com`;
+   - expiração do JWT: **8 horas**, sem refresh token; onde guardar o JWT no frontend: **em aberto**, com o time de front;
+   - bloqueio após falhas de login (RF02): **5 falhas seguidas bloqueiam por 15 minutos**;
+   - ainda em aberto: quem será dono das contas do Render e do Supabase, e a validação do plano gratuito do Render (ZAP-86).
 9. **Edição de pedidos.** No MVP, os pedidos vêm do seed. Não está definido se a Lídia pode criar ou editar pedidos manualmente.
+10. **Região dos servidores e LGPD.** O Render não tem região em São Paulo. Avaliar com a equipe uma nota na seção 9 sobre a localização dos dados.
 
 ---
 
@@ -529,7 +541,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | 7 | Decisões sobre pedidos | Confirmar, recusar com motivo, em produção, concluir; transação status + mensagem + log | US5–US6, RF09–RF12, RN05–RN08 |
 | 8 | Mensagens WhatsApp | Textos, geração do link `wa.me`, botão "Enviar no WhatsApp", status da mensagem | RF10, RF12, CDC, NBR 5.12.12 |
 | 9 | Acessibilidade e UX | Revisão de contraste, foco, rótulos e uso no celular | Ativ. #11 |
-| 10 | Infra e deploy | Nginx com HTTPS, VM, GitHub Actions (build, testes, deploy) | Arquitetura |
+| 10 | Infra e deploy | Render (Static Site e Web Service) com HTTPS, Supabase, GitHub Actions (build e testes) e deploy automático do Render | Arquitetura |
 | 11 | Preparação da demonstração | Roteiro e dados para o vídeo e para o treinamento da Lídia | Entregas finais |
 
 ---
@@ -556,6 +568,16 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Envio ao WhatsApp | "Resposta automática" (Atividades #5, #6 e #9) | **MVP semiautomático com `wa.me`**; Cloud API no futuro |
 | Demanda prioritária | Várias demandas (Etapa 1 de Empreendedorismo) | **Organização e gestão de pedidos**, escolhida pela Lídia |
 | Usuários do sistema | — | Só a Lídia; a Romilda fica sem acesso |
+| Hospedagem em produção | VM Linux em nuvem com Docker Compose e Nginx (Atividade #13) | **Render + Supabase** (ZAP-62): Static Site e Web Service Docker, sem VM e sem Nginx. Motivo: custo zero, sem servidor para administrar e HTTPS automático |
+| Deploy | GitHub Actions publicando na VM | **Render** publica a cada merge na `main`; o GitHub Actions faz build e testes |
+| Endereço e HTTPS | Domínio próprio com Let's Encrypt no Nginx | Subdomínio gratuito `*.onrender.com`, com HTTPS gerenciado pelo Render |
+| Docker Compose | Ambiente de produção | **Só ambiente local** (`infra/docker-compose.yml`) |
+| Build do backend | Em aberto (Maven ou Gradle) | **Maven**, com Maven Wrapper. Motivo: padrão do Spring Boot e mesma versão para toda a equipe e para o CI |
+| Migração do banco | Em aberto (Flyway ou Liquibase) | **Flyway**, com SQL puro. Motivo: integração nativa com o Spring Boot, e as restrições da seção 13.3 já estão em SQL |
+| Biblioteca de UI | Em aberto | **Mantine 9** (ZAP-70). Motivo: componentes acessíveis de fábrica, tema centralizado com contraste de 4,5:1 e bom uso no celular |
+| Testes do backend | Em aberto | **JUnit 5, Mockito e Testcontainers** (PostgreSQL). Motivo: ferramentas padrão do Spring, e o Testcontainers valida as regras do banco contra um Postgres real |
+| Expiração do JWT | Em aberto | **8 horas**, sem refresh token. Motivo: cobre um dia de uso sem pedir login várias vezes e expira no dia seguinte |
+| Bloqueio de login (RF02) | Em aberto | **5 falhas seguidas bloqueiam por 15 minutos**, contadas pelo `log_auditoria`. Motivo: dificulta adivinhar a senha (ISO 27002 5.17) sem trancar a Lídia para sempre |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
