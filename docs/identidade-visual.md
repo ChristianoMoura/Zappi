@@ -1,6 +1,6 @@
 # Zappi — Guia de Identidade Visual
 
-Versão de 02/11/2026 · aprovada pelo grupo na ZAP-34 · cópia editável e comentários no [guia no Claude Docs](https://claude.ai/artifact/3sfmtjoydqT7axcEQBnwRu)
+Versão de 02/11/2026 · aprovada pelo grupo na ZAP-34
 
 ## Visão geral
 
