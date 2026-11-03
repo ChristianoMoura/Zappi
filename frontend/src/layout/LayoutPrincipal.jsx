@@ -1,7 +1,9 @@
-import { AppShell, Button, Group, NavLink, Stack, Text, Title, UnstyledButton } from '@mantine/core'
+import { AppShell, Button, Group, NavLink, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { IconLogout } from '@tabler/icons-react'
 import { NavLink as LinkRota, Outlet, useLocation } from 'react-router'
+import nome from '../assets/zappi-nome.svg'
+import simbolo from '../assets/zappi-simbolo.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
 import { itensMenu } from './menu'
 import classes from './LayoutPrincipal.module.css'
@@ -28,9 +30,10 @@ export function LayoutPrincipal() {
 
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Title order={1} size="h2" c="zappi.7">
-            Zappi
-          </Title>
+          <div className={classes.marca}>
+            <img src={simbolo} alt="" className={classes.marcaSimbolo} />
+            <img src={nome} alt="Zappi" className={classes.marcaNome} />
+          </div>
           <Button variant="outline" leftSection={<IconLogout size={22} aria-hidden />} onClick={sair}>
             Sair
           </Button>
