@@ -152,6 +152,8 @@ A identidade visual (paleta "Ciano com creme", fonte Lexend e logo) está nesses
 
 Enquanto o endpoint de login do backend (ZAP-31) não existe, o login é simulado **só no modo de desenvolvimento**, com o acesso fictício `lidia@casabelt.com` / `Bolo@2026`. A simulação fica em `frontend/src/autenticacao/servicoAutenticacao.js`, que é o único arquivo a mudar quando a ZAP-31 ficar pronta. A simulação também mostra o aviso de bloqueio depois de 5 erros seguidos com o mesmo e-mail; recarregar a página libera o login. Fora do modo de desenvolvimento, o login avisa que não está disponível.
 
+A tela **Meu estabelecimento** segue o mesmo esquema enquanto a API da ZAP-36 não existe: em desenvolvimento, os dados da Casa Belt são simulados em `frontend/src/estabelecimento/servicoEstabelecimento.js` e ficam só na memória. Para testar a mensagem de link repetido, use o link `doces-da-ana`.
+
 ## Requisitos não funcionais
 
 - **Segurança (ABNT NBR ISO/IEC 27002:2022):** acesso só com login, senhas em hash BCrypt, política de senha forte, HTTPS, dados separados por estabelecimento e trilha de auditoria.

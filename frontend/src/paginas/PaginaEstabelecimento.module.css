@@ -1,0 +1,381 @@
+/* Layout A aprovado na ZAP-37: capa com o logo da loja metade por cima, dados em cartões
+   e barra de salvar fixa embaixo. Fundo branco com ciano. */
+.pagina {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-bottom: 8px;
+}
+
+.estado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+  color: var(--mantine-color-dimmed);
+  justify-content: center;
+}
+
+.erroCarregar {
+  border-width: 2px;
+  background: #fef3f2;
+  max-width: 640px;
+  margin: 24px auto;
+}
+
+/* Capa e perfil */
+.capa {
+  height: 210px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--mantine-color-zappi-0);
+
+  & img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.perfil {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin: -52px 0 24px 24px;
+  position: relative;
+}
+
+.avatar {
+  flex: none;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: 5px solid #fff;
+  background: var(--mantine-color-zappi-6);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 2.2rem;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
+}
+
+.perfilTexto {
+  min-width: 0;
+  padding-bottom: 4px;
+}
+
+.nome {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.descricao {
+  margin: 4px 0 0;
+  color: var(--mantine-color-dimmed);
+  max-width: 60ch;
+}
+
+.titulo {
+  font-size: 1.4rem;
+}
+
+.subtitulo {
+  margin: 4px 0 20px;
+  color: var(--mantine-color-dimmed);
+}
+
+/* Cartões */
+.cartoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.inteiro {
+  grid-column: 1 / -1;
+}
+
+.cartao {
+  background: #fff;
+  border: 1px solid #dbe3e3;
+  border-radius: 14px;
+  padding: 22px;
+  min-width: 0;
+}
+
+.tituloCartao {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icone {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--mantine-color-zappi-0);
+  color: var(--mantine-color-zappi-7);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.campos {
+  display: grid;
+  gap: 16px;
+}
+
+.endereco {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 14px;
+}
+
+.largo {
+  grid-column: span 2;
+}
+
+/* Campos (mesmo padrão da tela de login) */
+.rotulo {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.obrigatorio {
+  font-weight: 400;
+  font-size: 0.88rem;
+  color: var(--mantine-color-dimmed);
+}
+
+.campo,
+.campoTexto {
+  font-size: 1.05rem;
+  border-width: 2px;
+  border-color: #d9cbbe;
+  background: #fff;
+
+  &[data-error] {
+    border-color: var(--mantine-color-error);
+  }
+
+  &:focus-visible {
+    border-color: var(--mantine-color-zappi-7);
+    outline: 3px solid var(--zappi-cor-foco);
+    outline-offset: 3px;
+  }
+}
+
+.campo {
+  height: 54px;
+}
+
+.campoTexto {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  line-height: 1.45;
+}
+
+.prefixo {
+  color: var(--mantine-color-dimmed);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.dica {
+  font-size: 0.9rem;
+  color: var(--mantine-color-dimmed);
+}
+
+.erroCampo {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-top: 6px;
+}
+
+.contador {
+  margin: 4px 0 0;
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--mantine-color-dimmed);
+}
+
+/* Campo confirmado: check verde ao lado do rótulo */
+.confirmado {
+  color: #1d6b45;
+  margin-left: 6px;
+  vertical-align: -3px;
+}
+
+/* Barra de salvar, sempre à mão; no celular, fica acima da barra de menu */
+.rodape {
+  grid-column: 1 / -1;
+  position: sticky;
+  bottom: calc(var(--app-shell-footer-offset, 0px) + 8px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-top: 4px;
+  background: rgb(255 255 255 / 0.96);
+  border: 1px solid #dbe3e3;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+}
+
+.situacao {
+  margin-right: auto;
+  color: var(--mantine-color-dimmed);
+  font-size: 0.95rem;
+}
+
+/* Aviso de salvo ou de erro, no topo */
+.aviso {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 500;
+  border: 2px solid currentColor;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.15);
+  max-width: calc(100% - 32px);
+}
+
+.avisoOk {
+  color: #1d6b45;
+  background: #eaf6ef;
+}
+
+.avisoErro {
+  color: #b42318;
+  background: #fef3f2;
+}
+
+/* Celular: um cartão por linha; logo e nome centralizados, o logo metade sobre a capa */
+@media (max-width: 48em) {
+  .capa {
+    height: 140px;
+  }
+
+  .perfil {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: -48px 0 20px;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 96px;
+    height: 96px;
+    font-size: 1.8rem;
+  }
+
+  .nome {
+    font-size: 1.45rem;
+  }
+
+  .descricao {
+    font-size: 0.95rem;
+    max-width: 30ch;
+    margin-inline: auto;
+  }
+
+  .cartoes,
+  .endereco {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .largo {
+    grid-column: auto;
+  }
+
+  .situacao {
+    display: none;
+  }
+
+  .rodape :global(.mantine-Button-root) {
+    flex: 1;
+  }
+
+  .someNoCelular {
+    display: none;
+  }
+}
+
+/* Efeitos aprovados na ZAP-37; ficam parados para quem pediu "reduzir movimento" */
+@media (prefers-reduced-motion: no-preference) {
+  /* Entrada suave, em sequência */
+  .entrada {
+    animation: zappi-subir 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+
+  .avatarEntrada {
+    animation: zappi-surgir 0.55s ease both;
+    animation-delay: 0.15s;
+  }
+
+  /* Capa viva: a foto se aproxima devagar ao passar o mouse */
+  .capa img {
+    transition: transform 6s ease-out;
+  }
+
+  .capa:hover img {
+    transform: scale(1.08);
+  }
+
+  /* Passar o mouse: cartões sobem, ícone gira e fica ciano, logo da loja dá um giro */
+  .cartao,
+  .avatar,
+  .icone {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.2s, color 0.2s;
+  }
+
+  .cartao:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgb(0 0 0 / 0.08);
+  }
+
+  .cartao:hover .icone {
+    transform: rotate(-10deg) scale(1.12);
+    background: var(--mantine-color-zappi-7);
+    color: #fff;
+  }
+
+  .avatar:hover {
+    transform: scale(1.06) rotate(-3deg);
+  }
+
+  /* Campo confirmado e "Salvo" aparecem com um pulinho */
+  .confirmado,
+  .checkSalvo {
+    animation: zappi-surgir 0.35s ease both;
+  }
+
+  .aviso {
+    animation: aviso-entrar 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @keyframes aviso-entrar {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -12px);
+    }
+  }
+}
