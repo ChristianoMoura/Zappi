@@ -5,11 +5,19 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 import ilustracao from '../assets/ilustracao-login.webp'
 import logo from '../assets/zappi-logo.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
-import { CredenciaisInvalidasError } from '../autenticacao/servicoAutenticacao'
+import { CredenciaisInvalidasError, LoginBloqueadoError } from '../autenticacao/servicoAutenticacao'
 import classes from './PaginaLogin.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// As mensagens não dizem se o erro está no e-mail ou na senha, nem se o e-mail existe
+// (critérios da ZAP-16)
+function mensagemDeErro(erro) {
+  if (erro instanceof CredenciaisInvalidasError) return 'E-mail ou senha incorretos. Confira e tente de novo.'
+  if (erro instanceof LoginBloqueadoError) return 'Muitas tentativas sem sucesso. Espere 15 minutos e tente de novo.'
+  return 'Não foi possível entrar agora. Tente de novo em alguns minutos.'
+}
 
 // Tela de login (US1, RF01, RF02). No computador, ilustração à esquerda e formulário
 // à direita; no celular, só o formulário. Rótulos sempre visíveis (NBR 17225 5.3.1),
@@ -65,12 +73,7 @@ export function PaginaLogin() {
       navegar(destino, { replace: true })
     } catch (erro) {
       setSenha('')
-      // A mensagem não diz se o erro está no e-mail ou na senha (critério da ZAP-16)
-      setErroGeral(
-        erro instanceof CredenciaisInvalidasError
-          ? 'E-mail ou senha incorretos. Confira e tente de novo.'
-          : 'Não foi possível entrar agora. Tente de novo em alguns minutos.',
-      )
+      setErroGeral(mensagemDeErro(erro))
     } finally {
       setEnviando(false)
     }

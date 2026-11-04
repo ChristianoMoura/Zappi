@@ -163,7 +163,7 @@ O layout aprovado divide a tela em dois no computador: **ilustração 3D à esqu
 **Textos da tela:**
 
 - O título "Entrar no painel" não aparece, mas existe para leitores de tela.
-- Erros: "Digite seu e-mail.", "Digite sua senha.", "Confira o e-mail. Ele precisa ter "@" e um ponto, como lidia@casabelt.com." e "E-mail ou senha incorretos. Confira e tente de novo."
+- Erros: "Digite seu e-mail.", "Digite sua senha.", "Confira o e-mail. Ele precisa ter "@" e um ponto, como lidia@casabelt.com.", "E-mail ou senha incorretos. Confira e tente de novo." e "Muitas tentativas sem sucesso. Espere 15 minutos e tente de novo."
 - A mensagem de senha errada nunca diz se o erro está no e-mail ou na senha (critério da ZAP-16).
 
 ## Acessibilidade

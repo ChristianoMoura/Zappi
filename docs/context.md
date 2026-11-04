@@ -245,7 +245,7 @@ O foco é **CDC (Lei nº 8.078/1990)** e **LGPD (Lei nº 13.709/2018)**. Aspecto
 | 5.34 Privacidade e dados pessoais | Dados de clientes segregados e com acesso restrito | `estabelecimento_id` em tudo; RLS no Supabase; acesso ao banco só pelo backend |
 | 8.16 Monitoramento | Logs de login e de ações administrativas | Tabela `log_auditoria` |
 
-Autenticação por **token JWT** nas requisições depois do login. O token vale **8 horas**, sem refresh token: ao expirar, a Lídia faz login de novo. Ele vai no header `Authorization: Bearer`, e a chave de assinatura fica em variável de ambiente, nunca no código.
+Autenticação por **token JWT** nas requisições depois do login. O token vale **8 horas**, sem refresh token: ao expirar, a Lídia faz login de novo. No navegador, ele fica no `sessionStorage`: continua ao recarregar a página e some ao fechar a aba. Ele vai no header `Authorization: Bearer`, e a chave de assinatura fica em variável de ambiente, nunca no código.
 
 **Bloqueio de login (RF02):** 5 falhas seguidas para o mesmo e-mail bloqueiam novos logins por 15 minutos. A contagem usa os registros `LOGIN_FALHA` do `log_auditoria` desde o último `LOGIN_SUCESSO`, sem alterar o DER. A mensagem é em linguagem simples e não revela se o e-mail existe.
 
@@ -518,7 +518,7 @@ Trilha de auditoria (ISO 8.16).
    - biblioteca de UI e componentes do React: **Mantine 9** (ZAP-70);
    - frameworks de teste do backend: **JUnit 5, Mockito e Testcontainers**; frameworks de teste do frontend: **em aberto**, com o time de front;
    - hospedagem e domínio: **Render + Supabase**, com subdomínio gratuito `*.onrender.com`;
-   - expiração do JWT: **8 horas**, sem refresh token; onde guardar o JWT no frontend: **em aberto**, com o time de front;
+   - expiração do JWT: **8 horas**, sem refresh token; onde guardar o JWT no frontend: **`sessionStorage`** (ZAP-34);
    - bloqueio após falhas de login (RF02): **5 falhas seguidas bloqueiam por 15 minutos**;
    - ainda em aberto: quem será dono das contas do Render e do Supabase, e a validação do plano gratuito do Render (ZAP-86).
 9. **Edição de pedidos.** No MVP, os pedidos vêm do seed. Não está definido se a Lídia pode criar ou editar pedidos manualmente.
@@ -577,6 +577,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Biblioteca de UI | Em aberto | **Mantine 9** (ZAP-70). Motivo: componentes acessíveis de fábrica, tema centralizado com contraste de 4,5:1 e bom uso no celular |
 | Testes do backend | Em aberto | **JUnit 5, Mockito e Testcontainers** (PostgreSQL). Motivo: ferramentas padrão do Spring, e o Testcontainers valida as regras do banco contra um Postgres real |
 | Expiração do JWT | Em aberto | **8 horas**, sem refresh token. Motivo: cobre um dia de uso sem pedir login várias vezes e expira no dia seguinte |
+| Onde guardar o JWT no frontend | Em aberto | **`sessionStorage`** (ZAP-34). Motivo: a Lídia continua logada ao recarregar a página, e o token some ao fechar a aba, ficando menos tempo no aparelho que no `localStorage` |
 | Bloqueio de login (RF02) | Em aberto | **5 falhas seguidas bloqueiam por 15 minutos**, contadas pelo `log_auditoria`. Motivo: dificulta adivinhar a senha (ISO 27002 5.17) sem trancar a Lídia para sempre |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
