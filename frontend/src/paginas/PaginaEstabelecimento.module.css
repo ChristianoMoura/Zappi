@@ -1,5 +1,6 @@
-/* Layout A aprovado na ZAP-37: capa com o logo da loja metade por cima, dados em cartões
-   e barra de salvar fixa embaixo. Fundo branco com ciano. */
+/* Referência A aprovada na ZAP-37: capa com o logo da loja metade por cima, nome ao lado,
+   cartões Sobre e Contato à esquerda, Endereço à direita e o botão de salvar embaixo.
+   Fundo branco com ciano. */
 .pagina {
   max-width: 1080px;
   margin: 0 auto;
@@ -24,7 +25,7 @@
 
 /* Capa e perfil */
 .capa {
-  height: 210px;
+  height: 240px;
   border-radius: 16px;
   overflow: hidden;
   background: var(--mantine-color-zappi-0);
@@ -40,34 +41,42 @@
 .perfil {
   display: flex;
   align-items: flex-end;
-  gap: 18px;
-  margin: -52px 0 24px 24px;
+  gap: 24px;
+  margin: -80px 0 28px 40px;
   position: relative;
 }
 
 .avatar {
   flex: none;
-  width: 112px;
-  height: 112px;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
-  border: 5px solid #fff;
+  border: 6px solid #fff;
   background: var(--mantine-color-zappi-6);
   color: #fff;
   display: grid;
   place-items: center;
+  overflow: hidden;
   font-weight: 700;
-  font-size: 2.2rem;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
+  font-size: 2.8rem;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.14);
+
+  & img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
 }
 
 .perfilTexto {
   min-width: 0;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 }
 
 .nome {
   margin: 0;
-  font-size: 1.7rem;
+  font-size: 2rem;
   font-weight: 700;
   line-height: 1.15;
   overflow-wrap: anywhere;
@@ -79,49 +88,53 @@
   max-width: 60ch;
 }
 
-.titulo {
-  font-size: 1.4rem;
-}
-
-.subtitulo {
-  margin: 4px 0 20px;
-  color: var(--mantine-color-dimmed);
-}
-
-/* Cartões */
+/* Cartões: Sobre e Contato à esquerda, Endereço à direita, botões embaixo à esquerda */
 .cartoes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-areas:
+    'sobre endereco'
+    'contato endereco'
+    'acoes .';
+  grid-template-rows: auto 1fr auto;
+  gap: 20px;
   align-items: start;
 }
 
-.inteiro {
-  grid-column: 1 / -1;
+.areaSobre {
+  grid-area: sobre;
+}
+
+.areaContato {
+  grid-area: contato;
+}
+
+.areaEndereco {
+  grid-area: endereco;
 }
 
 .cartao {
   background: #fff;
   border: 1px solid #dbe3e3;
   border-radius: 14px;
-  padding: 22px;
+  padding: 24px;
   min-width: 0;
 }
 
 .tituloCartao {
-  margin: 0 0 16px;
-  font-size: 1.2rem;
+  margin: 0 0 18px;
+  font-size: 1.35rem;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
 .icone {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: var(--mantine-color-zappi-0);
-  color: var(--mantine-color-zappi-7);
+  background: var(--mantine-color-zappi-7);
+  color: #fff;
   display: grid;
   place-items: center;
   flex: none;
@@ -132,15 +145,19 @@
   gap: 16px;
 }
 
+/* Endereço em 12 colunas: CEP e rua inteiros; número e complemento meio a meio;
+   bairro, cidade e estado na mesma linha */
 .endereco {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 16px 14px;
 }
 
-.largo {
-  grid-column: span 2;
-}
+.col12 { grid-column: span 12; }
+.col6 { grid-column: span 6; }
+.col5 { grid-column: span 5; }
+.col4 { grid-column: span 4; }
+.col3 { grid-column: span 3; }
 
 /* Campos (mesmo padrão da tela de login) */
 .rotulo {
@@ -207,33 +224,20 @@
   color: var(--mantine-color-dimmed);
 }
 
-/* Campo confirmado: check verde ao lado do rótulo */
-.confirmado {
-  color: #1d6b45;
-  margin-left: 6px;
-  vertical-align: -3px;
+/* Botões de salvar e desfazer, embaixo dos cartões da esquerda */
+.acoes {
+  grid-area: acoes;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Barra de salvar, sempre à mão; no celular, fica acima da barra de menu */
-.rodape {
-  grid-column: 1 / -1;
-  position: sticky;
-  bottom: calc(var(--app-shell-footer-offset, 0px) + 8px);
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 12px 16px;
-  margin-top: 4px;
-  background: rgb(255 255 255 / 0.96);
-  border: 1px solid #dbe3e3;
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+.botaoSalvar {
+  min-width: 240px;
 }
 
 .situacao {
-  margin-right: auto;
   color: var(--mantine-color-dimmed);
   font-size: 0.95rem;
 }
@@ -269,21 +273,21 @@
 /* Celular: um cartão por linha; logo e nome centralizados, o logo metade sobre a capa */
 @media (max-width: 48em) {
   .capa {
-    height: 140px;
+    height: 150px;
   }
 
   .perfil {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    margin: -48px 0 20px;
+    margin: -60px 0 20px;
     gap: 10px;
   }
 
   .avatar {
-    width: 96px;
-    height: 96px;
-    font-size: 1.8rem;
+    width: 120px;
+    height: 120px;
+    font-size: 2rem;
   }
 
   .nome {
@@ -296,25 +300,34 @@
     margin-inline: auto;
   }
 
-  .cartoes,
-  .endereco {
+  .cartoes {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'sobre' 'contato' 'endereco' 'acoes';
+    grid-template-rows: none;
   }
 
-  .largo {
-    grid-column: auto;
+  .endereco {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .col12,
+  .col5 {
+    grid-column: span 2;
+  }
+
+  .col6,
+  .col4,
+  .col3 {
+    grid-column: span 1;
+  }
+
+  .acoes :global(.mantine-Button-root) {
+    flex: 1 1 100%;
   }
 
   .situacao {
-    display: none;
-  }
-
-  .rodape :global(.mantine-Button-root) {
-    flex: 1;
-  }
-
-  .someNoCelular {
-    display: none;
+    width: 100%;
+    text-align: center;
   }
 }
 
@@ -340,7 +353,7 @@
     transform: scale(1.08);
   }
 
-  /* Passar o mouse: cartões sobem, ícone gira e fica ciano, logo da loja dá um giro */
+  /* Passar o mouse: cartões sobem, ícone gira e escurece, logo da loja dá um giro */
   .cartao,
   .avatar,
   .icone {
@@ -354,16 +367,14 @@
 
   .cartao:hover .icone {
     transform: rotate(-10deg) scale(1.12);
-    background: var(--mantine-color-zappi-7);
-    color: #fff;
+    background: var(--mantine-color-zappi-9);
   }
 
   .avatar:hover {
     transform: scale(1.06) rotate(-3deg);
   }
 
-  /* Campo confirmado e "Salvo" aparecem com um pulinho */
-  .confirmado,
+  /* O check do "Salvo" aparece com um pulinho */
   .checkSalvo {
     animation: zappi-surgir 0.35s ease both;
   }

@@ -66,6 +66,41 @@
   }
 }
 
+.botaoConta {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  color: var(--mantine-color-zappi-7);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--mantine-color-zappi-0);
+  }
+}
+
+.nomeConta {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--mantine-color-text);
+}
+
+.itemConta {
+  font-size: 1rem;
+  min-height: 44px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .setaConta {
+    transition: transform 0.2s ease;
+  }
+
+  .botaoConta[aria-expanded='true'] .setaConta {
+    transform: rotate(180deg);
+  }
+}
+
 .menuLateral {
   overflow: hidden;
 }

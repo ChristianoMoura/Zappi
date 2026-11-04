@@ -127,17 +127,17 @@ As telas usam os componentes do **Mantine**, já ajustados no tema para seguir e
 | Elemento | Padrão |
 | --- | --- |
 | Botão principal | Ciano profundo #006D6D, texto branco, 56–62 px de altura, largura total no formulário |
-| Botão secundário | Contorno ciano profundo, fundo branco (ex.: "Sair", "Desfazer") |
+| Botão secundário | Contorno ciano profundo, fundo branco (ex.: "Desfazer") |
 | Campos | Fundo branco, borda #D9CBBE de 2 px, 56–60 px de altura, rótulo sempre visível acima |
 | Campo com erro | Borda e mensagem em #B42318, logo abaixo do campo, com ícone |
 | Alerta de erro | Caixa com borda #B42318 e fundo #FEF3F2, no topo do formulário |
 | Foco pelo teclado | Borda cacau #3D2B1F de 3 px, afastada 3 px do elemento |
 | Cantos | 8 px de raio em botões, campos e cartões |
 | Ícones | Tabler Icons, de traço, 20–28 px, sempre com texto ao lado |
-| Menu | Lateral no computador, com botão para recolher e deixar só os ícones (a escolha fica lembrada); barra fixa embaixo no celular; item ativo em ciano profundo |
+| Menu | Lateral no computador, com botão para recolher e deixar só os ícones (a escolha fica lembrada); barra fixa embaixo no celular; item ativo em ciano profundo. A conta fica num ícone de usuário no canto superior direito, que abre o menu com o nome e o "Sair" |
 | Carregando | Botão com três pontinhos animados, sem mudar de tamanho |
 
-**Interatividade (ZAP-37):** botões sobem um pouco ao passar o mouse e mostram uma onda a partir do ponto do clique; cartões sobem e o ícone gira e fica ciano; as partes da tela entram em sequência, partindo de um estado já visível; a capa se aproxima devagar ao passar o mouse; campos preenchidos certos ganham um check verde ao lado do rótulo; o botão de salvar mostra "Salvo" com check. Tudo fica parado para quem pediu "reduzir movimento" no sistema.
+**Interatividade (ZAP-37):** botões sobem um pouco ao passar o mouse e mostram uma onda a partir do ponto do clique; cartões sobem e o ícone (círculo ciano) gira; as partes da tela entram em sequência, partindo de um estado já visível; a capa se aproxima devagar ao passar o mouse; o botão de salvar mostra "Salvo" com check. Tudo fica parado para quem pediu "reduzir movimento" no sistema.
 
 **Mostrar senha:** botão com ícone de olho e a palavra "Mostrar" (ou "Esconder") dentro do campo de senha, à direita.
 
@@ -220,7 +220,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 
 | Etapa | Decisão |
 | --- | --- |
-| Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, layout A com capa) |
+| Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, Referência A com capa; o check de "campo confirmado" foi retirado a pedido do grupo) |
 | Implementação | Tela de login e identidade aplicadas em React no [PR #3](https://github.com/ChristianoMoura/Zappi/pull/3) |
 | Protótipo aprovado | Título "Entrar no painel" escondido; elementos do login maiores; slogan de volta sob o logo; ilustração sem texto |
 | Ilustração completa | Imagem expandida com IA para o formato do painel, com o bolo inteiro e sem emenda |

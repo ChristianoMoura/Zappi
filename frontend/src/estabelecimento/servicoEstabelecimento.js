@@ -4,6 +4,8 @@
 // guardados só na memória; fora dele, a tela avisa que o serviço não está disponível.
 // Quando a ZAP-36 ficar pronta, só este arquivo muda.
 
+import logoCasaBelt from '../assets/logo-casa-belt.webp'
+
 export class ServicoIndisponivelError extends Error {}
 export class LinkEmUsoError extends Error {}
 
@@ -21,6 +23,8 @@ let simulado = {
   bairro: 'Centro',
   cidade: 'São Paulo',
   uf: 'SP',
+  // PENDENTE: o DER não tem campo de logo; sem logo, a tela mostra as iniciais do nome
+  logo: logoCasaBelt,
 }
 
 // Link já usado por outro estabelecimento, só para testar a mensagem de link repetido

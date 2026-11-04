@@ -1,6 +1,6 @@
-import { ActionIcon, AppShell, Button, Group, NavLink, Stack, Text, UnstyledButton } from '@mantine/core'
+import { ActionIcon, AppShell, Group, Menu, NavLink, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useLocalStorage, useMediaQuery } from '@mantine/hooks'
-import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout } from '@tabler/icons-react'
+import { IconChevronDown, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout, IconUserCircle } from '@tabler/icons-react'
 import { NavLink as LinkRota, Outlet, useLocation } from 'react-router'
 import nome from '../assets/zappi-nome.svg'
 import simbolo from '../assets/zappi-simbolo.svg'
@@ -12,7 +12,7 @@ import classes from './LayoutPrincipal.module.css'
 // Painel da Lídia. No computador, o menu fica na lateral e pode ser recolhido, ficando
 // só com os ícones; no celular, vira uma barra fixa embaixo, com botões grandes.
 export function LayoutPrincipal() {
-  const { sair } = useAutenticacao()
+  const { nome: nomeUsuaria, sair } = useAutenticacao()
   const { pathname } = useLocation()
   const telaGrande = useMediaQuery('(min-width: 48em)', false, { getInitialValueInEffect: false })
   const [recolhido, setRecolhido] = useLocalStorage({ key: 'zappi.menu-recolhido', defaultValue: false })
@@ -54,9 +54,21 @@ export function LayoutPrincipal() {
             <img src={simbolo} alt="" className={classes.marcaSimbolo} />
             <img src={nome} alt="Zappi" className={classes.marcaNome} />
           </div>
-          <Button variant="outline" leftSection={<IconLogout size={22} aria-hidden />} onClick={sair}>
-            Sair
-          </Button>
+          {/* Conta no canto superior direito, como na Referência A: o "Sair" fica no menu */}
+          <Menu position="bottom-end" width={240} shadow="md" radius="md">
+            <Menu.Target>
+              <UnstyledButton className={classes.botaoConta} aria-label="Minha conta" data-onda>
+                <IconUserCircle size={38} stroke={1.5} aria-hidden />
+                <IconChevronDown size={18} stroke={2.5} aria-hidden className={classes.setaConta} />
+              </UnstyledButton>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {nomeUsuaria ? <Menu.Label className={classes.nomeConta}>{nomeUsuaria}</Menu.Label> : null}
+              <Menu.Item leftSection={<IconLogout size={22} aria-hidden />} onClick={sair} className={classes.itemConta}>
+                Sair
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Group>
       </AppShell.Header>
 

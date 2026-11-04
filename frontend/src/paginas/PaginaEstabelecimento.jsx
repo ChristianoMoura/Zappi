@@ -1,4 +1,4 @@
-import { Alert, Button, Loader, NativeSelect, Textarea, TextInput, Title } from '@mantine/core'
+import { Alert, Button, Loader, NativeSelect, Textarea, TextInput, VisuallyHidden } from '@mantine/core'
 import { IconAlertCircle, IconBuildingStore, IconCheck, IconDeviceFloppy, IconMapPin, IconPhone } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import capa from '../assets/capa-estabelecimento.webp'
@@ -17,14 +17,14 @@ import classes from './PaginaEstabelecimento.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
 // Ordem dos campos na tela, usada para levar o foco ao primeiro erro (NBR 17225 5.1.4)
-const ORDEM = ['nome', 'descricao', 'slug', 'whatsapp', 'emailContato', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'uf', 'cidade']
+const ORDEM = ['nome', 'descricao', 'slug', 'whatsapp', 'emailContato', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf']
 
 const paraTela = (guardado) => ({ ...guardado, whatsapp: whatsappParaTela(guardado.whatsapp) })
 const paraGuardar = (tela) => ({ ...tela, nome: tela.nome.trim(), slug: tela.slug.trim(), whatsapp: whatsappParaGuardar(tela.whatsapp), cep: soDigitos(tela.cep) })
 const iniciais = (nome) => (nome.trim().split(/\s+/).map((p) => p[0]).join('').slice(0, 2) || 'Z').toUpperCase()
 
-// Tela "Meu estabelecimento" (US2, RF03, RF04): layout A aprovado pelo grupo, com capa,
-// logo da loja e os dados em três cartões. Só nome, link do cardápio e WhatsApp são obrigatórios.
+// Tela "Meu estabelecimento" (US2, RF03, RF04): segue a Referência A aprovada pelo grupo, com
+// capa, logo da loja e os dados em três cartões. Só nome, link do cardápio e WhatsApp são obrigatórios.
 export function PaginaEstabelecimento() {
   useTituloPagina('Meu estabelecimento')
   const [salvo, setSalvo] = useState(null)
@@ -80,8 +80,6 @@ export function PaginaEstabelecimento() {
   }
 
   const alterou = JSON.stringify(dados) !== JSON.stringify(salvo)
-  const errosAtuais = validarEstabelecimento(dados)
-  const confirmado = (campo) => String(dados[campo] ?? '').trim() !== '' && !errosAtuais[campo]
 
   function mudar(campo, valor) {
     setDados((atual) => ({ ...atual, [campo]: valor }))
@@ -125,7 +123,7 @@ export function PaginaEstabelecimento() {
     setAviso({ tipo: 'ok', texto: 'Alterações desfeitas.' })
   }
 
-  // Campo com rótulo sempre visível, check de "confirmado" e mensagem de erro ligada ao campo
+  // Campo com rótulo sempre visível e mensagem de erro ligada ao campo
   const propsCampo = (campo, rotulo, { obrigatorio = false, dica } = {}) => ({
     id: `estabelecimento-${campo}`,
     ref: (el) => {
@@ -135,7 +133,6 @@ export function PaginaEstabelecimento() {
       <>
         {rotulo}
         {obrigatorio && <span className={classes.obrigatorio}> (obrigatório)</span>}
-        {confirmado(campo) && <IconCheck size={18} stroke={3} className={classes.confirmado} aria-hidden />}
       </>
     ),
     description: dica,
@@ -151,25 +148,23 @@ export function PaginaEstabelecimento() {
 
   return (
     <div className={classes.pagina}>
+      <VisuallyHidden component="h1">Meu estabelecimento</VisuallyHidden>
       <div {...entrada(classes.capa)}>
         <img src={capa} alt="" />
       </div>
 
       <div className={classes.perfil}>
-        <div className={`${classes.avatar} ${classes.avatarEntrada}`} aria-hidden="true">
-          {iniciais(dados.nome)}
+        <div className={`${classes.avatar} ${classes.avatarEntrada}`}>
+          {dados.logo ? (
+            <img src={dados.logo} alt={`Logo da ${dados.nome.trim() || 'confeitaria'}`} />
+          ) : (
+            <span aria-hidden="true">{iniciais(dados.nome)}</span>
+          )}
         </div>
         <div {...entrada(classes.perfilTexto)}>
           <p className={classes.nome}>{dados.nome.trim() || 'Sua confeitaria'}</p>
           {dados.descricao ? <p className={classes.descricao}>{dados.descricao}</p> : null}
         </div>
-      </div>
-
-      <div {...entrada()}>
-        <Title order={1} className={classes.titulo}>
-          Meu estabelecimento
-        </Title>
-        <p className={classes.subtitulo}>Esses dados aparecem para os seus clientes.</p>
       </div>
 
       <form
@@ -180,9 +175,9 @@ export function PaginaEstabelecimento() {
           void salvar()
         }}
       >
-        <section aria-labelledby="secao-sobre" {...entrada(`${classes.cartao} ${classes.inteiro}`)}>
+        <section aria-labelledby="secao-sobre" {...entrada(`${classes.cartao} ${classes.areaSobre}`)}>
           <h2 id="secao-sobre" className={classes.tituloCartao}>
-            <span className={classes.icone}><IconBuildingStore size={20} aria-hidden /></span>
+            <span className={classes.icone}><IconBuildingStore size={24} aria-hidden /></span>
             Sobre a confeitaria
           </h2>
           <div className={classes.campos}>
@@ -212,9 +207,9 @@ export function PaginaEstabelecimento() {
           </div>
         </section>
 
-        <section aria-labelledby="secao-contato" {...entrada(classes.cartao)}>
+        <section aria-labelledby="secao-contato" {...entrada(`${classes.cartao} ${classes.areaContato}`)}>
           <h2 id="secao-contato" className={classes.tituloCartao}>
-            <span className={classes.icone}><IconPhone size={20} aria-hidden /></span>
+            <span className={classes.icone}><IconPhone size={24} aria-hidden /></span>
             Contato
           </h2>
           <div className={classes.campos}>
@@ -238,50 +233,54 @@ export function PaginaEstabelecimento() {
           </div>
         </section>
 
-        <section aria-labelledby="secao-endereco" {...entrada(classes.cartao)}>
+        <section aria-labelledby="secao-endereco" {...entrada(`${classes.cartao} ${classes.areaEndereco}`)}>
           <h2 id="secao-endereco" className={classes.tituloCartao}>
-            <span className={classes.icone}><IconMapPin size={20} aria-hidden /></span>
+            <span className={classes.icone}><IconMapPin size={24} aria-hidden /></span>
             Endereço
           </h2>
           <div className={classes.endereco}>
             <TextInput
               {...propsCampo('cep', 'CEP')}
+              className={classes.col12}
               value={mascaraCep(dados.cep)}
               onChange={(e) => mudar('cep', soDigitos(e.currentTarget.value).slice(0, 8))}
               inputMode="numeric"
               autoComplete="postal-code"
               maxLength={9}
             />
-            <TextInput {...propsCampo('logradouro', 'Rua')} className={classes.largo} value={dados.logradouro} onChange={(e) => mudar('logradouro', e.currentTarget.value)} autoComplete="address-line1" />
-            <TextInput {...propsCampo('numero', 'Número', { dica: 'Pode ser "s/n".' })} value={dados.numero} onChange={(e) => mudar('numero', e.currentTarget.value)} />
-            <TextInput {...propsCampo('complemento', 'Complemento')} className={classes.largo} value={dados.complemento} onChange={(e) => mudar('complemento', e.currentTarget.value)} />
-            <TextInput {...propsCampo('bairro', 'Bairro')} value={dados.bairro} onChange={(e) => mudar('bairro', e.currentTarget.value)} />
+            <TextInput {...propsCampo('logradouro', 'Rua')} className={classes.col12} value={dados.logradouro} onChange={(e) => mudar('logradouro', e.currentTarget.value)} autoComplete="address-line1" />
+            <TextInput {...propsCampo('numero', 'Número', { dica: 'Pode ser "s/n".' })} className={classes.col6} value={dados.numero} onChange={(e) => mudar('numero', e.currentTarget.value)} />
+            <TextInput {...propsCampo('complemento', 'Complemento', { dica: 'Ex.: Loja 12.' })} className={classes.col6} value={dados.complemento} onChange={(e) => mudar('complemento', e.currentTarget.value)} />
+            <TextInput {...propsCampo('bairro', 'Bairro')} className={classes.col5} value={dados.bairro} onChange={(e) => mudar('bairro', e.currentTarget.value)} />
+            <TextInput {...propsCampo('cidade', 'Cidade')} className={classes.col4} value={dados.cidade} onChange={(e) => mudar('cidade', e.currentTarget.value)} autoComplete="address-level2" />
             <NativeSelect
               {...propsCampo('uf', 'Estado')}
+              className={classes.col3}
               data={[{ value: '', label: 'Escolha' }, ...UFS]}
               value={dados.uf}
               onChange={(e) => mudar('uf', e.currentTarget.value)}
             />
-            <TextInput {...propsCampo('cidade', 'Cidade')} className={classes.largo} value={dados.cidade} onChange={(e) => mudar('cidade', e.currentTarget.value)} autoComplete="address-level2" />
           </div>
         </section>
 
-        <div className={classes.rodape}>
-          <span className={classes.situacao} aria-live="polite">
-            {alterou ? 'Você tem alterações não salvas' : 'Tudo salvo'}
-          </span>
-          <Button variant="outline" onClick={desfazer} disabled={!alterou || salvando}>
-            Desfazer
-          </Button>
+        <div className={classes.acoes}>
           <Button
             type="submit"
+            size="lg"
             loading={salvando}
             loaderProps={{ type: 'dots' }}
             color={acabouDeSalvar ? '#1d6b45' : undefined}
             leftSection={acabouDeSalvar ? <IconCheck size={22} aria-hidden className={classes.checkSalvo} /> : <IconDeviceFloppy size={22} aria-hidden />}
+            className={classes.botaoSalvar}
           >
-            {acabouDeSalvar ? 'Salvo' : <>Salvar<span className={classes.someNoCelular}> alterações</span></>}
+            {acabouDeSalvar ? 'Salvo' : 'Salvar alterações'}
           </Button>
+          <Button variant="outline" size="lg" onClick={desfazer} disabled={!alterou || salvando}>
+            Desfazer
+          </Button>
+          <span className={classes.situacao} aria-live="polite">
+            {alterou ? 'Você tem alterações não salvas' : 'Tudo salvo'}
+          </span>
         </div>
       </form>
 
