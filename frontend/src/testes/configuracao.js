@@ -13,6 +13,11 @@ window.matchMedia = vi.fn((consulta) => ({
   dispatchEvent: vi.fn(),
 }))
 
+// O Textarea com altura automática escuta o carregamento das fontes
+if (!document.fonts) {
+  Object.defineProperty(document, 'fonts', { value: { addEventListener: vi.fn(), removeEventListener: vi.fn() } })
+}
+
 window.ResizeObserver = class {
   observe() {}
   unobserve() {}
