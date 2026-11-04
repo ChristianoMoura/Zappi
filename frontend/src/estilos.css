@@ -10,3 +10,68 @@ button:focus-visible {
   outline: 3px solid var(--zappi-cor-foco);
   outline-offset: 3px;
 }
+
+/* Interatividade aprovada na ZAP-37. Tudo fica parado para quem pediu "reduzir movimento". */
+.mantine-Button-root,
+.mantine-NavLink-root,
+[data-onda] {
+  position: relative;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Passar o mouse: botões sobem um pouco */
+  .mantine-Button-root {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  }
+
+  .mantine-Button-root:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgb(0 109 109 / 0.25);
+  }
+
+  .mantine-Button-root:not(:disabled):active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
+  }
+
+  /* Onda ao clicar (criada pelo useOndaAoClicar) */
+  .zappi-onda {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    background: currentColor;
+    opacity: 0.28;
+    transform: scale(0);
+    animation: zappi-onda 0.55s ease-out forwards;
+  }
+
+  @keyframes zappi-onda {
+    to {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+
+  /* Entrada suave: começa já visível, para a tela nunca ficar vazia se a animação não rodar */
+  @keyframes zappi-subir {
+    from {
+      opacity: 0.45;
+      transform: translateY(14px);
+    }
+  }
+
+  @keyframes zappi-surgir {
+    0% {
+      opacity: 0.45;
+      transform: scale(0.7);
+    }
+    70% {
+      transform: scale(1.08);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}

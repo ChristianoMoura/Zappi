@@ -17,12 +17,13 @@ const cianoZappi = [
   '#004646',
 ]
 
-// Cores da paleta A no lugar dos padrões do Mantine: fundo creme, texto cacau
-// (12,75:1), texto secundário e placeholder em #5C5048 (7,39:1) e erro em #B42318 (6,24:1).
+// Cores da paleta A no lugar dos padrões do Mantine. Dentro do app o fundo é branco com
+// ciano (decisão do grupo na ZAP-37); o creme fica na tela de login. Texto cacau (13,43:1),
+// texto secundário e placeholder em #5C5048 (7,79:1) e erro em #B42318 (6,57:1), sobre o branco.
 export const resolverVariaveis = () => ({
   variables: {},
   light: {
-    '--mantine-color-body': '#fff8f0',
+    '--mantine-color-body': '#ffffff',
     '--mantine-color-text': '#3d2b1f',
     '--mantine-color-dimmed': '#5c5048',
     '--mantine-color-placeholder': '#5c5048',

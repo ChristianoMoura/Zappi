@@ -1,6 +1,6 @@
 # Zappi — Guia de Identidade Visual
 
-Versão de 02/11/2026 · aprovada pelo grupo na ZAP-34
+Versão de 03/11/2026 · aprovada pelo grupo nas ZAP-34 e ZAP-37
 
 ## Visão geral
 
@@ -14,7 +14,7 @@ A identidade do Zappi foi aprovada pelo grupo em 02/11/2026, na subtarefa ZAP-34
 
 **Princípios visuais:**
 
-- **Acolhedor:** tons quentes de creme e cacau, nada de branco frio.
+- **Acolhedor:** tons quentes de creme e cacau na tela de login; dentro do app, fundo branco limpo com detalhes em ciano, para um visual profissional.
 - **Claro:** poucos elementos por tela, letras grandes, um destaque de cada vez.
 - **Acessível:** todo texto com contraste de 4,5:1 ou mais e foco sempre visível (ABNT NBR 17225).
 - **Sem cara de IA:** ilustração 3D com tema de confeitaria e layout inspirado em sistemas de pedidos reais.
@@ -64,10 +64,10 @@ A paleta "Ciano com creme" parte do **DarkCyan (#008B8B)** e usa tons quentes de
 | Ciano profundo | #006D6D | Botões, links, item ativo do menu | Branco sobre ele: 6,16:1; sobre o creme: 5,85:1 |
 | Ciano escuro | #005A5A | Botão com o mouse em cima | Branco sobre ele: 7,64:1 |
 | Ciano claro | #E6F4F4 | Fundo leve ao passar o mouse | — |
-| Creme | #FFF8F0 | Fundo geral das telas | Cacau sobre ele: 12,75:1 |
+| Creme | #FFF8F0 | Fundos quentes de apoio, fora das telas internas | Cacau sobre ele: 12,75:1 |
 | Creme do login | #FDF6EC | Lado do formulário na tela de login | Texto secundário sobre ele: 7,26:1 |
 | Creme da ilustração | #F7E7CC | Fundo do lado da ilustração no login | — |
-| Branco | #FFFFFF | Campos de formulário e cartões | — |
+| Branco | #FFFFFF | Fundo das telas internas do app, campos e cartões | Cacau sobre ele: 13,43:1; texto secundário: 7,79:1 |
 | Cacau | #3D2B1F | Texto principal e borda de foco | Sobre o creme: 12,75:1 |
 | Texto secundário | #5C5048 | Textos de apoio e placeholder | Sobre o creme: 7,39:1 |
 | Linha | #D9CBBE | Bordas de campos e divisões | — (não é texto) |
@@ -127,15 +127,17 @@ As telas usam os componentes do **Mantine**, já ajustados no tema para seguir e
 | Elemento | Padrão |
 | --- | --- |
 | Botão principal | Ciano profundo #006D6D, texto branco, 56–62 px de altura, largura total no formulário |
-| Botão secundário | Contorno ciano profundo, fundo creme (ex.: "Sair") |
+| Botão secundário | Contorno ciano profundo, fundo branco (ex.: "Sair", "Desfazer") |
 | Campos | Fundo branco, borda #D9CBBE de 2 px, 56–60 px de altura, rótulo sempre visível acima |
 | Campo com erro | Borda e mensagem em #B42318, logo abaixo do campo, com ícone |
 | Alerta de erro | Caixa com borda #B42318 e fundo #FEF3F2, no topo do formulário |
 | Foco pelo teclado | Borda cacau #3D2B1F de 3 px, afastada 3 px do elemento |
 | Cantos | 8 px de raio em botões, campos e cartões |
 | Ícones | Tabler Icons, de traço, 20–28 px, sempre com texto ao lado |
-| Menu | Lateral no computador; barra fixa embaixo no celular; item ativo em ciano profundo |
+| Menu | Lateral no computador, com botão para recolher e deixar só os ícones (a escolha fica lembrada); barra fixa embaixo no celular; item ativo em ciano profundo |
 | Carregando | Botão com três pontinhos animados, sem mudar de tamanho |
+
+**Interatividade (ZAP-37):** botões sobem um pouco ao passar o mouse e mostram uma onda a partir do ponto do clique; cartões sobem e o ícone gira e fica ciano; as partes da tela entram em sequência, partindo de um estado já visível; a capa se aproxima devagar ao passar o mouse; campos preenchidos certos ganham um check verde ao lado do rótulo; o botão de salvar mostra "Salvo" com check. Tudo fica parado para quem pediu "reduzir movimento" no sistema.
 
 **Mostrar senha:** botão com ícone de olho e a palavra "Mostrar" (ou "Esconder") dentro do campo de senha, à direita.
 
@@ -218,6 +220,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 
 | Etapa | Decisão |
 | --- | --- |
+| Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, layout A com capa) |
 | Implementação | Tela de login e identidade aplicadas em React no [PR #3](https://github.com/ChristianoMoura/Zappi/pull/3) |
 | Protótipo aprovado | Título "Entrar no painel" escondido; elementos do login maiores; slogan de volta sob o logo; ilustração sem texto |
 | Ilustração completa | Imagem expandida com IA para o formato do painel, com o bolo inteiro e sem emenda |
