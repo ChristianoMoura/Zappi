@@ -285,6 +285,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Mensagens (MVP) | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
 | Mensagens (Futuro) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS |
 | Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
+| Testes (frontend) | **Vitest e React Testing Library** (jsdom, user-event e jest-dom) | Testes das telas e das regras do painel, escritos ao lado do código (`*.test.jsx`), com o backend simulado |
 | CI/CD | **GitHub Actions** + deploy automático do **Render** | Build e testes em cada pull request; o Render publica a cada merge na `main`, depois que o CI passar |
 | Gestão | GitHub, Jira | Versionamento e backlog |
 
@@ -516,7 +517,7 @@ Trilha de auditoria (ISO 8.16).
    - build do backend: **Maven**, com Maven Wrapper;
    - ferramenta de migração: **Flyway**, com SQL puro;
    - biblioteca de UI e componentes do React: **Mantine 9** (ZAP-70);
-   - frameworks de teste do backend: **JUnit 5, Mockito e Testcontainers**; frameworks de teste do frontend: **em aberto**, com o time de front;
+   - frameworks de teste do backend: **JUnit 5, Mockito e Testcontainers**; frameworks de teste do frontend: **Vitest e React Testing Library**;
    - hospedagem e domínio: **Render + Supabase**, com subdomínio gratuito `*.onrender.com`;
    - expiração do JWT: **8 horas**, sem refresh token; onde guardar o JWT no frontend: **`sessionStorage`** (ZAP-34);
    - bloqueio após falhas de login (RF02): **5 falhas seguidas bloqueiam por 15 minutos**;
@@ -576,6 +577,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Migração do banco | Em aberto (Flyway ou Liquibase) | **Flyway**, com SQL puro. Motivo: integração nativa com o Spring Boot, e as restrições da seção 13.3 já estão em SQL |
 | Biblioteca de UI | Em aberto | **Mantine 9** (ZAP-70). Motivo: componentes acessíveis de fábrica, tema centralizado com contraste de 4,5:1 e bom uso no celular |
 | Testes do backend | Em aberto | **JUnit 5, Mockito e Testcontainers** (PostgreSQL). Motivo: ferramentas padrão do Spring, e o Testcontainers valida as regras do banco contra um Postgres real |
+| Testes do frontend | Em aberto | **Vitest e React Testing Library** (ZAP-62). Motivo: usam a configuração do Vite que o projeto já tem, e os testes usam as telas pelos rótulos e botões, como a Lídia, o que também ajuda a verificar a acessibilidade |
 | Expiração do JWT | Em aberto | **8 horas**, sem refresh token. Motivo: cobre um dia de uso sem pedir login várias vezes e expira no dia seguinte |
 | Onde guardar o JWT no frontend | Em aberto | **`sessionStorage`** (ZAP-34). Motivo: a Lídia continua logada ao recarregar a página, e o token some ao fechar a aba, ficando menos tempo no aparelho que no `localStorage` |
 | Bloqueio de login (RF02) | Em aberto | **5 falhas seguidas bloqueiam por 15 minutos**, contadas pelo `log_auditoria`. Motivo: dificulta adivinhar a senha (ISO 27002 5.17) sem trancar a Lídia para sempre |
