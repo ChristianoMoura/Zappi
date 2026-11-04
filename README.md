@@ -145,6 +145,8 @@ npm run dev
 | `npm run dev` | Sobe o painel em `http://localhost:5173`, recarregando a cada alteração |
 | `npm run build` | Gera a versão de produção em `frontend/dist` |
 | `npm run lint` | Verifica o código com o oxlint |
+| `npm test` | Roda os testes uma vez com o Vitest |
+| `npm run test:watch` | Roda os testes de novo a cada alteração |
 
 O frontend usa React 19, Vite, [Mantine](https://mantine.dev) (componentes) e React Router. O tema com as cores, os tamanhos e o foco visível fica em `frontend/src/tema.js` e `frontend/src/estilos.css`; use os componentes do Mantine para manter o padrão de acessibilidade em todas as telas.
 
