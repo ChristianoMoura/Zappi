@@ -72,7 +72,7 @@ export function PaginaEstabelecimento() {
     return (
       <div className={classes.estado} role="status">
         <Loader color="zappi" type="dots" />
-        Carregando os dados da confeitaria…
+        Carregando os dados do estabelecimento…
       </div>
     )
   }
@@ -138,7 +138,7 @@ export function PaginaEstabelecimento() {
       setTimeout(() => setAcabouDeSalvar(false), 1600)
     } catch (erro) {
       if (erro instanceof LinkEmUsoError) {
-        setErros({ slug: 'Esse link já é usado por outra confeitaria. Escolha outro.' })
+        setErros({ slug: 'Esse link já é usado por outro estabelecimento. Escolha outro.' })
         refs.current.slug?.focus()
         setAviso({ tipo: 'erro', texto: 'Confira o link do cardápio.' })
       } else {
@@ -196,7 +196,7 @@ export function PaginaEstabelecimento() {
         <div className={classes.avatarBloco}>
           <div className={`${classes.avatar} ${classes.avatarEntrada}`}>
             {dados.logo ? (
-              <img src={dados.logo} alt={`Logo da ${dados.nome.trim() || 'confeitaria'}`} />
+              <img src={dados.logo} alt={`Logo de ${dados.nome.trim() || 'seu estabelecimento'}`} />
             ) : (
               <span aria-hidden="true">{iniciais(dados.nome)}</span>
             )}
@@ -207,7 +207,7 @@ export function PaginaEstabelecimento() {
           <input ref={arquivoLogo} type="file" accept={TIPOS_FOTO.join(',')} hidden onChange={(e) => trocarFoto('logo', e, 'Logo trocado. Salve para guardar.')} />
         </div>
         <div {...entrada(classes.perfilTexto)}>
-          <p className={classes.nome}>{dados.nome.trim() || 'Sua confeitaria'}</p>
+          <p className={classes.nome}>{dados.nome.trim() || 'Seu estabelecimento'}</p>
           {dados.descricao ? <p className={classes.descricao}>{dados.descricao}</p> : null}
         </div>
       </div>
@@ -223,10 +223,10 @@ export function PaginaEstabelecimento() {
         <section aria-labelledby="secao-sobre" {...entrada(`${classes.cartao} ${classes.areaSobre}`)}>
           <h2 id="secao-sobre" className={classes.tituloCartao}>
             <span className={classes.icone}><IconBuildingStore size={24} aria-hidden /></span>
-            Sobre a confeitaria
+            Sobre o estabelecimento
           </h2>
           <div className={classes.campos}>
-            <TextInput {...propsCampo('nome', 'Nome da confeitaria', { obrigatorio: true })} value={dados.nome} onChange={(e) => mudar('nome', e.currentTarget.value)} />
+            <TextInput {...propsCampo('nome', 'Nome do estabelecimento', { obrigatorio: true })} value={dados.nome} onChange={(e) => mudar('nome', e.currentTarget.value)} />
             <Textarea
               {...propsCampo('descricao', 'Descrição')}
               value={dados.descricao}

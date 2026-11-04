@@ -54,7 +54,7 @@ export function mascaraCep(digitado) {
 export function validarEstabelecimento(dados) {
   const erros = {}
 
-  if (!dados.nome.trim()) erros.nome = 'Digite o nome da confeitaria.'
+  if (!dados.nome.trim()) erros.nome = 'Digite o nome do estabelecimento.'
 
   if (!dados.slug.trim()) erros.slug = 'Digite o link do cardápio.'
   else if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(dados.slug)) {
