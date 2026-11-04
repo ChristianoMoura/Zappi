@@ -23,8 +23,11 @@ let simulado = {
   bairro: 'Centro',
   cidade: 'São Paulo',
   uf: 'SP',
-  // PENDENTE: o DER não tem campo de logo; sem logo, a tela mostra as iniciais do nome
+  // PENDENTE: o DER não tem campos de logo e capa nem onde guardar as fotos (ex.: Storage do
+  // Supabase). Aqui são endereços de imagem; sem logo, a tela mostra as iniciais, e sem capa,
+  // a capa padrão.
   logo: logoCasaBelt,
+  capa: '',
 }
 
 // Link já usado por outro estabelecimento, só para testar a mensagem de link repetido

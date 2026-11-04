@@ -1,14 +1,17 @@
-import { Alert, Button, Loader, NativeSelect, Textarea, TextInput, VisuallyHidden } from '@mantine/core'
-import { IconAlertCircle, IconBuildingStore, IconCheck, IconDeviceFloppy, IconMapPin, IconPhone } from '@tabler/icons-react'
+import { Alert, Button, Checkbox, Loader, NativeSelect, Textarea, TextInput, VisuallyHidden } from '@mantine/core'
+import { IconAlertCircle, IconBuildingStore, IconCamera, IconCheck, IconDeviceFloppy, IconMapPin, IconPhone } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import capa from '../assets/capa-estabelecimento.webp'
+import capaPadrao from '../assets/capa-estabelecimento.webp'
 import {
   LIMITES,
   mascaraCep,
   mascaraTelefone,
+  SEM_NUMERO,
   soDigitos,
+  TIPOS_FOTO,
   UFS,
   validarEstabelecimento,
+  validarFoto,
   whatsappParaGuardar,
   whatsappParaTela,
 } from '../estabelecimento/regrasEstabelecimento'
@@ -36,6 +39,9 @@ export function PaginaEstabelecimento() {
   const [acabouDeSalvar, setAcabouDeSalvar] = useState(false)
   const [aviso, setAviso] = useState(null)
   const refs = useRef({})
+  const numeroAntes = useRef('')
+  const arquivoCapa = useRef(null)
+  const arquivoLogo = useRef(null)
 
   useEffect(() => {
     let ativo = true
@@ -84,6 +90,32 @@ export function PaginaEstabelecimento() {
   function mudar(campo, valor) {
     setDados((atual) => ({ ...atual, [campo]: valor }))
     if (erros[campo]) setErros((atual) => { const resto = { ...atual }; delete resto[campo]; return resto })
+  }
+
+  // Sem número: o campo fica bloqueado com "S/N"; ao desmarcar, volta o número que estava
+  const semNumero = dados.numero === SEM_NUMERO
+  function marcarSemNumero(marcado) {
+    if (marcado) {
+      numeroAntes.current = dados.numero
+      mudar('numero', SEM_NUMERO)
+    } else {
+      mudar('numero', numeroAntes.current)
+      setTimeout(() => refs.current.numero?.focus())
+    }
+  }
+
+  // Trocar capa ou logo: a prévia aparece na hora e só fica guardada ao salvar
+  function trocarFoto(campo, evento, mensagem) {
+    const arquivo = evento.currentTarget.files?.[0]
+    evento.currentTarget.value = ''
+    if (!arquivo) return
+    const problema = validarFoto(arquivo)
+    if (problema) {
+      setAviso({ tipo: 'erro', texto: problema })
+      return
+    }
+    mudar(campo, URL.createObjectURL(arquivo))
+    setAviso({ tipo: 'ok', texto: mensagem })
   }
 
   async function salvar() {
@@ -149,17 +181,30 @@ export function PaginaEstabelecimento() {
   return (
     <div className={classes.pagina}>
       <VisuallyHidden component="h1">Meu estabelecimento</VisuallyHidden>
-      <div {...entrada(classes.capa)}>
-        <img src={capa} alt="" />
+      <div {...entrada(classes.capaBloco)}>
+        <div className={classes.capa}>
+          <img src={dados.capa || capaPadrao} alt="" />
+        </div>
+        <button type="button" className={classes.trocarCapa} onClick={() => arquivoCapa.current?.click()} aria-label="Trocar foto de capa" title="Trocar foto de capa" data-onda>
+          <IconCamera size={20} aria-hidden />
+          <span>Trocar capa</span>
+        </button>
+        <input ref={arquivoCapa} type="file" accept={TIPOS_FOTO.join(',')} hidden onChange={(e) => trocarFoto('capa', e, 'Foto de capa trocada. Salve para guardar.')} />
       </div>
 
       <div className={classes.perfil}>
-        <div className={`${classes.avatar} ${classes.avatarEntrada}`}>
-          {dados.logo ? (
-            <img src={dados.logo} alt={`Logo da ${dados.nome.trim() || 'confeitaria'}`} />
-          ) : (
-            <span aria-hidden="true">{iniciais(dados.nome)}</span>
-          )}
+        <div className={classes.avatarBloco}>
+          <div className={`${classes.avatar} ${classes.avatarEntrada}`}>
+            {dados.logo ? (
+              <img src={dados.logo} alt={`Logo da ${dados.nome.trim() || 'confeitaria'}`} />
+            ) : (
+              <span aria-hidden="true">{iniciais(dados.nome)}</span>
+            )}
+          </div>
+          <button type="button" className={classes.trocarLogo} onClick={() => arquivoLogo.current?.click()} aria-label="Trocar logo" title="Trocar logo" data-onda>
+            <IconCamera size={22} aria-hidden />
+          </button>
+          <input ref={arquivoLogo} type="file" accept={TIPOS_FOTO.join(',')} hidden onChange={(e) => trocarFoto('logo', e, 'Logo trocado. Salve para guardar.')} />
         </div>
         <div {...entrada(classes.perfilTexto)}>
           <p className={classes.nome}>{dados.nome.trim() || 'Sua confeitaria'}</p>
@@ -182,19 +227,14 @@ export function PaginaEstabelecimento() {
           </h2>
           <div className={classes.campos}>
             <TextInput {...propsCampo('nome', 'Nome da confeitaria', { obrigatorio: true })} value={dados.nome} onChange={(e) => mudar('nome', e.currentTarget.value)} />
-            <div>
-              <Textarea
-                {...propsCampo('descricao', 'Descrição', { dica: 'Conte em poucas palavras o que você faz.' })}
-                value={dados.descricao}
-                onChange={(e) => mudar('descricao', e.currentTarget.value)}
-                autosize
-                minRows={3}
-                classNames={{ label: classes.rotulo, input: classes.campoTexto, error: classes.erroCampo, description: classes.dica }}
-              />
-              <p className={classes.contador} aria-live="polite">
-                {dados.descricao.length} / {LIMITES.descricao}
-              </p>
-            </div>
+            <Textarea
+              {...propsCampo('descricao', 'Descrição')}
+              value={dados.descricao}
+              onChange={(e) => mudar('descricao', e.currentTarget.value)}
+              autosize
+              minRows={3}
+              classNames={{ label: classes.rotulo, input: classes.campoTexto, error: classes.erroCampo, description: classes.dica }}
+            />
             <TextInput
               {...propsCampo('slug', 'Link do cardápio', { obrigatorio: true, dica: 'Use só letras minúsculas, números e hífen. Ex.: casa-belt' })}
               value={dados.slug}
@@ -214,7 +254,7 @@ export function PaginaEstabelecimento() {
           </h2>
           <div className={classes.campos}>
             <TextInput
-              {...propsCampo('whatsapp', 'WhatsApp', { obrigatorio: true, dica: 'Com DDD. É por aqui que os clientes falam com você.' })}
+              {...propsCampo('whatsapp', 'WhatsApp', { obrigatorio: true })}
               value={mascaraTelefone(dados.whatsapp)}
               onChange={(e) => mudar('whatsapp', soDigitos(e.currentTarget.value).slice(0, 11))}
               leftSection={<span className={classes.prefixo}>+55</span>}
@@ -249,8 +289,24 @@ export function PaginaEstabelecimento() {
               maxLength={9}
             />
             <TextInput {...propsCampo('logradouro', 'Rua')} className={classes.col12} value={dados.logradouro} onChange={(e) => mudar('logradouro', e.currentTarget.value)} autoComplete="address-line1" />
-            <TextInput {...propsCampo('numero', 'Número', { dica: 'Pode ser "s/n".' })} className={classes.col6} value={dados.numero} onChange={(e) => mudar('numero', e.currentTarget.value)} />
-            <TextInput {...propsCampo('complemento', 'Complemento', { dica: 'Ex.: Loja 12.' })} className={classes.col6} value={dados.complemento} onChange={(e) => mudar('complemento', e.currentTarget.value)} />
+            <div className={classes.col6}>
+              <TextInput
+                {...propsCampo('numero', 'Número')}
+                value={dados.numero}
+                onChange={(e) => mudar('numero', e.currentTarget.value)}
+                disabled={semNumero}
+                inputMode="numeric"
+              />
+              <Checkbox
+                id="estabelecimento-sem-numero"
+                label="Sem número"
+                checked={semNumero}
+                onChange={(e) => marcarSemNumero(e.currentTarget.checked)}
+                size="md"
+                className={classes.semNumero}
+              />
+            </div>
+            <TextInput {...propsCampo('complemento', 'Complemento')} className={classes.col6} value={dados.complemento} onChange={(e) => mudar('complemento', e.currentTarget.value)} />
             <TextInput {...propsCampo('bairro', 'Bairro')} className={classes.col5} value={dados.bairro} onChange={(e) => mudar('bairro', e.currentTarget.value)} />
             <TextInput {...propsCampo('cidade', 'Cidade')} className={classes.col4} value={dados.cidade} onChange={(e) => mudar('cidade', e.currentTarget.value)} autoComplete="address-level2" />
             <NativeSelect
@@ -278,9 +334,6 @@ export function PaginaEstabelecimento() {
           <Button variant="outline" size="lg" onClick={desfazer} disabled={!alterou || salvando}>
             Desfazer
           </Button>
-          <span className={classes.situacao} aria-live="polite">
-            {alterou ? 'Você tem alterações não salvas' : 'Tudo salvo'}
-          </span>
         </div>
       </form>
 
