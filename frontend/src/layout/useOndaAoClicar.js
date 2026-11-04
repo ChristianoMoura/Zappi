@@ -17,7 +17,8 @@ export function useOndaAoClicar() {
       const tamanho = Math.max(caixa.width, caixa.height) * 2
       const onda = document.createElement('span')
       onda.className = 'zappi-onda'
-      onda.style.width = onda.style.height = `${tamanho}px`
+      onda.style.width = `${tamanho}px`
+      onda.style.height = `${tamanho}px`
       onda.style.left = `${evento.clientX - caixa.left - tamanho / 2}px`
       onda.style.top = `${evento.clientY - caixa.top - tamanho / 2}px`
       alvo.append(onda)

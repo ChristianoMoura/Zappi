@@ -45,8 +45,12 @@ export function PaginaEstabelecimento() {
         setSalvo(paraTela(resposta))
         setDados(paraTela(resposta))
       })
-      .catch(() => ativo && setErroCarregar(true))
-      .finally(() => ativo && setCarregando(false))
+      .catch(() => {
+        if (ativo) setErroCarregar(true)
+      })
+      .finally(() => {
+        if (ativo) setCarregando(false)
+      })
     return () => {
       ativo = false
     }
@@ -124,7 +128,9 @@ export function PaginaEstabelecimento() {
   // Campo com rótulo sempre visível, check de "confirmado" e mensagem de erro ligada ao campo
   const propsCampo = (campo, rotulo, { obrigatorio = false, dica } = {}) => ({
     id: `estabelecimento-${campo}`,
-    ref: (el) => (refs.current[campo] = el),
+    ref: (el) => {
+      refs.current[campo] = el
+    },
     label: (
       <>
         {rotulo}
@@ -155,7 +161,7 @@ export function PaginaEstabelecimento() {
         </div>
         <div {...entrada(classes.perfilTexto)}>
           <p className={classes.nome}>{dados.nome.trim() || 'Sua confeitaria'}</p>
-          {dados.descricao && <p className={classes.descricao}>{dados.descricao}</p>}
+          {dados.descricao ? <p className={classes.descricao}>{dados.descricao}</p> : null}
         </div>
       </div>
 
@@ -171,7 +177,7 @@ export function PaginaEstabelecimento() {
         noValidate
         onSubmit={(evento) => {
           evento.preventDefault()
-          salvar()
+          void salvar()
         }}
       >
         <section aria-labelledby="secao-sobre" {...entrada(`${classes.cartao} ${classes.inteiro}`)}>
