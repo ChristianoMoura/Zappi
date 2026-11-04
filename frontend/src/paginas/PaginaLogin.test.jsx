@@ -1,0 +1,94 @@
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+import {
+  CredenciaisInvalidasError,
+  entrarNoServidor,
+  LoginBloqueadoError,
+  ServicoIndisponivelError,
+} from '../autenticacao/servicoAutenticacao'
+import { renderizarComRotas } from '../testes/renderizarComRotas'
+import { PaginaLogin } from './PaginaLogin'
+
+// O backend é simulado aqui para os testes não dependerem da ZAP-31
+vi.mock('../autenticacao/servicoAutenticacao', async (importarOriginal) => ({
+  ...(await importarOriginal()),
+  entrarNoServidor: vi.fn(),
+}))
+
+function abrirLogin() {
+  return renderizarComRotas(
+    [
+      { path: '/login', Component: PaginaLogin },
+      { path: '/pedidos', element: <h1>Pedidos</h1> },
+    ],
+    '/login',
+  )
+}
+
+async function preencherEEntrar(usuario, email = 'lidia@casabelt.com', senha = 'senha-de-teste') {
+  if (email) await usuario.type(screen.getByLabelText('E-mail'), email)
+  if (senha) await usuario.type(screen.getByLabelText('Senha'), senha)
+  await usuario.click(screen.getByRole('button', { name: 'Entrar' }))
+}
+
+describe('PaginaLogin (US1, RF01, RF02)', () => {
+  beforeEach(() => {
+    entrarNoServidor.mockReset()
+  })
+
+  test('mostra os campos com rótulo visível (NBR 17225 5.3.1)', () => {
+    abrirLogin()
+
+    expect(screen.getByLabelText('E-mail')).toBeVisible()
+    expect(screen.getByLabelText('Senha')).toBeVisible()
+  })
+
+  test('pede o e-mail e a senha sem chamar o servidor', async () => {
+    const usuario = userEvent.setup()
+    abrirLogin()
+
+    await preencherEEntrar(usuario, '', '')
+
+    expect(screen.getByText('Digite seu e-mail.')).toBeVisible()
+    expect(screen.getByText('Digite sua senha.')).toBeVisible()
+    expect(entrarNoServidor).not.toHaveBeenCalled()
+  })
+
+  test('recusa e-mail em formato inválido', async () => {
+    const usuario = userEvent.setup()
+    abrirLogin()
+
+    await preencherEEntrar(usuario, 'lidia')
+
+    expect(screen.getByText(/Confira o e-mail/)).toBeVisible()
+    expect(entrarNoServidor).not.toHaveBeenCalled()
+  })
+
+  test('com credenciais válidas, salva a sessão e abre os pedidos', async () => {
+    const usuario = userEvent.setup()
+    entrarNoServidor.mockResolvedValue({ token: 'token-de-teste', nome: 'Lídia' })
+    const roteador = abrirLogin()
+
+    await preencherEEntrar(usuario)
+
+    await waitFor(() => expect(roteador.state.location.pathname).toBe('/pedidos'))
+    expect(JSON.parse(sessionStorage.getItem('zappi.sessao'))).toEqual({ token: 'token-de-teste', nome: 'Lídia' })
+  })
+
+  test.each([
+    [new CredenciaisInvalidasError(), 'E-mail ou senha incorretos. Confira e tente de novo.'],
+    [new LoginBloqueadoError(), 'Muitas tentativas sem sucesso. Espere 15 minutos e tente de novo.'],
+    [new ServicoIndisponivelError(), 'Não foi possível entrar agora. Tente de novo em alguns minutos.'],
+  ])('avisa em linguagem simples, limpa a senha e não abre a sessão (%o)', async (erro, mensagem) => {
+    const usuario = userEvent.setup()
+    entrarNoServidor.mockRejectedValue(erro)
+    abrirLogin()
+
+    await preencherEEntrar(usuario)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(mensagem)
+    expect(screen.getByLabelText('Senha')).toHaveValue('')
+    expect(sessionStorage.getItem('zappi.sessao')).toBeNull()
+  })
+})
