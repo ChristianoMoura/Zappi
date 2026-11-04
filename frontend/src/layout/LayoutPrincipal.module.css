@@ -27,7 +27,7 @@
   gap: 2px;
   padding: 4px;
   color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-sm);
+  font-size: 0.8rem; /* menor para "Meu estabelecimento" caber em telas de 360 px */
   font-weight: 600;
   text-align: center;
   line-height: 1.2;
@@ -54,4 +54,80 @@
   height: 26px;
   width: auto;
   display: block;
+}
+
+.botaoMenu {
+  color: var(--mantine-color-text);
+  margin-right: 4px;
+
+  &:hover {
+    background: var(--mantine-color-zappi-0);
+    color: var(--mantine-color-zappi-7);
+  }
+}
+
+.botaoConta {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  color: var(--mantine-color-zappi-7);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--mantine-color-zappi-0);
+  }
+}
+
+.nomeConta {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--mantine-color-text);
+}
+
+.itemConta {
+  font-size: 1rem;
+  min-height: 44px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .setaConta {
+    transition: transform 0.2s ease;
+  }
+
+  .botaoConta[aria-expanded='true'] .setaConta {
+    transform: rotate(180deg);
+  }
+}
+
+.menuLateral {
+  overflow: hidden;
+}
+
+/* Recolhido: só o ícone, centralizado */
+.itemMenu[data-recolhido] {
+  justify-content: center;
+  padding-inline: 0;
+
+  & :global(.mantine-NavLink-section) {
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Passar o mouse: itens do menu deslizam um pouco */
+  .itemMenu {
+    transition: transform 0.18s ease, background-color 0.18s ease;
+  }
+
+  .itemMenu:not([data-active]):hover {
+    background: var(--mantine-color-zappi-0);
+    color: var(--mantine-color-zappi-7);
+    transform: translateX(4px);
+  }
+
+  .itemMenu[data-recolhido]:not([data-active]):hover {
+    transform: scale(1.06);
+  }
 }
