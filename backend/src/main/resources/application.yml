@@ -20,6 +20,9 @@ spring:
 server:
   # O Render informa a porta pela variável PORT.
   port: ${PORT:8080}
+  # Usa o IP do cliente repassado pelo proxy do Render (X-Forwarded-For) no log de
+  # auditoria. O Tomcat só aceita esse cabeçalho vindo de endereços internos.
+  forward-headers-strategy: native
 
 management:
   endpoints:
