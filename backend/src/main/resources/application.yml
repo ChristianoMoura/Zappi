@@ -1,0 +1,31 @@
+# Configuração comum a todos os ambientes.
+# Credenciais vêm só de variáveis de ambiente, nunca do código (ISO 27002 8.24).
+spring:
+  application:
+    name: zappi-backend
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USUARIO}
+    password: ${DB_SENHA}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # As tabelas são criadas pelas migrações do Flyway (ZAP-72), nunca pelo Hibernate.
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+server:
+  # O Render informa a porta pela variável PORT.
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
