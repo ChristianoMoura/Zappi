@@ -73,7 +73,7 @@ zappi/
 
 ## Como rodar localmente
 
-> Por enquanto, o Docker Compose sobe o banco de dados e o frontend. O backend entrará nele quando seu projeto for criado (ZAP-68).
+O Docker Compose sobe o banco de dados, o backend e o frontend.
 
 ### Pré-requisitos
 
@@ -95,13 +95,15 @@ zappi/
    docker compose -f infra/docker-compose.yml up -d
    ```
 
-3. Confira se o serviço `banco` aparece como `healthy` e o `frontend` como `running`:
+3. Confira se o serviço `banco` aparece como `healthy` e o `backend` e o `frontend` como `running`:
 
    ```bash
    docker compose -f infra/docker-compose.yml ps
    ```
 
 4. Abra o painel em [http://localhost:5173](http://localhost:5173). Na primeira vez, o frontend leva alguns minutos para instalar as dependências; acompanhe com `docker compose -f infra/docker-compose.yml logs -f frontend`.
+
+5. Confira o backend em [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health), que deve responder `{"status":"UP"}`. Na primeira vez, ele leva alguns minutos para baixar as dependências do Maven; acompanhe com `docker compose -f infra/docker-compose.yml logs -f backend`. O backend não recarrega sozinho: depois de mudar o código, reinicie com `docker compose -f infra/docker-compose.yml restart backend`.
 
 Para parar o ambiente sem perder os dados:
 
@@ -129,6 +131,25 @@ Em desenvolvimento, cada pessoa usa um PostgreSQL próprio, em contêiner. Em pr
 Esses valores valem apenas para a máquina local. Para mudá-los, por exemplo se a porta 5432 já estiver em uso, copie `infra/.env.example` para `infra/.env` e edite o novo arquivo. Se mudar o usuário, a senha ou o nome do banco depois da primeira execução, recrie o banco com o comando `down -v`.
 
 As credenciais do Supabase nunca devem ser colocadas no repositório.
+
+### Backend sem Docker
+
+Para desenvolver o backend direto na máquina, com o [JDK 21](https://adoptium.net/) e o banco do Docker Compose no ar (`docker compose -f infra/docker-compose.yml up -d banco`). Não é preciso instalar o Maven: o projeto usa o Maven Wrapper (`mvnw`).
+
+```bash
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+No Windows (PowerShell ou Prompt de Comando), use `mvnw.cmd` no lugar de `./mvnw`.
+
+| Comando | O que faz |
+|---|---|
+| `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` | Sobe a API em `http://localhost:8080`, usando o banco local |
+| `./mvnw test` | Roda os testes (precisa do Docker aberto, porque os testes sobem um PostgreSQL próprio com Testcontainers) |
+| `./mvnw verify` | Compila, roda os testes e gera o `.jar` em `backend/target` |
+
+O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA` e `PORT`); o perfil `local` já traz os valores do banco do Docker Compose. A única rota aberta por enquanto é a verificação de saúde (`/actuator/health`); as demais respondem `401` até o login da ZAP-31.
 
 ### Frontend sem Docker
 

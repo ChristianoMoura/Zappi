@@ -20,6 +20,27 @@ services:
       timeout: 3s
       retries: 10
 
+  backend:
+    image: maven:3.9-eclipse-temurin-21
+    working_dir: /app
+    command: mvn -B spring-boot:run
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_URL: jdbc:postgresql://banco:5432/${POSTGRES_DB:-zappi}
+      DB_USUARIO: ${POSTGRES_USER:-zappi}
+      DB_SENHA: ${POSTGRES_PASSWORD:-zappi_local}
+    ports:
+      # Acessível apenas pela própria máquina
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - ../backend:/app
+      # Dependências do Maven e build ficam no contêiner, separados dos da máquina
+      - backend_maven:/root/.m2
+      - backend_target:/app/target
+    depends_on:
+      banco:
+        condition: service_healthy
+
   frontend:
     image: node:24-alpine
     working_dir: /app
@@ -36,4 +57,6 @@ services:
 
 volumes:
   banco_dados:
+  backend_maven:
+  backend_target:
   frontend_node_modules:

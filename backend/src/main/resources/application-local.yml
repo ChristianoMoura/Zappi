@@ -1,0 +1,7 @@
+# Perfil "local": banco do Docker Compose (infra/docker-compose.yml).
+# São os mesmos valores do README e do infra/.env.example, válidos só na máquina local.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zappi}
+    username: ${DB_USUARIO:zappi}
+    password: ${DB_SENHA:zappi_local}
