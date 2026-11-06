@@ -5,3 +5,7 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/zappi}
     username: ${DB_USUARIO:zappi}
     password: ${DB_SENHA:zappi_local}
+
+zappi:
+  cors:
+    origens-permitidas: ${CORS_ORIGENS:http://localhost:5173}
