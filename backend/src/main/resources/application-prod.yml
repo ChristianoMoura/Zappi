@@ -1,0 +1,12 @@
+# Perfil "prod": Render + Supabase (seção 12 do context.md). Ativado pela imagem Docker.
+# Banco, origens do CORS e porta vêm de variáveis de ambiente, nunca do código.
+spring:
+  datasource:
+    hikari:
+      # O session pooler gratuito do Supabase aceita poucas conexões por projeto.
+      maximum-pool-size: ${DB_POOL_MAXIMO:5}
+      minimum-idle: 1
+
+server:
+  # Ao reiniciar (deploy), termina as requisições em andamento antes de sair.
+  shutdown: graceful

@@ -24,6 +24,12 @@ server:
   # auditoria. O Tomcat só aceita esse cabeçalho vindo de endereços internos.
   forward-headers-strategy: native
 
+zappi:
+  cors:
+    # Endereços do frontend que podem chamar a API, separados por vírgula
+    # (no Render, o endereço do Static Site). Vazio: nenhuma origem liberada.
+    origens-permitidas: ${CORS_ORIGENS:}
+
 management:
   endpoints:
     web:

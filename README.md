@@ -149,7 +149,29 @@ No Windows (PowerShell ou Prompt de Comando), use `mvnw.cmd` no lugar de `./mvnw
 | `./mvnw test` | Roda os testes (precisa do Docker aberto, porque os testes sobem um PostgreSQL próprio com Testcontainers) |
 | `./mvnw verify` | Compila, roda os testes e gera o `.jar` em `backend/target` |
 
-O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA` e `PORT`); o perfil `local` já traz os valores do banco do Docker Compose. A única rota aberta por enquanto é a verificação de saúde (`/actuator/health`); as demais respondem `401` até o login da ZAP-31.
+O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS` e `PORT`); o perfil `local` já traz os valores do banco do Docker Compose. A única rota aberta por enquanto é a verificação de saúde (`/actuator/health`); as demais respondem `401` até o login da ZAP-31.
+
+### Imagem do backend para produção (Render)
+
+Em produção, o backend roda no Render a partir do `backend/Dockerfile`, com o perfil `prod`. A imagem é ajustada para o plano gratuito (0,1 CPU e 512 MB). Para gerá-la e testá-la na máquina, com os mesmos limites e o banco local no ar:
+
+```bash
+docker build -t zappi-backend backend
+docker run --rm --memory=512m --cpus=0.1 --network zappi_default -p 127.0.0.1:8081:8080 -e DB_URL=jdbc:postgresql://banco:5432/zappi -e DB_USUARIO=zappi -e DB_SENHA=zappi_local -e CORS_ORIGENS=http://localhost:5173 zappi-backend
+```
+
+Variáveis de ambiente de produção, configuradas no painel do Render (nunca no repositório):
+
+| Variável | Obrigatória | O que é |
+|---|---|---|
+| `DB_URL` | Sim | Conexão do **session pooler** do Supabase, no formato `jdbc:postgresql://<host-do-pooler>:5432/postgres?sslmode=require`. O host aparece no botão **Connect** do painel do Supabase |
+| `DB_USUARIO` | Sim | Usuário do pooler, no formato `postgres.<id-do-projeto>` |
+| `DB_SENHA` | Sim | Senha do banco do Supabase |
+| `CORS_ORIGENS` | Sim | Endereço do frontend no Render (ex.: `https://<nome-do-site>.onrender.com`). Mais de um, separados por vírgula |
+| `PORT` | Não | Porta do servidor; o Render preenche sozinho |
+| `DB_POOL_MAXIMO` | Não | Máximo de conexões com o banco (padrão 5), porque o pooler gratuito do Supabase aceita poucas |
+
+O health check do Render deve usar o caminho `/actuator/health`.
 
 ### Frontend sem Docker
 
