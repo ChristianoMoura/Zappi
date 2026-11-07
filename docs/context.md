@@ -225,7 +225,7 @@ O foco é **CDC (Lei nº 8.078/1990)** e **LGPD (Lei nº 13.709/2018)**. Aspecto
 | Lei | Requisito | Como o sistema atende |
 |---|---|---|
 | CDC | Informação clara sobre os produtos | Cardápio com descrição, sabor, preço por kg e foto, sem informação enganosa |
-| CDC | Transparência na comunicação automatizada | Mensagem identifica que foi gerada pelo Zappi (ver ponto em aberto 14.1) |
+| CDC | Transparência na comunicação automatizada | Mensagem termina com "Mensagem gerada pelo Zappi" (textos em `docs/mensagens-whatsapp.md`) |
 | CDC | Canal de atendimento | Contato direto com a Lídia (`estabelecimento.telefone_whatsapp`) |
 | LGPD | Consentimento | Consentimento registrado antes de gravar nome e telefone |
 | LGPD | Finalidade específica | Dados usados só para processar e acompanhar pedidos; nada de compartilhar com terceiros |
@@ -507,7 +507,7 @@ Trilha de auditoria (ISO 8.16).
 
 ## 14. Pontos em aberto (decidir com a equipe antes de implementar)
 
-1. **Texto da mensagem ao cliente.** O dicionário fala em "aviso de resposta automática do Zappi". No MVP, quem envia é a Lídia, pelo `wa.me`. Sugestão: identificar a mensagem como **"mensagem gerada pelo Zappi"**. Os textos de confirmação, recusa e pronto ainda **não foram redigidos**.
+1. **Texto da mensagem ao cliente.** **Decidido (ZAP-63):** os textos de confirmação, recusa (também usado no cancelamento) e pronto para retirada estão em [`docs/mensagens-whatsapp.md`](mensagens-whatsapp.md). Todos terminam com **"Mensagem gerada pelo Zappi"**.
 2. **Quando a mensagem vira "Enviada".** **Decidido (ZAP-64):** ao clicar em "Enviar no WhatsApp". Detalhes na seção 12.3.
 3. **Transições de status permitidas.** **Decidido (ZAP-64):**
    - mudar de coluna por **botões** nos detalhes do pedido, mostrando só o próximo passo possível, **sem arrastar**;
@@ -591,6 +591,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Voltar uma coluna | Em aberto | **Só Concluído → Em produção e Em produção → Confirmado**, com confirmação (ZAP-64). Motivo: corrige os cliques errados mais prováveis; confirmar e recusar já avisaram o cliente |
 | Mensagem "Enviada" | Em aberto (clique ou confirmação manual) | **Ao clicar em "Enviar no WhatsApp"** (ZAP-64). Motivo: o sistema não sabe se ela apertou enviar, e não acrescenta um passo extra para a Lídia |
 | Número do pedido | Em aberto (sequência ou `MAX + 1`) | **`MAX + 1` com bloqueio** da linha do estabelecimento (ZAP-64). Motivo: não muda o banco e não deixa buracos na numeração |
+| Textos das mensagens do WhatsApp | Não redigidos | **Três textos** em `docs/mensagens-whatsapp.md` (ZAP-63), validados com autorização do Lucas. Motivo: linguagem simples (NBR 17225 5.12.12), identificação do Zappi (CDC), sem emojis e sem expor o endereço da Lídia |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
