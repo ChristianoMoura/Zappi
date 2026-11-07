@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CartaoPedido } from '../pedidos/CartaoPedido'
 import { DetalhesPedido } from '../pedidos/DetalhesPedido'
 import { colunasVisiveis, pedidosDaColuna, STATUS } from '../pedidos/regrasPedidos'
-import { buscarPedidos } from '../pedidos/servicoPedidos'
+import { buscarPedidos, confirmarPedido, marcarMensagemEnviada } from '../pedidos/servicoPedidos'
 import classes from '../pedidos/QuadroPedidos.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
@@ -31,6 +31,9 @@ export function PaginaPedidos() {
   const [mostrarRecusados, setMostrarRecusados] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState(String(STATUS.NOVO))
   const [aberto, setAberto] = useState(null)
+  const [confirmando, setConfirmando] = useState(false)
+  const [acabouDeConfirmar, setAcabouDeConfirmar] = useState(false)
+  const [erroAcao, setErroAcao] = useState('')
   const origemFoco = useRef(null)
 
   useEffect(() => {
@@ -79,12 +82,48 @@ export function PaginaPedidos() {
 
   function abrir(pedido, origem) {
     origemFoco.current = origem
+    setAcabouDeConfirmar(false)
+    setErroAcao('')
     setAberto(pedido)
   }
 
   function fechar() {
     setAberto(null)
-    origemFoco.current?.focus()
+    setAcabouDeConfirmar(false)
+    setErroAcao('')
+    // Depois de confirmar, o card mudou de coluna: o foco volta para ele no lugar novo
+    const numero = aberto?.numero
+    const cartao = numero && document.querySelector(`[data-numero-pedido="${numero}"]`)
+    ;(cartao ?? origemFoco.current)?.focus()
+  }
+
+  function atualizar(pedido) {
+    setPedidos((atuais) => atuais.map((p) => (p.numero === pedido.numero ? pedido : p)))
+    setAberto(pedido)
+  }
+
+  async function confirmar(pedido) {
+    setConfirmando(true)
+    setErroAcao('')
+    try {
+      atualizar(await confirmarPedido(pedido.numero))
+      setAcabouDeConfirmar(true)
+      // No celular, a aba acompanha o pedido para a coluna Confirmado
+      if (!telaGrande) setAbaAtiva(String(STATUS.CONFIRMADO))
+    } catch {
+      setErroAcao('Não foi possível confirmar o pedido agora. Tente de novo em alguns minutos.')
+    } finally {
+      setConfirmando(false)
+    }
+  }
+
+  // O link do WhatsApp abre na hora; marcar como enviada acontece em seguida
+  async function enviarMensagem(indice) {
+    try {
+      atualizar(await marcarMensagemEnviada(aberto.numero, indice))
+    } catch {
+      setErroAcao('A mensagem foi aberta no WhatsApp, mas não deu para marcar como enviada. Tente de novo.')
+    }
   }
 
   return (
@@ -139,7 +178,17 @@ export function PaginaPedidos() {
         </Tabs>
       )}
 
-      <DetalhesPedido pedido={aberto} aberto={aberto !== null} aoFechar={fechar} telaGrande={telaGrande} />
+      <DetalhesPedido
+        pedido={aberto}
+        aberto={aberto !== null}
+        aoFechar={fechar}
+        telaGrande={telaGrande}
+        aoConfirmar={confirmar}
+        aoEnviarMensagem={enviarMensagem}
+        confirmando={confirmando}
+        acabouDeConfirmar={acabouDeConfirmar}
+        erroAcao={erroAcao}
+      />
     </div>
   )
 }

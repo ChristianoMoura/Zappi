@@ -47,6 +47,32 @@ export function dataRetiradaCurta(iso, hoje = new Date()) {
   return `${rotulo}, ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
 }
 
+const DIAS_POR_EXTENSO = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
+
+// Data das mensagens ao cliente (docs/mensagens-whatsapp.md): "sábado, 14/11" ou "hoje, sábado, 07/11"
+export function dataRetiradaMensagem(iso, hoje = new Date()) {
+  const [ano, mes, dia] = iso.split('-').map(Number)
+  const data = `${DIAS_POR_EXTENSO[new Date(ano, mes - 1, dia).getDay()]}, ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
+  return iso === dataLocal(hoje) ? `hoje, ${data}` : data
+}
+
 // O selo "Retira hoje" só faz sentido para pedido aceito que ainda não ficou pronto
 export const retiraHoje = (pedido, hoje = new Date()) =>
   pedido.dataRetirada === dataLocal(hoje) && [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(pedido.status)
+
+// Só a mensagem da etapa atual pode ser enviada (ZAP-51): Confirmado → confirmação,
+// Concluído → pronto, Recusado → recusa. Novo e Em produção não têm mensagem a enviar.
+export const TIPO_MENSAGEM_DA_ETAPA = {
+  [STATUS.CONFIRMADO]: 'Confirmação',
+  [STATUS.CONCLUIDO]: 'Pronto para retirada',
+  [STATUS.RECUSADO]: 'Recusa',
+}
+
+// Separa a mensagem da etapa atual (a mais recente do tipo) das anteriores, guardando a
+// posição de cada uma na lista do pedido para marcar como enviada
+export function mensagensDaEtapa(pedido) {
+  const comIndice = pedido.mensagens.map((mensagem, indice) => ({ mensagem, indice }))
+  const tipo = TIPO_MENSAGEM_DA_ETAPA[pedido.status]
+  const atual = tipo ? comIndice.filter(({ mensagem }) => mensagem.tipo === tipo).at(-1) ?? null : null
+  return { atual, anteriores: comIndice.filter((item) => item !== atual) }
+}

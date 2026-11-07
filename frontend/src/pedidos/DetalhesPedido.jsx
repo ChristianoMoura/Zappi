@@ -1,5 +1,7 @@
-import { Drawer } from '@mantine/core'
-import { COLUNAS, dataRetiradaCurta, moeda, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido } from './regrasPedidos'
+import { Alert, Button, Drawer } from '@mantine/core'
+import { IconAlertCircle, IconCheck, IconSend } from '@tabler/icons-react'
+import { useEffect, useRef } from 'react'
+import { COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
 const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
@@ -10,10 +12,93 @@ function dataHora(iso) {
   return `${dia}/${mes} às ${hora}`
 }
 
+const EtiquetaMensagem = ({ mensagem }) =>
+  mensagem.status === 'Enviada' ? (
+    <span className={`${classes.selo} ${classes.seloEnviada}`}>Enviada</span>
+  ) : (
+    <span className={`${classes.selo} ${classes.seloPendente}`}>Ainda não enviada</span>
+  )
+
+// Mensagem da etapa atual com o botão "Enviar no WhatsApp" (ZAP-51) e as anteriores recolhidas,
+// só para consulta. O botão abre o link wa.me e marca a mensagem como enviada; continua
+// disponível para reenviar (ZAP-64).
+function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef }) {
+  const { atual, anteriores } = mensagensDaEtapa(pedido)
+  if (!atual && anteriores.length === 0) return null
+  const primeiroNome = pedido.cliente.nome.split(' ')[0]
+
+  return (
+    <section className={classes.bloco} aria-labelledby="detalhes-mensagem">
+      <h3 id="detalhes-mensagem">Mensagem para o cliente</h3>
+      <div className={classes.mensagens}>
+        {atual ? (
+          <div className={classes.mensagemAtual}>
+            <div className={classes.mensagemTopo}>
+              <span>{atual.mensagem.tipo}</span>
+              <EtiquetaMensagem mensagem={atual.mensagem} />
+            </div>
+            <p className={classes.mensagemTexto}>{atual.mensagem.texto}</p>
+            <div className={classes.mensagemAcoes}>
+              <Button
+                ref={botaoEnviarRef}
+                component="a"
+                href={atual.mensagem.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => aoEnviarMensagem(atual.indice)}
+                color="#1f7a4d"
+                fullWidth
+                leftSection={<IconSend size={22} aria-hidden />}
+                aria-label={`${atual.mensagem.status === 'Enviada' ? 'Enviar de novo' : 'Enviar'} no WhatsApp para ${primeiroNome} (abre o WhatsApp)`}
+              >
+                {atual.mensagem.status === 'Enviada' ? 'Enviar de novo no WhatsApp' : 'Enviar no WhatsApp'}
+              </Button>
+              {atual.mensagem.enviadoEm && (
+                <span className={classes.apoio}>Enviada em {dataHora(atual.mensagem.enviadoEm)}. Se fechou o WhatsApp sem mandar, envie de novo.</span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className={classes.semMensagem}>
+            {pedido.status === STATUS.EM_PRODUCAO
+              ? 'Nesta etapa não há mensagem para enviar. O cliente recebe o aviso quando o pedido ficar pronto.'
+              : 'Nesta etapa não há mensagem para enviar.'}
+          </p>
+        )}
+
+        {anteriores.length > 0 && (
+          <details className={classes.anteriores}>
+            <summary>Mensagens anteriores ({anteriores.length})</summary>
+            <ul className={classes.itens}>
+              {anteriores.map(({ mensagem, indice }) => (
+                <li key={indice} className={classes.mensagemAnterior}>
+                  <div className={classes.mensagemTopo}>
+                    <span>{mensagem.tipo}</span>
+                    <EtiquetaMensagem mensagem={mensagem} />
+                  </div>
+                  <p className={classes.mensagemTexto}>{mensagem.texto}</p>
+                  {mensagem.enviadoEm && <span className={classes.apoio}>Enviada em {dataHora(mensagem.enviadoEm)}.</span>}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+    </section>
+  )
+}
+
 // Detalhes do pedido (ZAP-47, RF08). No computador abre pela direita; no celular, sobe de baixo.
-// Os botões de confirmar, recusar e mudar o andamento entram aqui nas próximas histórias.
-export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande }) {
+// A faixa de baixo mostra só o próximo passo possível (ZAP-64): aqui, "Confirmar pedido" nos
+// pedidos Novos (ZAP-51). Recusar, cancelar e o andamento entram nas próximas subtarefas.
+export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoEnviarMensagem, confirmando, acabouDeConfirmar, erroAcao }) {
   const coluna = pedido && COLUNAS.find((c) => c.status === pedido.status)
+  const botaoEnviarRef = useRef(null)
+
+  // Depois de confirmar, o botão some; o foco vai para o próximo passo, que é enviar a mensagem
+  useEffect(() => {
+    if (acabouDeConfirmar) botaoEnviarRef.current?.focus()
+  }, [acabouDeConfirmar])
   const historico = pedido
     ? [
         ['Recebido', pedido.criadoEm],
@@ -39,6 +124,20 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande }) {
             <span className={`${classes.selo} ${pedido.status === STATUS.RECUSADO ? classes.seloRecusado : classes.seloStatus}`}>{coluna.nome}</span>
             {retiraHoje(pedido) && <span className={`${classes.selo} ${classes.seloHoje}`}>Retira hoje</span>}
           </div>
+
+          {acabouDeConfirmar && (
+            <Alert color="#1d6b45" variant="outline" icon={<IconCheck size={22} aria-hidden />} className={classes.sucesso} role="status">
+              Pedido confirmado e movido para a coluna Confirmado. Agora envie a mensagem para {pedido.cliente.nome.split(' ')[0]}.
+            </Alert>
+          )}
+
+          {erroAcao && (
+            <Alert color="#b42318" variant="outline" icon={<IconAlertCircle size={22} aria-hidden />} className={classes.erroAcao} role="alert">
+              {erroAcao}
+            </Alert>
+          )}
+
+          <MensagensDoPedido pedido={pedido} aoEnviarMensagem={aoEnviarMensagem} botaoEnviarRef={botaoEnviarRef} />
 
           {pedido.motivoRecusa && (
             <p className={classes.motivo}>
@@ -112,17 +211,13 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande }) {
             </dl>
           </section>
 
-          {pedido.mensagens.length > 0 && (
-            <section className={classes.bloco} aria-labelledby="detalhes-mensagens">
-              <h3 id="detalhes-mensagens">Mensagens de WhatsApp</h3>
-              <ul className={classes.itens}>
-                {pedido.mensagens.map((mensagem, i) => (
-                  <li key={i} className={classes.mensagem}>
-                    {mensagem.tipo} · {mensagem.status}
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {pedido.status === STATUS.NOVO && (
+            <div className={classes.faixaAcoes}>
+              <Button fullWidth onClick={() => aoConfirmar(pedido)} loading={confirmando} loaderProps={{ type: 'dots' }} leftSection={<IconCheck size={22} aria-hidden />}>
+                Confirmar pedido
+              </Button>
+              <p className={classes.dicaAcao}>Ao confirmar, o Zappi prepara a mensagem para {pedido.cliente.nome.split(' ')[0]}.</p>
+            </div>
           )}
         </div>
       )}

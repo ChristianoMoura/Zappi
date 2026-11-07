@@ -14,6 +14,7 @@ export function CartaoPedido({ pedido, aoAbrir }) {
     <UnstyledButton
       className={classes.cartao}
       data-recusado={recusado || undefined}
+      data-numero-pedido={pedido.numero}
       onClick={(evento) => aoAbrir(pedido, evento.currentTarget)}
       aria-label={`Pedido ${pedido.numero}, ${pedido.cliente.nome}, retirada ${retirada}, ${total}`}
     >
