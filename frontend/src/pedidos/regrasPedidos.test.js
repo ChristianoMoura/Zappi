@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest'
 import {
   colunasVisiveis,
   dataRetiradaCurta,
+  dataRetiradaMensagem,
+  mensagensDaEtapa,
   moeda,
   pedidosDaColuna,
   quantidadeTexto,
@@ -56,5 +58,33 @@ describe('regras do quadro de pedidos (ZAP-28)', () => {
   test('ordena a coluna pela data de retirada', () => {
     const lista = [pedido({ numero: 2, dataRetirada: '2026-11-20' }), pedido({ numero: 3, dataRetirada: '2026-11-09' }), pedido({ numero: 4, status: STATUS.CONFIRMADO })]
     expect(pedidosDaColuna(lista, STATUS.NOVO).map((p) => p.numero)).toEqual([3, 2])
+  })
+})
+
+describe('mensagens da etapa (ZAP-51)', () => {
+  const comMensagens = (status, mensagens) => ({ status, mensagens: mensagens.map((tipo) => ({ tipo })) })
+
+  test('só a mensagem da etapa atual pode ser enviada', () => {
+    expect(mensagensDaEtapa(comMensagens(STATUS.CONFIRMADO, ['Confirmação'])).atual.indice).toBe(0)
+    const concluido = mensagensDaEtapa(comMensagens(STATUS.CONCLUIDO, ['Confirmação', 'Pronto para retirada']))
+    expect(concluido.atual.mensagem.tipo).toBe('Pronto para retirada')
+    expect(concluido.anteriores.map((a) => a.mensagem.tipo)).toEqual(['Confirmação'])
+  })
+
+  test('em Novo e em Em produção não há mensagem a enviar', () => {
+    expect(mensagensDaEtapa(comMensagens(STATUS.NOVO, [])).atual).toBeNull()
+    const emProducao = mensagensDaEtapa(comMensagens(STATUS.EM_PRODUCAO, ['Confirmação']))
+    expect(emProducao.atual).toBeNull()
+    expect(emProducao.anteriores).toHaveLength(1)
+  })
+
+  test('concluído de novo depois de uma volta usa o aviso de pronto mais recente', () => {
+    const { atual } = mensagensDaEtapa(comMensagens(STATUS.CONCLUIDO, ['Confirmação', 'Pronto para retirada', 'Pronto para retirada']))
+    expect(atual.indice).toBe(2)
+  })
+
+  test('escreve a data da mensagem por extenso', () => {
+    expect(dataRetiradaMensagem('2026-11-14', hoje)).toBe('sábado, 14/11')
+    expect(dataRetiradaMensagem('2026-11-07', hoje)).toBe('hoje, sábado, 07/11')
   })
 })
