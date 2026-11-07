@@ -1,0 +1,66 @@
+# Build e testes do backend e do frontend (ZAP-81).
+# Roda em cada pull request para a main e em cada merge na main. O deploy
+# automático do Render só publica depois que estes testes passam (ZAP-82).
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Num PR, um push novo cancela a rodada anterior; na main, todas terminam.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend (build e testes)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      # Os testes sobem um PostgreSQL com Testcontainers, usando o Docker do runner.
+      - name: Compilar e testar
+        run: ./mvnw -B -ntp verify
+
+  frontend:
+    name: Frontend (lint, testes e build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build
