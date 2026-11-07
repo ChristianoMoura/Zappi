@@ -12,6 +12,12 @@ services:
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
     healthCheckPath: /actuator/health
+    # Só publica depois que todos os checks do commit na main passarem (ZAP-82).
+    autoDeployTrigger: checksPass
+    # Só refaz o deploy quando o backend muda.
+    buildFilter:
+      paths:
+        - backend/**
     envVars:
       # Session pooler do Supabase (README, "Imagem do backend para produção").
       - key: DB_URL
@@ -31,6 +37,10 @@ services:
     branch: main
     buildCommand: cd frontend && npm ci --ignore-scripts && npm run build
     staticPublishPath: frontend/dist
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - frontend/**
     envVars:
       - key: NODE_VERSION
         value: "24"
