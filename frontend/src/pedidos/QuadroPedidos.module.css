@@ -123,6 +123,16 @@
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 1px 2px rgb(61 43 31 / 0.06);
+
+  &:hover {
+    border-color: var(--mantine-color-zappi-7);
+    box-shadow: 0 4px 14px rgb(61 43 31 / 0.12);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--zappi-cor-foco);
+    outline-offset: 3px;
+  }
 }
 
 .numero {
@@ -194,6 +204,10 @@
   border: 1px solid #f3c6c1;
 }
 
+.seloStatus {
+  background: var(--mantine-color-zappi-0);
+  color: var(--mantine-color-zappi-8);
+}
 
 /* Celular: uma aba por coluna, com rolagem lateral */
 .abas {
@@ -242,4 +256,137 @@
   flex-direction: column;
   gap: 12px;
   padding-top: 8px;
+}
+
+/* Detalhes do pedido (ZAP-47) */
+.detalhesConteudo {
+  background: #fff;
+}
+
+.detalhesTopo {
+  border-bottom: 1px solid #e7ddd2;
+}
+
+.detalhesTitulo {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.detalhesCorpo {
+  padding-top: 16px;
+}
+
+.detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.selos {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.motivo {
+  margin: 0;
+  background: #fef3f2;
+  border: 1px solid #f3c6c1;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.bloco {
+  & h3 {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mantine-color-dimmed);
+  }
+
+  & dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 14px;
+    font-size: 1rem;
+  }
+
+  & dt {
+    color: var(--mantine-color-dimmed);
+  }
+
+  & dd {
+    margin: 0;
+    font-weight: 500;
+    min-width: 0;
+  }
+}
+
+/* Linhas do histórico: dt e dd ficam na grade do dl */
+.par {
+  display: contents;
+}
+
+.itens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item,
+.mensagem {
+  background: #fff;
+  border: 1px solid #d9cbbe;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemLinha {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 600;
+
+  /* O valor não quebra entre o "R$" e o número no celular */
+  & > span:last-child {
+    white-space: nowrap;
+  }
+}
+
+.apoio {
+  color: var(--mantine-color-dimmed);
+}
+
+.total {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 1.25rem;
+  padding-top: 8px;
+  border-top: 2px solid #d9cbbe;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cartao {
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
 }
