@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
@@ -24,7 +24,7 @@ const pedido = (numero, status, nome, extras = {}) => ({
 })
 
 const pedidos = [
-  pedido(12, STATUS.NOVO, 'Ana Souza'),
+  pedido(12, STATUS.NOVO, 'Ana Souza', { observacao: 'Festa infantil' }),
   pedido(10, STATUS.CONFIRMADO, 'Carla Dias'),
   pedido(9, STATUS.EM_PRODUCAO, 'Beatriz Rocha'),
   pedido(8, STATUS.CONCLUIDO, 'Pedro Alves'),
@@ -49,9 +49,7 @@ async function abrirQuadro() {
   return screen.findByRole('heading', { level: 1, name: 'Pedidos' })
 }
 
-const cartao = (numero) => screen.getByRole('article', { name: `Pedido ${numero}` })
-
-describe('PaginaPedidos (US4, RF07)', () => {
+describe('PaginaPedidos (US4, RF07, RF08)', () => {
   beforeEach(() => {
     buscarPedidos.mockReset().mockResolvedValue(pedidos)
   })
@@ -69,14 +67,14 @@ describe('PaginaPedidos (US4, RF07)', () => {
       }
       expect(screen.queryByRole('heading', { level: 2, name: /Recusado/ })).not.toBeInTheDocument()
       const novo = screen.getByRole('region', { name: /Novo/ })
-      expect(within(novo).getByRole('article', { name: 'Pedido 12' })).toHaveTextContent('Ana Souza')
+      expect(within(novo).getByRole('button', { name: /Pedido 12, Ana Souza/ })).toBeVisible()
       expect(screen.queryByText('Rita Gomes')).not.toBeInTheDocument()
     })
 
     test('o card mostra número, cliente, retirada, itens e valor (RN09)', async () => {
       await abrirQuadro()
 
-      const doze = cartao(12)
+      const doze = screen.getByRole('button', { name: /Pedido 12/ })
       expect(doze).toHaveTextContent('#12')
       expect(doze).toHaveTextContent('Ana Souza')
       expect(doze).toHaveTextContent('Retirada: ter, 15/01')
@@ -91,7 +89,24 @@ describe('PaginaPedidos (US4, RF07)', () => {
       await usuario.click(screen.getByRole('switch', { name: 'Mostrar recusados' }))
 
       const recusados = screen.getByRole('region', { name: /Recusado/ })
-      expect(within(recusados).getByRole('article', { name: 'Pedido 7' })).toHaveTextContent('Rita Gomes')
+      expect(within(recusados).getByRole('button', { name: /Pedido 7, Rita Gomes/ })).toBeVisible()
+    })
+
+    test('abre os detalhes do pedido e devolve o foco ao card ao fechar (RF08)', async () => {
+      const usuario = userEvent.setup()
+      await abrirQuadro()
+      const cartao = screen.getByRole('button', { name: /Pedido 12, Ana Souza/ })
+
+      await usuario.click(cartao)
+
+      const detalhes = await screen.findByRole('dialog', { name: 'Pedido #12' })
+      expect(within(detalhes).getByText('Festa infantil')).toBeVisible()
+      expect(within(detalhes).getByText('(11) 98765-0000')).toBeVisible()
+      expect(within(detalhes).getAllByText('R$ 200,00').length).toBeGreaterThan(0)
+
+      await usuario.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      expect(cartao).toHaveFocus()
     })
   })
 
@@ -101,11 +116,11 @@ describe('PaginaPedidos (US4, RF07)', () => {
       await abrirQuadro()
 
       expect(screen.getByRole('tab', { name: 'Novo 1', selected: true })).toBeVisible()
-      expect(cartao(12)).toBeVisible()
-      expect(screen.queryByRole('article', { name: 'Pedido 10' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Pedido 12/ })).toBeVisible()
+      expect(screen.queryByRole('button', { name: /Pedido 10/ })).not.toBeInTheDocument()
 
       await usuario.click(screen.getByRole('tab', { name: 'Confirmado 1' }))
-      expect(cartao(10)).toHaveTextContent('Carla Dias')
+      expect(screen.getByRole('button', { name: /Pedido 10, Carla Dias/ })).toBeVisible()
     })
 
     test('ligar o filtro abre a aba dos recusados', async () => {
@@ -115,7 +130,7 @@ describe('PaginaPedidos (US4, RF07)', () => {
       await usuario.click(screen.getByRole('switch', { name: 'Mostrar recusados' }))
 
       expect(screen.getByRole('tab', { name: 'Recusado 1', selected: true })).toBeVisible()
-      expect(cartao(7)).toHaveTextContent('Rita Gomes')
+      expect(screen.getByRole('button', { name: /Pedido 7, Rita Gomes/ })).toBeVisible()
     })
   })
 

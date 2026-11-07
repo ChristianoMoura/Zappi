@@ -1,14 +1,15 @@
 import { Alert, Loader, Switch, Tabs } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { IconAlertCircle } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CartaoPedido } from '../pedidos/CartaoPedido'
+import { DetalhesPedido } from '../pedidos/DetalhesPedido'
 import { colunasVisiveis, pedidosDaColuna, STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos } from '../pedidos/servicoPedidos'
 import classes from '../pedidos/QuadroPedidos.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
-function ListaDaColuna({ coluna, pedidos, semPedidos }) {
+function ListaDaColuna({ coluna, pedidos, semPedidos, aoAbrir }) {
   if (pedidos.length === 0) {
     return (
       <p className={classes.vazio}>
@@ -16,10 +17,10 @@ function ListaDaColuna({ coluna, pedidos, semPedidos }) {
       </p>
     )
   }
-  return pedidos.map((pedido) => <CartaoPedido key={pedido.numero} pedido={pedido} />)
+  return pedidos.map((pedido) => <CartaoPedido key={pedido.numero} pedido={pedido} aoAbrir={aoAbrir} />)
 }
 
-// Quadro de pedidos (US4, RF07): no computador, uma coluna por status; no celular,
+// Quadro de pedidos (US4, RF07, RF08): no computador, uma coluna por status; no celular,
 // uma aba por coluna. Os recusados ficam escondidos até ligar "Mostrar recusados" (RN04).
 export function PaginaPedidos() {
   useTituloPagina('Pedidos')
@@ -29,6 +30,8 @@ export function PaginaPedidos() {
   const [erroCarregar, setErroCarregar] = useState(false)
   const [mostrarRecusados, setMostrarRecusados] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState(String(STATUS.NOVO))
+  const [aberto, setAberto] = useState(null)
+  const origemFoco = useRef(null)
 
   useEffect(() => {
     let ativo = true
@@ -74,6 +77,16 @@ export function PaginaPedidos() {
     else if (!ligado && abaAtiva === String(STATUS.RECUSADO)) setAbaAtiva(String(STATUS.NOVO))
   }
 
+  function abrir(pedido, origem) {
+    origemFoco.current = origem
+    setAberto(pedido)
+  }
+
+  function fechar() {
+    setAberto(null)
+    origemFoco.current?.focus()
+  }
+
   return (
     <div className={classes.pagina}>
       <div className={classes.cabecalho}>
@@ -104,7 +117,7 @@ export function PaginaPedidos() {
                     {daColuna.length}
                   </span>
                 </h2>
-                <ListaDaColuna coluna={coluna} pedidos={daColuna} semPedidos={semPedidos} />
+                <ListaDaColuna coluna={coluna} pedidos={daColuna} semPedidos={semPedidos} aoAbrir={abrir} />
               </section>
             )
           })}
@@ -120,11 +133,13 @@ export function PaginaPedidos() {
           </Tabs.List>
           {colunas.map((coluna) => (
             <Tabs.Panel key={coluna.status} value={String(coluna.status)}>
-              <ListaDaColuna coluna={coluna} pedidos={pedidosDaColuna(pedidos, coluna.status)} semPedidos={semPedidos} />
+              <ListaDaColuna coluna={coluna} pedidos={pedidosDaColuna(pedidos, coluna.status)} semPedidos={semPedidos} aoAbrir={abrir} />
             </Tabs.Panel>
           ))}
         </Tabs>
       )}
+
+      <DetalhesPedido pedido={aberto} aberto={aberto !== null} aoFechar={fechar} telaGrande={telaGrande} />
     </div>
   )
 }
