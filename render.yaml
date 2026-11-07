@@ -1,0 +1,65 @@
+# Infraestrutura do Zappi no Render (ZAP-61): backend (Web Service Docker) e
+# frontend (Static Site), no plano gratuito. Os segredos do banco são
+# preenchidos só no painel do Render, na criação do Blueprint (nunca aqui).
+services:
+  # Backend Spring Boot (ZAP-79)
+  - type: web
+    runtime: docker
+    name: zappi-casabelt-api
+    plan: free
+    region: virginia
+    branch: main
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    healthCheckPath: /actuator/health
+    # Só publica depois que todos os checks do commit na main passarem (ZAP-82).
+    autoDeployTrigger: checksPass
+    # Só refaz o deploy quando o backend muda.
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      # Session pooler do Supabase (README, "Imagem do backend para produção").
+      - key: DB_URL
+        sync: false
+      - key: DB_USUARIO
+        sync: false
+      - key: DB_SENHA
+        sync: false
+      # Endereço do frontend: o rewrite de /api repassa a origem do navegador.
+      - key: CORS_ORIGENS
+        value: https://zappi-casabelt.onrender.com
+
+  # Frontend React (ZAP-80)
+  - type: web
+    runtime: static
+    name: zappi-casabelt
+    branch: main
+    buildCommand: cd frontend && npm ci --ignore-scripts && npm run build
+    staticPublishPath: frontend/dist
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - frontend/**
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+    routes:
+      # O front chama /api; o Render repassa para o backend sem mudar o endereço no navegador.
+      - type: rewrite
+        source: /api/*
+        destination: https://zappi-casabelt-api.onrender.com/api/*
+      # Rotas do React Router abrem o index.html ao recarregar a página.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

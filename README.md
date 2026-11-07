@@ -199,6 +199,25 @@ Enquanto o endpoint de login do backend (ZAP-31) não existe, o login é simulad
 
 A tela **Meu estabelecimento** segue o mesmo esquema enquanto a API da ZAP-36 não existe: em desenvolvimento, os dados da Casa Belt são simulados em `frontend/src/estabelecimento/servicoEstabelecimento.js` e ficam só na memória. Para testar a mensagem de link repetido, use o link `doces-da-ana`.
 
+## Produção (Render + Supabase)
+
+O sistema roda no plano gratuito do [Render](https://render.com), com o banco e as fotos no Supabase. Os dois serviços estão descritos no [`render.yaml`](render.yaml):
+
+| Serviço | Endereço | O que é |
+|---|---|---|
+| Painel (frontend) | `https://zappi-casabelt.onrender.com` | Static Site com o build do React. É o endereço que a equipe e a Lídia usam |
+| API (backend) | `https://zappi-casabelt-api.onrender.com` | Web Service com a imagem do `backend/Dockerfile` |
+
+O endereço final de cada serviço aparece no painel do Render depois da criação. Se o Render der outro nome, atualize o `render.yaml` (a regra de `/api` e o `CORS_ORIGENS`).
+
+**Como o deploy acontece:** a cada merge na `main`, o GitHub Actions roda os testes e o Render publica sozinho, **só se todos os checks do commit passarem** (inclusive o SonarCloud). O backend só é publicado de novo quando algo em `backend/` muda, e o frontend, quando algo em `frontend/` muda. A mudança aparece no ar alguns minutos depois do merge.
+
+**Como o frontend chama a API:** o painel continua chamando `/api`. O Static Site repassa essas chamadas para o backend sem mudar o endereço no navegador, e o React Router funciona ao recarregar qualquer página.
+
+**Primeiro acesso do dia:** no plano gratuito, o backend "dorme" depois de 15 minutos sem uso e leva de 1 a 2,5 minutos para acordar. O Supabase gratuito pausa o projeto depois de 1 semana sem uso. Antes de demonstrações e do treinamento, abra o sistema alguns minutos antes.
+
+**Quem administra:** as contas do Render e do Supabase são do Henrique (no plano gratuito do Render, só uma pessoa tem acesso ao painel). Os segredos do banco (`DB_URL`, `DB_USUARIO` e `DB_SENHA`) ficam só no painel do Render, nunca no repositório.
+
 ## Requisitos não funcionais
 
 - **Segurança (ABNT NBR ISO/IEC 27002:2022):** acesso só com login, senhas em hash BCrypt, política de senha forte, HTTPS, dados separados por estabelecimento e trilha de auditoria.
@@ -227,7 +246,7 @@ Fluxo de trabalho:
 2. Faça commits pequenos, sempre com a chave da subtarefa.
 3. Abra um pull request para a `main`.
 4. Outra pessoa da equipe revisa e os testes do GitHub Actions precisam passar.
-5. Faça o merge. A `main` é publicada automaticamente.
+5. Faça o merge. A `main` é publicada automaticamente no Render, depois que os checks passarem (veja "Produção").
 
 Não faça commits direto na `main`.
 
