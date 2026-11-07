@@ -1,0 +1,25 @@
+# Infraestrutura do Zappi no Render (ZAP-61): backend (Web Service Docker) e
+# frontend (Static Site), no plano gratuito. Os segredos do banco são
+# preenchidos só no painel do Render, na criação do Blueprint (nunca aqui).
+services:
+  # Backend Spring Boot (ZAP-79)
+  - type: web
+    runtime: docker
+    name: zappi-casabelt-api
+    plan: free
+    region: virginia
+    branch: main
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    healthCheckPath: /actuator/health
+    envVars:
+      # Session pooler do Supabase (README, "Imagem do backend para produção").
+      - key: DB_URL
+        sync: false
+      - key: DB_USUARIO
+        sync: false
+      - key: DB_SENHA
+        sync: false
+      # Endereço do frontend: o rewrite de /api repassa a origem do navegador.
+      - key: CORS_ORIGENS
+        value: https://zappi-casabelt.onrender.com
