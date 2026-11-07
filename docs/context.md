@@ -143,8 +143,8 @@ O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado ap
 5. Quadro **Kanban** de pedidos com as colunas Novo, Confirmado, Em produção e Concluído, mais um filtro para exibir os **Recusados**.
 6. Detalhes do pedido ao abrir um card.
 7. **Confirmar** um pedido.
-8. **Recusar** um pedido com **motivo obrigatório**.
-9. Mover o pedido para **Em produção** e **Concluído**.
+8. **Recusar** um pedido com **motivo obrigatório**, e **cancelar** um pedido Confirmado ou Em produção pelo mesmo fluxo.
+9. Mover o pedido para **Em produção** e **Concluído**, e voltar uma etapa da produção para corrigir um clique errado.
 10. Geração da mensagem ao cliente (confirmação, recusa e pronto para retirada) e botão **"Enviar no WhatsApp"** com link `wa.me`.
 11. Registro de auditoria (logins e ações administrativas).
 12. Infraestrutura: Docker Compose no ambiente local; em produção, Render e Supabase com HTTPS gerenciado, CI no GitHub Actions e deploy automático do Render a cada merge na `main`.
@@ -197,13 +197,13 @@ Escopo ampliado do MVP, sem RF numerado nas atividades: mover para "Em produçã
 |---|---|---|
 | RN01 | Todo dado de negócio pertence a um estabelecimento (`estabelecimento_id`). O sistema é multi-estabelecimento; a Casa Belt é o primeiro. | DER |
 | RN02 | Só a proprietária (usuário do estabelecimento) acessa o painel. A Romilda e os clientes não têm usuário. | ISO 5.15 |
-| RN03 | Status do pedido: 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado. | DER / RF07 |
+| RN03 | Status do pedido: 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado. Transições permitidas: Novo → Confirmado ou Recusado; Confirmado → Em produção ou Recusado (cancelamento); Em produção → Concluído ou Recusado (cancelamento); e as voltas Em produção → Confirmado e Concluído → Em produção. Nada volta para antes da confirmação, e Recusado não muda mais. A mudança é feita por botões nos detalhes do pedido, sem arrastar. | DER / RF07 / ZAP-64 |
 | RN04 | Recusados ficam ocultos no Kanban por padrão e aparecem pelo filtro "Recusados". | Arquitetura |
-| RN05 | Recusar exige `motivo_recusa` (obrigatório quando status = 5). | RF11 |
-| RN06 | Confirmar grava `confirmado_em`; recusar grava `recusado_em`; concluir grava `concluido_em`. | DER |
-| RN07 | Confirmar, recusar ou concluir **gera uma mensagem** (`mensagem_whatsapp`) dos tipos 1-Confirmação, 2-Recusa e 3-Pronto. | RF10 / RF12 |
+| RN05 | Recusar ou cancelar exige `motivo_recusa` (obrigatório quando status = 5). O cancelamento usa o mesmo fluxo da recusa. | RF11 / ZAP-64 |
+| RN06 | Confirmar grava `confirmado_em`; recusar ou cancelar grava `recusado_em`; concluir grava `concluido_em`. Voltar de Concluído para Em produção apaga `concluido_em`. | DER / ZAP-64 |
+| RN07 | Confirmar, recusar, cancelar ou concluir **gera uma mensagem** (`mensagem_whatsapp`) dos tipos 1-Confirmação, 2-Recusa e 3-Pronto. Iniciar a produção e as voltas não geram mensagem. | RF10 / RF12 / ZAP-64 |
 | RN08 | Mudar o status, gerar a mensagem e gravar o log acontecem **na mesma transação**. | Justificativa do banco |
-| RN09 | O número do pedido é sequencial e único **por estabelecimento** e aparece no card (ex.: #1). | DER |
+| RN09 | O número do pedido é sequencial e único **por estabelecimento** e aparece no card (ex.: #1). É gerado com `MAX + 1` e bloqueio da linha do estabelecimento (`SELECT ... FOR UPDATE`), na mesma transação da criação do pedido. | DER / ZAP-64 |
 | RN10 | O item do pedido **congela o preço** (`preco_unitario`). Mudar o cardápio não altera pedidos antigos. | DER |
 | RN11 | `subtotal = quantidade × preco_unitario`; `valor_total = soma dos subtotais`. | DER |
 | RN12 | Quantidade > 0. KG aceita fração (ex.: 1,5); UN não aceita. | DER |
@@ -302,6 +302,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 ### 12.3 Como funciona a mensagem no MVP
 - O backend monta o texto e um link no formato `https://wa.me/<telefone_destino>?text=<texto codificado em URL>`.
 - A Lídia clica em "Enviar no WhatsApp". O WhatsApp abre com a mensagem pronta e ela só aperta enviar.
+- O clique marca a mensagem como 2-Enviada e grava `enviado_em`, porque o sistema não tem como saber se ela apertou enviar dentro do WhatsApp. O botão continua disponível para reenviar, e o reenvio mantém o primeiro `enviado_em` (ZAP-64).
 - O envio é **semiautomático**: o sistema prepara, a Lídia envia. O envio 100% automático (Cloud API) é **Futuro**; o campo `id_externo` já está reservado para ele.
 
 ### 12.4 Limitações aceitas da hospedagem gratuita
@@ -507,12 +508,16 @@ Trilha de auditoria (ISO 8.16).
 ## 14. Pontos em aberto (decidir com a equipe antes de implementar)
 
 1. **Texto da mensagem ao cliente.** O dicionário fala em "aviso de resposta automática do Zappi". No MVP, quem envia é a Lídia, pelo `wa.me`. Sugestão: identificar a mensagem como **"mensagem gerada pelo Zappi"**. Os textos de confirmação, recusa e pronto ainda **não foram redigidos**.
-2. **Quando a mensagem vira "Enviada".** Ao clicar no botão `wa.me` ou com confirmação manual da Lídia? O sistema não tem como saber se ela apertou enviar dentro do WhatsApp.
-3. **Transições de status permitidas.** Derivadas das atividades: Novo → Confirmado ou Recusado; Confirmado → Em produção; Em produção → Concluído. Falta definir se é possível voltar uma coluna ou recusar depois de confirmado, e se mover entre colunas será por arrastar ou por botões (recomendado: botões, pela persona).
+2. **Quando a mensagem vira "Enviada".** **Decidido (ZAP-64):** ao clicar em "Enviar no WhatsApp". Detalhes na seção 12.3.
+3. **Transições de status permitidas.** **Decidido (ZAP-64):**
+   - mudar de coluna por **botões** nos detalhes do pedido, mostrando só o próximo passo possível, **sem arrastar**;
+   - **cancelar** pedidos Confirmados e Em produção pelo fluxo de recusa: o pedido vai para Recusado, com motivo obrigatório; um status próprio "Cancelado" fica como melhoria futura;
+   - **voltar** só para desfazer o último passo da produção: Concluído → Em produção e Em produção → Confirmado, com confirmação; ao voltar de Concluído, se o aviso de pronto já foi enviado, a tela lembra a Lídia de avisar o cliente;
+   - nada volta para antes da confirmação, e um pedido Recusado não volta para o quadro.
 4. **Massa do bolo.** O cliente escolhe massa, recheio e cobertura, mas o modelo só tem `recheio` e `cobertura` no item. Hoje a massa iria em `sabor` ou `observacao`. Para virar campo próprio, o DER precisa mudar.
 5. **Salgados.** Confirmar com a Lídia se são vendidos por unidade ou por cento. Se for por cento, avaliar uma nova unidade de medida.
 6. **Consistência de tenant.** Garantir que o pedido e o cliente pertencem ao mesmo estabelecimento (validação no backend ou FK composta).
-7. **Geração do número do pedido** por estabelecimento: sequência por tenant ou `MAX + 1` com bloqueio.
+7. **Geração do número do pedido** por estabelecimento. **Decidido (ZAP-64):** `MAX + 1` com bloqueio da linha do estabelecimento, na mesma transação da criação do pedido (RN09).
 8. **Decisões técnicas** (registradas na ZAP-62; histórico na seção 17):
    - build do backend: **Maven**, com Maven Wrapper;
    - ferramenta de migração: **Flyway**, com SQL puro;
@@ -539,7 +544,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | 4 | Estabelecimento | API e tela de cadastro/edição, log de edição | US2, RF03–RF04 |
 | 5 | Produtos | CRUD com exclusão lógica, upload para o Storage, texto alternativo, ordem de foco | US3, RF05–RF06, NBR 5.9.1, 5.1.4 |
 | 6 | Kanban de pedidos | Colunas por status, filtro de recusados, detalhes do pedido | US4, RF07–RF08 |
-| 7 | Decisões sobre pedidos | Confirmar, recusar com motivo, em produção, concluir; transação status + mensagem + log | US5–US6, RF09–RF12, RN05–RN08 |
+| 7 | Decisões sobre pedidos | Confirmar, recusar ou cancelar com motivo, em produção, concluir e voltar uma etapa da produção; transação status + mensagem + log | US5–US6, RF09–RF12, RN03, RN05–RN08 |
 | 8 | Mensagens WhatsApp | Textos, geração do link `wa.me`, botão "Enviar no WhatsApp", status da mensagem | RF10, RF12, CDC, NBR 5.12.12 |
 | 9 | Acessibilidade e UX | Revisão de contraste, foco, rótulos e uso no celular | Ativ. #11 |
 | 10 | Infra e deploy | Render (Static Site e Web Service) com HTTPS, Supabase, GitHub Actions (build e testes) e deploy automático do Render | Arquitetura |
@@ -581,6 +586,11 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Expiração do JWT | Em aberto | **8 horas**, sem refresh token. Motivo: cobre um dia de uso sem pedir login várias vezes e expira no dia seguinte |
 | Onde guardar o JWT no frontend | Em aberto | **`sessionStorage`** (ZAP-34). Motivo: a Lídia continua logada ao recarregar a página, e o token some ao fechar a aba, ficando menos tempo no aparelho que no `localStorage` |
 | Bloqueio de login (RF02) | Em aberto | **5 falhas seguidas bloqueiam por 15 minutos**, contadas pelo `log_auditoria`. Motivo: dificulta adivinhar a senha (ISO 27002 5.17) sem trancar a Lídia para sempre |
+| Mudar o pedido de coluna | Em aberto (botões ou arrastar) | **Botões** nos detalhes do pedido, só com o próximo passo possível (ZAP-64). Motivo: arrastar é difícil no celular e para a persona, e um botão com nome diz o que vai acontecer |
+| Recusar depois de confirmado | Em aberto | **"Cancelar pedido"** em Confirmado e Em produção, pelo fluxo de recusa (ZAP-64, proposta A). Motivo: não muda o banco nem os tipos de mensagem e cabe no prazo; o status "Cancelado" fica como melhoria futura |
+| Voltar uma coluna | Em aberto | **Só Concluído → Em produção e Em produção → Confirmado**, com confirmação (ZAP-64). Motivo: corrige os cliques errados mais prováveis; confirmar e recusar já avisaram o cliente |
+| Mensagem "Enviada" | Em aberto (clique ou confirmação manual) | **Ao clicar em "Enviar no WhatsApp"** (ZAP-64). Motivo: o sistema não sabe se ela apertou enviar, e não acrescenta um passo extra para a Lídia |
+| Número do pedido | Em aberto (sequência ou `MAX + 1`) | **`MAX + 1` com bloqueio** da linha do estabelecimento (ZAP-64). Motivo: não muda o banco e não deixa buracos na numeração |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
