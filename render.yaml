@@ -23,3 +23,33 @@ services:
       # Endereço do frontend: o rewrite de /api repassa a origem do navegador.
       - key: CORS_ORIGENS
         value: https://zappi-casabelt.onrender.com
+
+  # Frontend React (ZAP-80)
+  - type: web
+    runtime: static
+    name: zappi-casabelt
+    branch: main
+    buildCommand: cd frontend && npm ci --ignore-scripts && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+    routes:
+      # O front chama /api; o Render repassa para o backend sem mudar o endereço no navegador.
+      - type: rewrite
+        source: /api/*
+        destination: https://zappi-casabelt-api.onrender.com/api/*
+      # Rotas do React Router abrem o index.html ao recarregar a página.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
