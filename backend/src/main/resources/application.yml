@@ -10,8 +10,9 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # As tabelas são criadas pelas migrações do Flyway (ZAP-72), nunca pelo Hibernate.
-      ddl-auto: none
+      # As tabelas são criadas pelas migrações do Flyway (db/migration), nunca pelo Hibernate.
+      # Na subida, o Hibernate só confere se as entidades batem com as tabelas.
+      ddl-auto: validate
     properties:
       hibernate:
         jdbc:

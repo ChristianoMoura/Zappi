@@ -19,8 +19,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import br.com.zappi.TestcontainersConfiguration;
 
-// Enquanto as migrações da ZAP-72 não existem, a tabela é criada a partir do mapeamento só neste teste.
-@SpringBootTest(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+@SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class ServicoAuditoriaTests {
 
@@ -49,17 +48,26 @@ class ServicoAuditoriaTests {
 	@Test
 	void gravaAcaoComIpUserAgentEDetalhesEmJsonb() {
 		simularRequisicao("203.0.113.10", "Mozilla/5.0 (Teste)");
+		// O log aponta para estabelecimento e usuário que existem (FKs da migração).
+		long estabelecimento = jdbc.queryForObject("""
+				insert into estabelecimento (nome, slug, telefone_whatsapp)
+				values ('Casa Belt', 'casa-belt-auditoria', '5511900000000') returning id
+				""", Long.class);
+		long usuario = jdbc.queryForObject("""
+				insert into usuario (estabelecimento_id, nome, email, senha_hash)
+				values (?, 'Lídia', 'lidia.auditoria@exemplo.com', 'hash-de-teste') returning id
+				""", Long.class, estabelecimento);
 
 		LogAuditoria log = servico.registrar(RegistroAuditoria.de(AcaoAuditoria.PRODUTO_EDITADO)
-				.estabelecimento(1L)
-				.usuario(2L)
+				.estabelecimento(estabelecimento)
+				.usuario(usuario)
 				.entidade("produto", 10L)
 				.detalhes(Map.of("antes", Map.of("preco", 100), "depois", Map.of("preco", 115))));
 
 		LogAuditoria gravado = repositorio.findById(log.getId()).orElseThrow();
 		assertThat(gravado.getAcao()).isEqualTo(AcaoAuditoria.PRODUTO_EDITADO);
-		assertThat(gravado.getEstabelecimentoId()).isEqualTo(1L);
-		assertThat(gravado.getUsuarioId()).isEqualTo(2L);
+		assertThat(gravado.getEstabelecimentoId()).isEqualTo(estabelecimento);
+		assertThat(gravado.getUsuarioId()).isEqualTo(usuario);
 		assertThat(gravado.getEntidade()).isEqualTo("produto");
 		assertThat(gravado.getEntidadeId()).isEqualTo(10L);
 		assertThat(gravado.getIpOrigem()).isEqualTo("203.0.113.10");

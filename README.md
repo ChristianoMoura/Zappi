@@ -151,6 +151,8 @@ No Windows (PowerShell ou Prompt de Comando), use `mvnw.cmd` no lugar de `./mvnw
 
 O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS` e `PORT`); o perfil `local` já traz os valores do banco do Docker Compose. A única rota aberta por enquanto é a verificação de saúde (`/actuator/health`); as demais respondem `401` até o login da ZAP-31.
 
+As tabelas são criadas pelo **Flyway**, com migrações em SQL em `backend/src/main/resources/db/migration` (ex.: `V1__cria_tabelas.sql`). Elas rodam sozinhas na subida do backend, no banco local, nos testes e no Supabase. Nunca crie nem altere tabelas pelo painel do Supabase: toda mudança no banco é uma **nova** migração (`V2__...`, `V3__...`), sem editar as que já foram aplicadas. Na subida, o Hibernate confere se as entidades batem com as tabelas (`ddl-auto: validate`) e não sobe se houver diferença.
+
 ### Imagem do backend para produção (Render)
 
 Em produção, o backend roda no Render a partir do `backend/Dockerfile`, com o perfil `prod`. A imagem é ajustada para o plano gratuito (0,1 CPU e 512 MB). Para gerá-la e testá-la na máquina, com os mesmos limites e o banco local no ar:
