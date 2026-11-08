@@ -94,6 +94,7 @@
   aspect-ratio: 4 / 3;
   max-width: 100%;
   background: #f7e7cc;
+  overflow: hidden;
 
   & img {
     width: 100%;
@@ -568,6 +569,22 @@
     & > :last-child {
       order: -1;
     }
+  }
+}
+
+/* Realce ao passar o mouse, como nos cartões do Kanban: o cartão sobe, ganha sombra e borda ciano */
+.produto {
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.25s ease;
+
+  &:hover {
+    border-color: var(--mantine-color-zappi-7);
+    box-shadow: 0 14px 30px rgb(61 43 31 / 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .produto:hover {
+    transform: translateY(-3px);
   }
 }
 

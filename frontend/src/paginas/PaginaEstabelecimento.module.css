@@ -435,16 +435,7 @@
     animation-delay: 0.15s;
   }
 
-  /* Capa viva: a foto se aproxima devagar ao passar o mouse */
-  .capa img {
-    transition: transform 6s ease-out;
-  }
-
-  .capa:hover img {
-    transform: scale(1.08);
-  }
-
-  /* Passar o mouse: cartões sobem, ícone gira e escurece, logo da loja dá um giro */
+  /* Passar o mouse: cartões sobem, ícone cresce um pouco e escurece */
   .trocarCapa,
   .trocarLogo {
     transition: transform 0.18s ease, background-color 0.18s ease;
@@ -460,7 +451,6 @@
   }
 
   .cartao,
-  .avatar,
   .icone {
     transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.2s, color 0.2s;
   }
@@ -470,13 +460,33 @@
     box-shadow: 0 14px 30px rgb(0 0 0 / 0.08);
   }
 
-  .cartao:hover .icone {
-    transform: rotate(-10deg) scale(1.12);
-    background: var(--mantine-color-zappi-9);
+  /* Capa e logo realçam como os cartões: sobem um pouco com sombra */
+  .capaBloco,
+  .avatarBloco,
+  .avatar {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
   }
 
-  .avatar:hover {
-    transform: scale(1.06) rotate(-3deg);
+  .capaBloco {
+    border-radius: 16px;
+  }
+
+  .capaBloco:hover,
+  .avatarBloco:hover {
+    transform: translateY(-3px);
+  }
+
+  .capaBloco:hover {
+    box-shadow: 0 14px 30px rgb(0 0 0 / 0.12);
+  }
+
+  .avatarBloco:hover .avatar {
+    box-shadow: 0 14px 30px rgb(0 0 0 / 0.2);
+  }
+
+  .cartao:hover .icone {
+    transform: scale(1.12);
+    background: var(--mantine-color-zappi-9);
   }
 
   /* O check do "Salvo" aparece com um pulinho */
