@@ -63,7 +63,7 @@ Observações sobre a equipe:
 - Preço definido por **quilo (KG)** e pelo **recheio/sabor**. Exemplos reais:
   - Bolo de brigadeiro de chocolate — **R$ 100,00/kg**
   - Bolo de Ninho com morango — **R$ 115,00/kg**
-- Salgados também são vendidos. A unidade de venda (unidade ou cento) ainda precisa ser confirmada (seção 14).
+- Salgados também são vendidos, **por unidade (UN)**. O cento e outras quantidades fechadas são cadastrados como produtos próprios, com o seu preço. Ex.: "Cento de coxinha" a R$ 120,00 por unidade (1 un = 1 cento) e "Coxinha por unidade" a R$ 1,25 (decisão da ZAP-64, item 14.5).
 
 ### 2.3 Pessoas (personas)
 
@@ -525,7 +525,7 @@ Trilha de auditoria (ISO 8.16).
    - **voltar** só para desfazer o último passo da produção: Concluído → Em produção e Em produção → Confirmado, com confirmação; ao voltar de Concluído, se o aviso de pronto já foi enviado, a tela lembra a Lídia de avisar o cliente;
    - nada volta para antes da confirmação, e um pedido Recusado não volta para o quadro.
 4. **Massa do bolo.** O cliente escolhe massa, recheio e cobertura, mas o modelo só tem `recheio` e `cobertura` no item. Hoje a massa iria em `sabor` ou `observacao`. Para virar campo próprio, o DER precisa mudar.
-5. **Salgados.** Confirmar com a Lídia se são vendidos por unidade ou por cento. Se for por cento, avaliar uma nova unidade de medida.
+5. **Salgados.** **Decidido (ZAP-64):** vendidos por **unidade (UN)**, sem unidade de medida nova. O cento, o meio cento e pacotes viram produtos próprios no cardápio (ex.: "Cento de coxinha"), o que também dá o desconto do cento. O sistema não obriga um mínimo de unidades: a Lídia combina com o cliente. No cadastro, o nome é o tipo ("Salgado") e o sabor é o item ("Coxinha de frango").
 6. **Consistência de tenant.** Garantir que o pedido e o cliente pertencem ao mesmo estabelecimento (validação no backend ou FK composta).
 7. **Geração do número do pedido** por estabelecimento. **Decidido (ZAP-64):** `MAX + 1` com bloqueio da linha do estabelecimento, na mesma transação da criação do pedido (RN09).
 8. **Decisões técnicas** (registradas na ZAP-62; histórico na seção 17):
@@ -601,6 +601,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Recusar depois de confirmado | Em aberto | **"Cancelar pedido"** em Confirmado e Em produção, pelo fluxo de recusa (ZAP-64, proposta A). Motivo: não muda o banco nem os tipos de mensagem e cabe no prazo; o status "Cancelado" fica como melhoria futura |
 | Voltar uma coluna | Em aberto | **Só Concluído → Em produção e Em produção → Confirmado**, com confirmação (ZAP-64). Motivo: corrige os cliques errados mais prováveis; confirmar e recusar já avisaram o cliente |
 | Mensagem "Enviada" | Em aberto (clique ou confirmação manual) | **Ao clicar em "Enviar no WhatsApp"** (ZAP-64). Motivo: o sistema não sabe se ela apertou enviar, e não acrescenta um passo extra para a Lídia |
+| Unidade de venda dos salgados | Em aberto (unidade ou cento) | **Por unidade (UN)**; o cento e os pacotes viram produtos próprios (ZAP-64). Motivo: não muda o banco nem as telas, e o desconto do cento sai do preço de cada produto |
 | Número do pedido | Em aberto (sequência ou `MAX + 1`) | **`MAX + 1` com bloqueio** da linha do estabelecimento (ZAP-64). Motivo: não muda o banco e não deixa buracos na numeração |
 | Textos das mensagens do WhatsApp | Não redigidos | **Três textos** em `docs/mensagens-whatsapp.md` (ZAP-63), validados com autorização do Lucas. Motivo: linguagem simples (NBR 17225 5.12.12), identificação do Zappi (CDC), sem emojis e sem expor o endereço da Lídia |
 | Andamento da produção | Escopo ampliado sem US nem RF numerado | **US8, RF15 e RF16** (ZAP-83, história ZAP-60). Motivo: formalizar o que já tinha sido aprovado, para ter rastreabilidade como as demais funcionalidades |
