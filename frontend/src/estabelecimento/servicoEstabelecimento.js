@@ -35,6 +35,22 @@ const LINKS_EM_USO = ['doces-da-ana']
 
 const esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms))
 
+// Quem mostra a marca da loja (topo do painel e login) é avisado quando o Meu
+// estabelecimento é salvo, para o nome e o logo mudarem na hora em todas as telas.
+const ouvintes = new Set()
+export function ouvirEstabelecimento(aoMudar) {
+  ouvintes.add(aoMudar)
+  return () => ouvintes.delete(aoMudar)
+}
+
+// Nome e logo da loja, os mesmos do Meu estabelecimento. O login também usa, antes de entrar.
+// PENDENTE: com a ZAP-36, isto vira uma rota pública da API por loja (ex.: pelo link do
+// cardápio), já que no login a loja ainda não é conhecida pela sessão.
+export async function buscarMarcaLoja() {
+  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
+  return { nome: simulado.nome, logo: simulado.logo }
+}
+
 export async function buscarEstabelecimento() {
   if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
   await esperar(400)
@@ -46,5 +62,6 @@ export async function salvarEstabelecimento(dados) {
   await esperar(700)
   if (LINKS_EM_USO.includes(dados.slug)) throw new LinkEmUsoError()
   simulado = { ...dados }
+  ouvintes.forEach((aoMudar) => aoMudar({ nome: simulado.nome, logo: simulado.logo }))
   return { ...simulado }
 }
