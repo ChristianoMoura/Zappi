@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { STATUS } from './regrasPedidos'
-import { AcaoNaoPermitidaError, buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido } from './servicoPedidos'
+import { AcaoNaoPermitidaError, avancarPedido, buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from './servicoPedidos'
 
 // Simulação usada em desenvolvimento até as APIs da ZAP-44, ZAP-49 e ZAP-50
 describe('serviço simulado de pedidos', () => {
@@ -43,6 +43,25 @@ describe('serviço simulado de pedidos', () => {
     await expect(recusarPedido(emProducao.numero, 'De novo')).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
     const concluido = lista.find((p) => p.status === STATUS.CONCLUIDO)
     await expect(recusarPedido(concluido.numero, 'Motivo')).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+  })
+
+  test('avança Confirmado até Concluído, gerando o aviso de pronto, e volta só uma coluna', async () => {
+    const confirmado = (await buscarPedidos()).find((p) => p.status === STATUS.CONFIRMADO)
+
+    const emProducao = await avancarPedido(confirmado.numero)
+    expect(emProducao).toMatchObject({ status: STATUS.EM_PRODUCAO })
+    expect(emProducao.producaoEm).toBeTruthy()
+
+    const pronto = await avancarPedido(confirmado.numero)
+    expect(pronto.status).toBe(STATUS.CONCLUIDO)
+    expect(pronto.mensagens.at(-1)).toMatchObject({ tipo: 'Pronto para retirada', status: 'Pendente' })
+    await expect(avancarPedido(confirmado.numero)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+
+    const voltou = await voltarPedido(confirmado.numero)
+    expect(voltou.status).toBe(STATUS.EM_PRODUCAO)
+    expect(voltou.concluidoEm).toBeUndefined()
+    expect((await voltarPedido(confirmado.numero)).status).toBe(STATUS.CONFIRMADO)
+    await expect(voltarPedido(confirmado.numero)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
   })
 
   test('marcar como enviada guarda a data do primeiro envio', async () => {

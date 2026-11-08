@@ -577,3 +577,21 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Lembrete de avisar o cliente ao voltar um pedido que já tinha aviso de pronto (ZAP-77) */
+.lembrete {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #fff4dc;
+  border-left: 4px solid #f2b134;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.lembrete svg {
+  flex-shrink: 0;
+  color: #1f7a4d;
+}
