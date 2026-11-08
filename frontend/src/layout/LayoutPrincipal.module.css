@@ -58,6 +58,8 @@
 
 .botaoMenu {
   color: var(--mantine-color-text);
+  /* Centro em 42 px, na mesma linha dos ícones do menu recolhido (84 px) */
+  margin-left: 4px;
   margin-right: 4px;
 
   &:hover {
@@ -112,6 +114,11 @@
 
   & :global(.mantine-NavLink-section) {
     margin: 0;
+  }
+
+  /* Sem o nome, o espaço do rótulo ficava vazio à direita e empurrava o ícone para a esquerda */
+  & :global(.mantine-NavLink-body) {
+    display: none;
   }
 }
 
