@@ -54,6 +54,12 @@ public class Usuario {
 		// exigido pelo JPA
 	}
 
+	/** Marca a data/hora do último login bem-sucedido (ZAP-31). */
+	public void registrarLogin(OffsetDateTime quando) {
+		this.ultimoLoginEm = quando;
+		this.atualizadoEm = quando;
+	}
+
 	public Long getId() {
 		return id;
 	}
