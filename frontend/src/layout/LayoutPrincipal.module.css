@@ -13,6 +13,19 @@
   }
 }
 
+/* Área das telas com o mesmo creme do lado do formulário no login (#FDF6EC) */
+.principal {
+  background: #fdf6ec;
+}
+
+/* Topo, menu lateral e barra de baixo no "Creme suave" escolhido pelo grupo, um pouco mais
+   claro que a tela, com a linha #EAD9C2 do login separando as áreas. Cartões continuam brancos.
+   Contraste: cacau 12,81:1, texto secundário 7,43:1, ciano 5,88:1 */
+.moldura {
+  background: #fef9f1;
+  border-color: #ead9c2;
+}
+
 .barraInferior {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

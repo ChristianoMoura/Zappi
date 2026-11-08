@@ -33,7 +33,7 @@ export function LayoutPrincipal() {
         Pular para o conteúdo
       </a>
 
-      <AppShell.Header>
+      <AppShell.Header className={classes.moldura}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <div className={classes.marca}>
             {telaGrande && (
@@ -75,7 +75,7 @@ export function LayoutPrincipal() {
       {/* Só um dos dois menus existe por vez, para o teclado e o leitor de
           tela não passarem por um menu escondido. */}
       {telaGrande && (
-      <AppShell.Navbar p={recolhido ? 'xs' : 'md'} component="nav" id="menu-principal" aria-label="Menu principal" className={classes.menuLateral}>
+      <AppShell.Navbar p={recolhido ? 'xs' : 'md'} component="nav" id="menu-principal" aria-label="Menu principal" className={`${classes.menuLateral} ${classes.moldura}`}>
         <Stack gap="xs">
           {itensMenu.map(({ caminho, rotulo, Icone }) => (
             <NavLink
@@ -96,12 +96,12 @@ export function LayoutPrincipal() {
       </AppShell.Navbar>
       )}
 
-      <AppShell.Main id="conteudo" tabIndex={-1}>
+      <AppShell.Main id="conteudo" tabIndex={-1} className={classes.principal}>
         <Outlet />
       </AppShell.Main>
 
       {!telaGrande && (
-      <AppShell.Footer component="nav" aria-label="Menu principal">
+      <AppShell.Footer component="nav" aria-label="Menu principal" className={classes.moldura}>
         <div className={classes.barraInferior}>
           {itensMenu.map(({ caminho, rotulo, Icone }) => (
             <UnstyledButton
