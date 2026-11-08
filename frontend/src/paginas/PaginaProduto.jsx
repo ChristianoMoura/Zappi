@@ -172,9 +172,8 @@ export function PaginaProduto() {
           Produtos
         </Button>
         <h1 ref={titulo} className={classes.titulo} tabIndex={-1}>
-          {editando ? `Editar ${nomeCompleto(original).toLowerCase()}` : 'Cadastrar produto'}
+          {editando ? `Editar ${nomeCompleto(original)}` : 'Cadastrar produto'}
         </h1>
-        <p className={classes.subtitulo}>{editando ? 'Mude o que precisar e salve.' : 'Preencha os dados do produto. Ele aparece na lista para escolher nos pedidos.'}</p>
       </div>
 
       <form
@@ -188,8 +187,8 @@ export function PaginaProduto() {
         <div className={classes.formGrade}>
           <section className={classes.caixa} aria-labelledby="secao-produto">
             <h2 id="secao-produto" className={classes.tituloCaixa}>Sobre o produto</h2>
-            <TextInput {...propsCampo('nome', 'Nome', { obrigatorio: true, dica: 'O tipo de produto. Ex.: Bolo ou Salgado.' })} value={dados.nome} onChange={(e) => mudar('nome', e.currentTarget.value)} autoComplete="off" />
-            <TextInput {...propsCampo('sabor', 'Sabor', { obrigatorio: true, dica: 'Ex.: Brigadeiro de chocolate ou Coxinha de frango.' })} value={dados.sabor} onChange={(e) => mudar('sabor', e.currentTarget.value)} autoComplete="off" />
+            <TextInput {...propsCampo('nome', 'Nome', { obrigatorio: true })} value={dados.nome} onChange={(e) => mudar('nome', e.currentTarget.value)} autoComplete="off" />
+            <TextInput {...propsCampo('sabor', 'Sabor', { obrigatorio: true })} value={dados.sabor} onChange={(e) => mudar('sabor', e.currentTarget.value)} autoComplete="off" />
             <fieldset className={classes.grupo}>
               <legend className={classes.rotulo}>
                 Vendido por <span className={classes.marca}>obrigatório</span>
@@ -203,7 +202,6 @@ export function PaginaProduto() {
                 data={Object.entries(UNIDADES).map(([valor, u]) => ({ value: valor, label: u.rotuloOpcao }))}
                 className={classes.unidades}
               />
-              <p className={classes.dica}>{unidade.dica}</p>
             </fieldset>
             <TextInput
               {...propsCampo('preco', unidade.rotuloPreco, { obrigatorio: true })}
@@ -228,7 +226,7 @@ export function PaginaProduto() {
               </p>
             )}
             <Textarea
-              {...propsCampo('descricao', 'Descrição', { dica: 'Massa, recheio, cobertura ou o que ajudar o cliente a escolher.' })}
+              {...propsCampo('descricao', 'Descrição')}
               value={dados.descricao}
               onChange={(e) => mudar('descricao', e.currentTarget.value)}
               autosize
@@ -256,7 +254,6 @@ export function PaginaProduto() {
             ) : (
               <div className={classes.areaFoto}>
                 <IconCamera size={48} stroke={1.5} aria-hidden className={classes.iconeFoto} />
-                <p>A foto é opcional, mas ajuda o cliente a escolher.</p>
                 <Button ref={botaoFoto} variant="outline" onClick={() => arquivo.current?.click()} leftSection={<IconCamera size={22} aria-hidden />} aria-describedby="foto-dica foto-erro">
                   Escolher foto
                 </Button>

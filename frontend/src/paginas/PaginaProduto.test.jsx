@@ -44,7 +44,6 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     expect(campo(/^Nome/)).toHaveValue('Bolo')
     expect(screen.getByRole('radio', { name: 'Quilo (kg)' })).toBeChecked()
     expect(campo(/^Preço por kg/)).toBeInTheDocument()
-    expect(screen.getByText('Ex.: Brigadeiro de chocolate ou Coxinha de frango.')).toBeVisible()
   })
 
   test('não salva sem os campos obrigatórios e leva o foco ao primeiro erro', async () => {
@@ -109,7 +108,7 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     const usuario = userEvent.setup()
     const titulo = await abrir('/produtos/1')
 
-    expect(titulo).toHaveTextContent('Editar bolo de brigadeiro de chocolate')
+    expect(titulo).toHaveTextContent('Editar Bolo de brigadeiro de chocolate')
     const preco = campo(/^Preço por kg/)
     expect(preco).toHaveValue('100,00')
     await usuario.clear(preco)
