@@ -29,6 +29,9 @@ services:
       # Hash BCrypt da senha da Lídia, usado só pela V2 (dados iniciais, ZAP-73).
       - key: LIDIA_SENHA_HASH
         sync: false
+      # Chave de assinatura do token de login (ZAP-32), em Base64 com 32 bytes ou mais.
+      - key: JWT_CHAVE
+        sync: false
       # Endereço do frontend: o rewrite de /api repassa a origem do navegador.
       - key: CORS_ORIGENS
         value: https://zappi-casabelt.onrender.com

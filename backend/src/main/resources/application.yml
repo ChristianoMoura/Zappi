@@ -35,6 +35,12 @@ zappi:
     # Endereços do frontend que podem chamar a API, separados por vírgula
     # (no Render, o endereço do Static Site). Vazio: nenhuma origem liberada.
     origens-permitidas: ${CORS_ORIGENS:}
+  jwt:
+    # Chave de assinatura do token, em Base64 com 32 bytes ou mais (ISO 27002 8.24).
+    # Vazia fora da produção: o backend gera uma chave aleatória a cada subida.
+    chave: ${JWT_CHAVE:}
+    # O token vale 8 horas, sem refresh token (decisão da ZAP-62).
+    validade: 8h
 
 management:
   endpoints:
