@@ -274,7 +274,6 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
               <Button fullWidth variant="outline" color="#b42318" onClick={() => setJanela('recusar')} disabled={enviando} leftSection={<IconX size={22} aria-hidden />}>
                 Recusar pedido
               </Button>
-              <p className={classes.dicaAcao}>Nos dois casos, o Zappi prepara a mensagem para {primeiroNome}.</p>
             </div>
           )}
 
@@ -301,7 +300,6 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
                   {volta.rotulo}
                 </Button>
               )}
-              {avanco?.destino === STATUS.CONCLUIDO && <p className={classes.dicaAcao}>Ao marcar como pronto, o Zappi prepara o aviso para {primeiroNome}.</p>}
             </div>
           )}
 

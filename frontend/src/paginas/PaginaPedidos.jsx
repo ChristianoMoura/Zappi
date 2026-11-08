@@ -182,7 +182,6 @@ export function PaginaPedidos() {
       <div className={classes.cabecalho}>
         <div>
           <h1 className={classes.titulo}>Pedidos</h1>
-          <p className={classes.subtitulo}>Acompanhe suas encomendas.</p>
         </div>
         <div className={classes.acoesTopo}>
           <Switch
@@ -204,7 +203,7 @@ export function PaginaPedidos() {
           {colunas.map((coluna) => {
             const daColuna = pedidosDaColuna(pedidos, coluna.status)
             return (
-              <section key={coluna.status} className={classes.coluna} data-recusado={coluna.status === STATUS.RECUSADO || undefined} aria-labelledby={`coluna-${coluna.status}`}>
+              <section key={coluna.status} className={classes.coluna} style={{ '--cor-coluna': coluna.cor }} data-recusado={coluna.status === STATUS.RECUSADO || undefined} aria-labelledby={`coluna-${coluna.status}`}>
                 <h2 id={`coluna-${coluna.status}`} className={classes.tituloColuna}>
                   <span className={classes.ponto} style={{ background: coluna.cor }} aria-hidden />
                   {coluna.nome}
