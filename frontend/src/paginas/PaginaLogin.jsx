@@ -2,7 +2,9 @@ import { Alert, Button, Stack, Text, TextInput, Title, UnstyledButton } from '@m
 import { IconAlertCircle, IconEye, IconEyeOff } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
-import ilustracao from '../assets/ilustracao-login.webp'
+import ilustracao1400 from '../assets/ilustracao-login-1400.webp'
+import ilustracao2000 from '../assets/ilustracao-login-2000.webp'
+import ilustracao2800 from '../assets/ilustracao-login-2800.webp'
 import logo from '../assets/zappi-logo.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
 import { CredenciaisInvalidasError, LoginBloqueadoError } from '../autenticacao/servicoAutenticacao'
@@ -94,7 +96,14 @@ export function PaginaLogin() {
   return (
     <main className={classes.tela}>
       <div className={classes.ilustracao} aria-hidden="true">
-        <img src={ilustracao} alt="" />
+        {/* Três tamanhos da ilustração ampliada: o navegador baixa só o que a tela precisa.
+            O painel ocupa cerca de 54% da largura e, em janelas mais altas, é a altura que manda. */}
+        <img
+          src={ilustracao2000}
+          srcSet={`${ilustracao1400} 1400w, ${ilustracao2000} 2000w, ${ilustracao2800} 2800w`}
+          sizes="(min-width: 64em) max(54vw, 97vh), 1px"
+          alt=""
+        />
       </div>
 
       <div className={classes.ladoFormulario}>

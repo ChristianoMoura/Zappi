@@ -109,7 +109,8 @@ O estilo de imagem do Zappi é **3D lúdico, com acabamento de massinha brilhant
 
 - Gerada no Higgsfield (Nano Banana Pro, com o logo oficial como referência).
 - Expandida com IA (FLUX.2 Pro Outpaint) para o formato do painel, quase quadrado (1960 × 2020 px), com o bolo completo e o fundo uniforme #F7E7CC.
-- Usada em WebP de 1400 px (cerca de 68 KB): [`ilustracao-login.webp`](../frontend/src/assets/ilustracao-login.webp).
+- Ampliada 2× no Higgsfield (Topaz, modo CGI) para 3920 × 4040 px, em 08/11/2026, porque a versão de 1400 px ficava borrada em telas de alta densidade.
+- Usada em WebP de 1400, 2000 e 2800 px (cerca de 100, 160 e 240 KB), com `srcset`: o navegador baixa só o tamanho que a tela precisa. Arquivos: [`ilustracao-login-1400.webp`](../frontend/src/assets/ilustracao-login-1400.webp), [`-2000`](../frontend/src/assets/ilustracao-login-2000.webp) e [`-2800`](../frontend/src/assets/ilustracao-login-2800.webp).
 - Aparece só no computador; no celular, a tela mostra apenas o formulário.
 
 **Regras para novas imagens:**
@@ -200,7 +201,7 @@ O Zappi fala como uma pessoa da família ajudando: **simples, direto e gentil**,
 | --- | --- |
 | Logo completo, símbolo e nome | [`frontend/src/assets/`](../frontend/src/assets/): `zappi-logo.svg`, `zappi-simbolo.svg`, `zappi-nome.svg` |
 | Ícone do site | [`frontend/public/favicon.svg`](../frontend/public/favicon.svg) |
-| Ilustração do login | [`frontend/src/assets/ilustracao-login.webp`](../frontend/src/assets/ilustracao-login.webp) |
+| Ilustração do login | [`frontend/src/assets/`](../frontend/src/assets/): `ilustracao-login-1400.webp`, `-2000.webp` e `-2800.webp` |
 | Cores, fonte e tamanhos | [`frontend/src/tema.js`](../frontend/src/tema.js) |
 | Foco visível | [`frontend/src/estilos.css`](../frontend/src/estilos.css) |
 | Tela de login | [`frontend/src/paginas/PaginaLogin.jsx`](../frontend/src/paginas/PaginaLogin.jsx) e `PaginaLogin.module.css` |
@@ -220,6 +221,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 
 | Etapa | Decisão |
 | --- | --- |
+| Ilustração em alta | Ilustração do login ampliada 2× (Topaz) e servida em três tamanhos, em 08/11/2026, aprovada pelo grupo em protótipo de comparação |
 | Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, Referência A com capa; o check de "campo confirmado" foi retirado a pedido do grupo) |
 | Implementação | Tela de login e identidade aplicadas em React no [PR #3](https://github.com/ChristianoMoura/Zappi/pull/3) |
 | Protótipo aprovado | Título "Entrar no painel" escondido; elementos do login maiores; slogan de volta sob o logo; ilustração sem texto |
