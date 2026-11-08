@@ -1,5 +1,6 @@
 package br.com.zappi.autenticacao;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Locale;
@@ -28,7 +29,9 @@ public class ServicoAutenticacao {
 
 	/** Por que o login falhou. Fica só no log; a API responde sempre a mesma coisa. */
 	enum MotivoFalha {
-		EMAIL_INEXISTENTE, SENHA_INCORRETA, USUARIO_INATIVO
+		EMAIL_INEXISTENTE, SENHA_INCORRETA, USUARIO_INATIVO,
+		/** Recusada pelo bloqueio (ZAP-85), sem conferir a senha. Não conta para o bloqueio. */
+		LOGIN_BLOQUEADO
 	}
 
 	private final UsuarioRepositorio usuarios;
@@ -39,6 +42,8 @@ public class ServicoAutenticacao {
 
 	private final ServicoAuditoria auditoria;
 
+	private final BloqueioDeLogin bloqueio;
+
 	/**
 	 * Hash de uma senha aleatória, conferido quando o e-mail não existe. Assim a resposta
 	 * leva o mesmo tempo nos dois casos e não revela quais e-mails estão cadastrados.
@@ -46,22 +51,33 @@ public class ServicoAutenticacao {
 	private final String hashFicticio;
 
 	public ServicoAutenticacao(UsuarioRepositorio usuarios, PasswordEncoder codificadorDeSenha,
-			ServicoToken servicoToken, ServicoAuditoria auditoria) {
+			ServicoToken servicoToken, ServicoAuditoria auditoria, BloqueioDeLogin bloqueio) {
 		this.usuarios = usuarios;
 		this.codificadorDeSenha = codificadorDeSenha;
 		this.servicoToken = servicoToken;
 		this.auditoria = auditoria;
+		this.bloqueio = bloqueio;
 		this.hashFicticio = codificadorDeSenha.encode(UUID.randomUUID().toString());
 	}
 
 	/**
 	 * Confere e-mail e senha e devolve o token. Com qualquer problema nas credenciais,
-	 * lança {@link CredenciaisInvalidasException}, sempre com a mesma mensagem.
+	 * lança {@link CredenciaisInvalidasException}, sempre com a mesma mensagem. Com 5
+	 * falhas seguidas, lança {@link LoginBloqueadoException} por 15 minutos.
 	 */
 	@Transactional
 	public RespostaLogin entrar(String email, String senha) {
 		String emailNormalizado = email.trim().toLowerCase(Locale.ROOT);
 		Optional<Usuario> encontrado = usuarios.findByEmail(emailNormalizado);
+
+		OffsetDateTime agora = OffsetDateTime.now(ZoneOffset.UTC);
+		Optional<OffsetDateTime> bloqueadoAte = bloqueio.bloqueadoAte(emailNormalizado, agora);
+		if (bloqueadoAte.isPresent()) {
+			// Nem confere a senha: durante o bloqueio, nem a senha certa entra.
+			falha(emailNormalizado, encontrado.orElse(null), MotivoFalha.LOGIN_BLOQUEADO);
+			throw new LoginBloqueadoException(Duration.between(agora, bloqueadoAte.get()));
+		}
+
 		boolean senhaConfere = senhaConfere(senha, encontrado.map(Usuario::getSenhaHash).orElse(hashFicticio));
 
 		if (encontrado.isEmpty()) {
@@ -76,7 +92,7 @@ public class ServicoAutenticacao {
 		}
 
 		Long estabelecimentoId = usuario.getEstabelecimento().getId();
-		usuario.registrarLogin(OffsetDateTime.now(ZoneOffset.UTC));
+		usuario.registrarLogin(agora);
 		// Na mesma transação: se algo falhar daqui em diante, o registro é desfeito junto.
 		auditoria.registrar(RegistroAuditoria.de(AcaoAuditoria.LOGIN_SUCESSO)
 			.estabelecimento(estabelecimentoId)

@@ -176,10 +176,13 @@ O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actu
 | E-mail e senha certos | `200` | `{ "token": "<jwt>", "nome": "Lídia" }` |
 | E-mail inexistente, senha errada ou usuária desativada | `401` | `{ "codigo": "CREDENCIAIS_INVALIDAS", "mensagem": "E-mail ou senha incorretos." }` |
 | Campos vazios, e-mail mal formado ou JSON inválido | `400` | `{ "codigo": "DADOS_INVALIDOS", "mensagem": "Confira os dados informados." }` |
+| 5 falhas com o mesmo e-mail em 15 minutos | `429` + header `Retry-After` (segundos) | `{ "codigo": "LOGIN_BLOQUEADO", "mensagem": "Muitas tentativas sem sucesso. Espere 15 minutos e tente novamente." }` |
 
 A resposta de erro é a mesma nos três casos do `401`, e leva o mesmo tempo, para não revelar quais e-mails estão cadastrados. O e-mail é comparado sem diferenciar maiúsculas e minúsculas. No login certo, o backend grava `usuario.ultimo_login_em`. Todas as respostas de erro da API seguem o formato `{ "codigo", "mensagem" }`.
 
 **Log de login (ZAP-33, ISO 27002 8.16):** toda tentativa com dados válidos fica no `log_auditoria`, com o e-mail informado (em minúsculas), o IP do navegador, o user agent e a data/hora. O `LOGIN_SUCESSO` leva o usuário e o estabelecimento. O `LOGIN_FALHA` é gravado mesmo com o erro e leva o motivo em `detalhes` (`EMAIL_INEXISTENTE`, `SENHA_INCORRETA` ou `USUARIO_INATIVO`); com e-mail inexistente, o usuário e o estabelecimento ficam nulos. O motivo fica só no log: a API responde sempre o mesmo `401`. A senha nunca é gravada.
+
+**Bloqueio de login (ZAP-85, RF02):** 5 falhas com o mesmo e-mail nos últimos 15 minutos, desde o último login certo, bloqueiam novas tentativas com esse e-mail. Durante o bloqueio, nem a senha certa entra, porque ela nem é conferida, e o acesso volta sozinho 15 minutos depois das falhas. A contagem usa os `LOGIN_FALHA` do `log_auditoria`, sem mudar o banco. Cada tentativa recusada também vai para o log (`LOGIN_FALHA` com motivo `LOGIN_BLOQUEADO`), mas não conta para o bloqueio: insistir não prolonga a espera. O bloqueio vale para qualquer e-mail digitado, cadastrado ou não, para não revelar quais existem.
 
 **Política de senha (ZAP-33, ISO 27002 5.17):** pelo menos 8 caracteres, com letra, número e caractere especial (espaço não conta), e no máximo 72 bytes, o limite do BCrypt. A regra fica em `PoliticaDeSenha`; toda requisição que define uma senha nova usa a anotação `@SenhaForte` no campo.
 
@@ -233,7 +236,7 @@ O frontend usa React 19, Vite, [Mantine](https://mantine.dev) (componentes) e Re
 
 A identidade visual (paleta "Ciano com creme", fonte Lexend e logo) está nesses arquivos e em `frontend/src/assets/`. As regras completas estão no [Guia de Identidade Visual](docs/identidade-visual.md).
 
-O login chama o backend de verdade (`POST /api/autenticacao/login`, ZAP-31), em `frontend/src/autenticacao/servicoAutenticacao.js`. Em desenvolvimento, o Vite repassa `/api` ao backend local (`http://localhost:8080`; no Docker Compose, ao contêiner do backend), então o backend precisa estar no ar, com a `LIDIA_SENHA_HASH` definida, para entrar com `lidia@casabelt.com` e a senha combinada (peça para a equipe). O aviso de bloqueio depois de 5 erros seguidos chega com a ZAP-85.
+O login chama o backend de verdade (`POST /api/autenticacao/login`, ZAP-31), em `frontend/src/autenticacao/servicoAutenticacao.js`. Em desenvolvimento, o Vite repassa `/api` ao backend local (`http://localhost:8080`; no Docker Compose, ao contêiner do backend), então o backend precisa estar no ar, com a `LIDIA_SENHA_HASH` definida, para entrar com `lidia@casabelt.com` e a senha combinada (peça para a equipe). Depois de 5 erros seguidos, a tela mostra o aviso de bloqueio (resposta `429` do backend, ZAP-85).
 
 A tela **Meu estabelecimento** ainda é simulada enquanto a API da ZAP-36 não existe: em desenvolvimento, os dados da Casa Belt são simulados em `frontend/src/estabelecimento/servicoEstabelecimento.js`. O nome e o logo salvos ali aparecem também no topo do painel e no login, e as alterações ficam guardadas no navegador (`localStorage`, chave `zappi.estabelecimento-simulado`) para continuarem valendo depois de recarregar a página. Para voltar aos dados originais, apague essa chave nas ferramentas do navegador (F12 → Application → Local Storage). Para testar a mensagem de link repetido, use o link `doces-da-ana`.
 
