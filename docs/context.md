@@ -155,11 +155,13 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 13. **Cadastrar e editar pedidos** (US7): a Lídia registra as encomendas que recebe pelo WhatsApp e corrige um pedido, com a edição limitada pelo status (RN21).
 14. **Anonimizar os dados de um cliente** a pedido do titular (RN17, LGPD), sem apagar o histórico de pedidos (decisão da ZAP-64).
 
+15. **Envio automático das mensagens pela WhatsApp Cloud API** (Meta): o sistema envia ao cliente as mensagens de confirmação, recusa e pronto para retirada. As condições para ativar ainda precisam ser validadas (seção 14, item 12).
+
 **Portal do Cliente** (épico `ZAP-2`; requisitos e regras em definição na `ZAP-18`)
 
-15. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo e o contato da Lídia.
-16. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio, cobertura, observações e data de retirada.
-17. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
+16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo e o contato da Lídia.
+17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio, cobertura, observações e data de retirada.
+18. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
 
 ### 5.3 Dados iniciais (seed)
 - Estabelecimento: **Casa Belt**.
@@ -169,7 +171,6 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 - Use dados fictícios para os clientes, nunca dados reais.
 
 ### 5.4 Fora da entrega (Futuro / backlog)
-- Envio automático pela **WhatsApp Cloud API** (Meta).
 - Pagamento online.
 - Controle de estoque de ingredientes.
 - Relatórios e gestão financeira (precificação, margens).
@@ -301,7 +302,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Banco | **PostgreSQL (Supabase)** | Banco relacional gerenciado; TLS; criptografia em repouso; RLS em todas as tabelas; o backend e o Flyway conectam pelo session pooler (IPv4, porta 5432) |
 | Arquivos | **Supabase Storage** | Bucket `produtos`; o banco guarda só o caminho; upload só pelo backend; leitura pública |
 | Mensagens | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
-| Mensagens (Futuro) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS |
+| Mensagens (a integrar) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS, com o status informado pela Meta. Condições em validação (seção 14, item 12) |
 | Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
 | Testes (frontend) | **Vitest e React Testing Library** (jsdom, user-event e jest-dom) | Testes das telas e das regras do painel, escritos ao lado do código (`*.test.jsx`), com o backend simulado |
 | CI/CD | **GitHub Actions** + deploy automático do **Render** | Build e testes em cada pull request; o Render publica a cada merge na `main`, depois que o CI passar |
@@ -321,7 +322,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 - O backend monta o texto e um link no formato `https://wa.me/<telefone_destino>?text=<texto codificado em URL>`.
 - A Lídia clica em "Enviar no WhatsApp". O WhatsApp abre com a mensagem pronta e ela só aperta enviar.
 - O clique marca a mensagem como 2-Enviada e grava `enviado_em`, porque o sistema não tem como saber se ela apertou enviar dentro do WhatsApp. O botão continua disponível para reenviar, e o reenvio mantém o primeiro `enviado_em` (ZAP-64).
-- O envio é **semiautomático**: o sistema prepara, a Lídia envia. O envio 100% automático (Cloud API) é **Futuro**; o campo `id_externo` já está reservado para ele.
+- O envio é **semiautomático**: o sistema prepara, a Lídia envia. Este é o funcionamento atual. O envio automático pela **Cloud API** será integrado (seção 5.2, item 15), usando o campo `id_externo` e o status 3-Falha, que já existem.
 
 ### 12.4 Limitações aceitas da hospedagem gratuita
 - O backend no Render (plano gratuito) **dorme após 15 minutos sem acesso**, e o primeiro acesso leva cerca de 1 minuto. Antes do ensaio, do vídeo e do treinamento, acordar o backend.
@@ -489,7 +490,7 @@ Mensagem gerada a cada decisão sobre o pedido (RF10/RF12). A Lídia envia pelo 
 | telefone_destino | VARCHAR(13) | Sim | | Cópia do telefone do cliente na geração |
 | conteudo | TEXT | Sim | | Linguagem simples (NBR 5.12.12) + identificação do Zappi (CDC) |
 | status | SMALLINT | Sim | | 1-Pendente · 2-Enviada · 3-Falha |
-| id_externo | VARCHAR(100) | Não | | Reservado para a Cloud API (futuro) |
+| id_externo | VARCHAR(100) | Não | | Identificador da mensagem na Cloud API |
 | criado_em | TIMESTAMPTZ | Sim | | Padrão now() |
 | enviado_em | TIMESTAMPTZ | Não | | |
 
@@ -554,6 +555,13 @@ Trilha de auditoria (ISO 8.16).
     - limite de pedidos por data, sobretudo em datas comemorativas;
     - como o cliente escolhe a massa, já que não há campo próprio (item 4);
     - proteção do envio de pedidos sem login, contra abuso e pedidos falsos.
+12. **WhatsApp Cloud API** (decidido usar; a validar com a Meta e com a Lídia):
+    - verificação da conta na Meta para um negócio informal, sem CNPJ/MEI, e os limites de envio sem verificação;
+    - qual número será usado, sem a Lídia perder o WhatsApp que usa com os clientes;
+    - aprovação dos modelos de mensagem (`docs/mensagens-whatsapp.md`) pela Meta e o tempo que leva;
+    - custo por mensagem e quem cadastra o meio de pagamento;
+    - LGPD: telefone e texto passam pela Meta, então a seção 9 ("nada de compartilhar com terceiros") e o texto do consentimento precisam ser revistos;
+    - o que fazer com o `wa.me` e até quando validar tudo isso para caber na entrega de 22/11/2026.
 
 ---
 
@@ -616,6 +624,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Mudar o pedido de coluna | Em aberto (botões ou arrastar) | **Botões** nos detalhes do pedido, só com o próximo passo possível (ZAP-64). Motivo: arrastar é difícil no celular e para a persona, e um botão com nome diz o que vai acontecer |
 | Recusar depois de confirmado | Em aberto | **"Cancelar pedido"** em Confirmado e Em produção, pelo fluxo de recusa (ZAP-64, proposta A). Motivo: não muda o banco nem os tipos de mensagem e cabe no prazo; o status "Cancelado" fica como melhoria futura |
 | Voltar uma coluna | Em aberto | **Só Concluído → Em produção e Em produção → Confirmado**, com confirmação (ZAP-64). Motivo: corrige os cliques errados mais prováveis; confirmar e recusar já avisaram o cliente |
+| Envio pela WhatsApp Cloud API | Futuro (seção 5.4) | **Faz parte da entrega** (08/11/2026, ZAP-83), com as condições a validar na seção 14, item 12. Motivo: decisão da equipe de enviar as mensagens de forma automática |
 | Escopo da entrega | MVP só com o Portal do Administrador; Portal do Cliente como Futuro (seções 5.1 e 5.4) | **Entrega final em 22/11/2026 com o Portal do Administrador e o Portal do Cliente juntos** (08/11/2026, ZAP-83). Motivo: decisão da equipe de entregar o sistema real, e não um MVP. WhatsApp Cloud API, pagamento online, estoque, relatórios financeiros, fidelização e acesso da Romilda continuam como Futuro |
 | Mensagem "Enviada" | Em aberto (clique ou confirmação manual) | **Ao clicar em "Enviar no WhatsApp"** (ZAP-64). Motivo: o sistema não sabe se ela apertou enviar, e não acrescenta um passo extra para a Lídia |
 | Unidade de venda dos salgados | Em aberto (unidade ou cento) | **Por unidade (UN)**; o cento e os pacotes viram produtos próprios (ZAP-64). Motivo: não muda o banco nem as telas, e o desconto do cento sai do preço de cada produto |
