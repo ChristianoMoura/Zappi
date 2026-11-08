@@ -38,6 +38,39 @@
   display: block;
 }
 
+/* Collab Casa Belt × Zappi (tamanhos ajustados pelo grupo no protótipo) */
+.marcaCollab {
+  gap: 16px;
+}
+
+.logoLoja {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #fff;
+  box-shadow: 0 6px 18px rgb(61 43 31 / 0.16);
+  display: block;
+}
+
+.zappiLinha {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zappiSimbolo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+.zappiNome {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
 .slogan {
   color: var(--mantine-color-dimmed);
   font-size: 1.05rem;
