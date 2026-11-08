@@ -1,9 +1,10 @@
 import { Alert, Button, Drawer } from '@mantine/core'
-import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconSend, IconToolsKitchen2, IconX } from '@tabler/icons-react'
+import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconPencil, IconSend, IconToolsKitchen2, IconX } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { JanelaMotivo } from './JanelaMotivo'
 import { JanelaVoltar } from './JanelaVoltar'
-import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeCancelar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
+import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeCancelar, podeEditar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
 const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
@@ -24,7 +25,7 @@ const EtiquetaMensagem = ({ mensagem }) =>
 // Mensagem da etapa atual com o botão "Enviar no WhatsApp" (ZAP-51) e as anteriores recolhidas,
 // só para consulta. O botão abre o link wa.me e marca a mensagem como enviada; continua
 // disponível para reenviar (ZAP-64).
-function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef }) {
+function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef, focoInicial }) {
   const { atual, anteriores } = mensagensDaEtapa(pedido)
   if (!atual && anteriores.length === 0) return null
   const primeiroNome = pedido.cliente.nome.split(' ')[0]
@@ -43,6 +44,7 @@ function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef }) {
             <div className={classes.mensagemAcoes}>
               <Button
                 ref={botaoEnviarRef}
+                data-autofocus={focoInicial || undefined}
                 component="a"
                 href={atual.mensagem.link}
                 target="_blank"
@@ -103,10 +105,15 @@ const SUCESSO = {
   iniciar: { texto: 'Pedido movido para a coluna Em produção. Quando ficar pronto, marque como pronto.' },
   pronto: { texto: 'Pedido pronto e movido para a coluna Concluído.', enviar: true },
   voltar: { texto: 'Pedido voltou para a coluna' },
+  editar: { texto: 'Pedido atualizado.', enviar: true },
 }
 
 function textoSucesso(acabouDe, coluna, primeiroNome) {
   const { texto, enviar } = SUCESSO[acabouDe]
+  if (acabouDe === 'editar') {
+    if (coluna.status === STATUS.CONFIRMADO) return `${texto} Envie a confirmação atualizada para ${primeiroNome}.`
+    return coluna.status === STATUS.EM_PRODUCAO ? `${texto} Lembre de avisar ${primeiroNome} pelo WhatsApp sobre o que mudou.` : texto
+  }
   if (acabouDe === 'voltar') return `${texto} ${coluna.nome}.`
   return enviar ? `${texto} Agora envie a mensagem para ${primeiroNome}.` : texto
 }
@@ -123,7 +130,8 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
     if (!acabouDe) return
     if (SUCESSO[acabouDe].enviar && botaoEnviarRef.current) botaoEnviarRef.current.focus()
     else sucessoRef.current?.focus()
-  }, [acabouDe])
+    // O número entra aqui porque, ao voltar da edição, o painel abre já com o aviso
+  }, [acabouDe, pedido?.numero])
 
   async function concluirMotivo(motivo) {
     if (await aoRecusar(pedido, motivo)) setJanela(null)
@@ -162,10 +170,15 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
           <div className={classes.selos}>
             <span className={`${classes.selo} ${pedido.status === STATUS.RECUSADO ? classes.seloRecusado : classes.seloStatus}`}>{coluna.nome}</span>
             {retiraHoje(pedido) && <span className={`${classes.selo} ${classes.seloHoje}`}>Retira hoje</span>}
+            {podeEditar(pedido.status) && (
+              <Button component={Link} to={`/pedidos/${pedido.numero}/editar`} variant="subtle" size="md" leftSection={<IconPencil size={20} aria-hidden />} className={classes.editarPedido}>
+                Editar pedido
+              </Button>
+            )}
           </div>
 
           {acabouDe && (
-            <Alert ref={sucessoRef} tabIndex={-1} color="#1d6b45" variant="outline" icon={<IconCheck size={22} aria-hidden />} className={classes.sucesso} role="status">
+            <Alert ref={sucessoRef} tabIndex={-1} data-autofocus={(acabouDe === 'editar' && pedido.status !== STATUS.CONFIRMADO) || undefined} color="#1d6b45" variant="outline" icon={<IconCheck size={22} aria-hidden />} className={classes.sucesso} role="status">
               {textoSucesso(acabouDe, coluna, primeiroNome)}
               {acabouDe === 'voltar' && pedido.status === STATUS.EM_PRODUCAO && avisoDeProntoEnviado(pedido) && (
                 <> Lembre de avisar {primeiroNome} pelo WhatsApp que o pedido ainda não está pronto.</>
@@ -179,7 +192,7 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
             </Alert>
           )}
 
-          <MensagensDoPedido pedido={pedido} aoEnviarMensagem={aoEnviarMensagem} botaoEnviarRef={botaoEnviarRef} />
+          <MensagensDoPedido pedido={pedido} aoEnviarMensagem={aoEnviarMensagem} botaoEnviarRef={botaoEnviarRef} focoInicial={acabouDe === 'editar'} />
 
           {pedido.motivoRecusa && (
             <p className={classes.motivo}>

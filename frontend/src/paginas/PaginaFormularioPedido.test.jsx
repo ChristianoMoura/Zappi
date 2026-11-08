@@ -6,12 +6,13 @@ import { buscarPedidos, cadastrarPedido } from '../pedidos/servicoPedidos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { pedidoDeTeste, usarTela } from '../testes/pedidosDeTeste'
-import { PaginaNovoPedido } from './PaginaNovoPedido'
+import { PaginaFormularioPedido } from './PaginaFormularioPedido'
 import { PaginaPedidos } from './PaginaPedidos'
 
 // O backend é simulado aqui para os testes não dependerem da ZAP-88 e da ZAP-39
 vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarPedidos: vi.fn(), cadastrarPedido: vi.fn() }))
 vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarProdutos: vi.fn() }))
+
 
 const produtos = [
   { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, ativo: true },
@@ -20,7 +21,7 @@ const produtos = [
 
 const rotas = [
   { path: '/pedidos', Component: PaginaPedidos },
-  { path: '/pedidos/novo', Component: PaginaNovoPedido },
+  { path: '/pedidos/novo', Component: PaginaFormularioPedido },
 ]
 
 const campo = (nome) => screen.getByRole('textbox', { name: nome })

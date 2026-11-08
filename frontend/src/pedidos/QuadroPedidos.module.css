@@ -185,7 +185,9 @@
 }
 
 .selo {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.85rem;
   font-weight: 600;
   border-radius: 999px;
@@ -284,6 +286,7 @@
 
 .selos {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -633,4 +636,10 @@
   .novoPedido {
     flex: 1 1 100%;
   }
+}
+
+/* Botão "Editar pedido" na linha dos selos, nos detalhes (ZAP-91) */
+.editarPedido {
+  margin-left: auto;
+  padding-inline: 8px;
 }

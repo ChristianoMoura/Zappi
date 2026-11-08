@@ -13,5 +13,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/testes/configuracao.js',
+    // Os formulários são grandes e os testes digitam campo por campo: 5 s (o padrão) fica no limite
+    testTimeout: 20000,
   },
 })

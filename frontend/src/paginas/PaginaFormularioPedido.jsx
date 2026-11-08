@@ -1,11 +1,11 @@
 import { Alert, Button, Checkbox, Loader, NativeSelect, Textarea, TextInput } from '@mantine/core'
-import { IconAlertCircle, IconCheck, IconChevronLeft, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconAlertCircle, IconAlertTriangle, IconCheck, IconChevronLeft, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
-import { itemVazio, LIMITES, montarPedido, ordemDosCampos, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
-import { dataLocal, moeda } from '../pedidos/regrasPedidos'
-import { cadastrarPedido } from '../pedidos/servicoPedidos'
+import { CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
+import { dataLocal, moeda, podeEditar, podeTrocarCliente, STATUS } from '../pedidos/regrasPedidos'
+import { buscarPedido, cadastrarPedido, editarPedido } from '../pedidos/servicoPedidos'
 import { nomeCompleto, precoParaTela, UNIDADES } from '../produtos/regrasProdutos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
 import formulario from '../produtos/Produtos.module.css'
@@ -14,16 +14,21 @@ import { useTituloPagina } from './useTituloPagina'
 
 const VAZIO = () => ({ clienteNome: '', clienteWhatsapp: '', consentimentoLgpd: false, itens: [itemVazio()], dataRetirada: '', observacao: '' })
 
-// Cadastro de pedido pela Lídia (ZAP-89, US7, RF13): ela registra a encomenda que recebeu pelo
-// WhatsApp. Ordem dos campos: cliente → itens → data de retirada → observações → "Salvar"
-// (NBR 17225 5.1.4). Os produtos vêm do cardápio, e o total é calculado na tela (RN11, RN14).
-export function PaginaNovoPedido() {
-  useTituloPagina('Novo pedido')
+// Cadastro (ZAP-89, RF13) e edição (ZAP-91, RF14) de pedido pela Lídia: ela registra ou corrige a
+// encomenda que recebeu pelo WhatsApp. Ordem dos campos: cliente → itens → data de retirada →
+// observações → "Salvar" (NBR 17225 5.1.4). Os produtos vêm do cardápio, e o total é calculado
+// na tela (RN11, RN14). Na edição, o que pode mudar depende do status (RN21), e os itens que já
+// estavam no pedido mantêm o preço da época (RN10).
+export function PaginaFormularioPedido() {
+  const { numero } = useParams()
+  const editando = numero !== undefined
+  useTituloPagina(editando ? 'Editar pedido' : 'Novo pedido')
   const navegar = useNavigate()
   const [produtos, setProdutos] = useState([])
+  const [pedido, setPedido] = useState(null)
   const [carregando, setCarregando] = useState(true)
-  const [erroCarregar, setErroCarregar] = useState(false)
-  const [dados, setDados] = useState(VAZIO)
+  const [erroCarregar, setErroCarregar] = useState('')
+  const [dados, setDados] = useState(editando ? null : VAZIO)
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
   const [erroSalvar, setErroSalvar] = useState('')
@@ -34,12 +39,20 @@ export function PaginaNovoPedido() {
 
   useEffect(() => {
     let ativo = true
-    buscarProdutos()
-      .then((resposta) => {
-        if (ativo) setProdutos(resposta)
+    Promise.all([buscarProdutos(), editando ? buscarPedido(Number(numero)) : null])
+      .then(([cardapio, salvo]) => {
+        if (!ativo) return
+        setProdutos(cardapio)
+        if (!editando) return
+        if (!podeEditar(salvo.status)) {
+          setErroCarregar('Este pedido já foi encerrado e não pode mais ser editado.')
+          return
+        }
+        setPedido(salvo)
+        setDados(formularioDoPedido(salvo))
       })
       .catch(() => {
-        if (ativo) setErroCarregar(true)
+        if (ativo) setErroCarregar(editando ? 'Não foi possível abrir este pedido agora. Tente de novo em alguns minutos.' : 'Não foi possível carregar os produtos do cardápio agora. Tente de novo em alguns minutos.')
       })
       .finally(() => {
         if (ativo) setCarregando(false)
@@ -47,7 +60,7 @@ export function PaginaNovoPedido() {
     return () => {
       ativo = false
     }
-  }, [])
+  }, [editando, numero])
 
   useEffect(() => {
     if (!carregando) titulo.current?.focus()
@@ -62,15 +75,13 @@ export function PaginaNovoPedido() {
     )
   }
 
-  const voltar = () => navegar('/pedidos', { state: { foco: 'novo-pedido' } })
+  const voltar = () => navegar('/pedidos', { state: editando ? { abrir: Number(numero) } : { foco: 'novo-pedido' } })
 
-  if (erroCarregar || produtos.length === 0) {
+  if (erroCarregar || (!editando && produtos.length === 0)) {
     return (
       <div className={formulario.pagina}>
         <Alert color="#b42318" variant="outline" icon={<IconAlertCircle size={22} aria-hidden />} className={formulario.erroCarregar}>
-          {erroCarregar
-            ? 'Não foi possível carregar os produtos do cardápio agora. Tente de novo em alguns minutos.'
-            : 'O cardápio está vazio. Cadastre pelo menos um produto antes de registrar um pedido.'}
+          {erroCarregar || 'O cardápio está vazio. Cadastre pelo menos um produto antes de registrar um pedido.'}
         </Alert>
         <Button component={Link} to={erroCarregar ? '/pedidos' : '/produtos/novo'} variant="outline" size="lg" className={formulario.voltarLista}>
           {erroCarregar ? 'Voltar para os pedidos' : 'Cadastrar produto'}
@@ -106,7 +117,7 @@ export function PaginaNovoPedido() {
   }
 
   async function salvar() {
-    const novosErros = validarPedido(dados, produtos)
+    const novosErros = validarPedido(dados, produtos, new Date(), pedido?.dataRetirada ?? null)
     setErros(novosErros)
     setErroSalvar('')
     const primeiro = ordemDosCampos(dados.itens).find((campo) => novosErros[campo])
@@ -116,8 +127,13 @@ export function PaginaNovoPedido() {
     }
     setSalvando(true)
     try {
-      const pedido = await cadastrarPedido(montarPedido(dados, produtos))
-      navegar('/pedidos', { state: { novo: { numero: pedido.numero, cliente: pedido.cliente.nome } } })
+      if (editando) {
+        await editarPedido(Number(numero), montarPedido(dados, produtos))
+        navegar('/pedidos', { state: { abrir: Number(numero), editado: true } })
+      } else {
+        const salvo = await cadastrarPedido(montarPedido(dados, produtos))
+        navegar('/pedidos', { state: { novo: { numero: salvo.numero, cliente: salvo.cliente.nome } } })
+      }
     } catch {
       setSalvando(false)
       setErroSalvar('Não foi possível salvar o pedido agora. Tente de novo em alguns minutos.')
@@ -125,10 +141,29 @@ export function PaginaNovoPedido() {
   }
 
   const total = totalDoFormulario(dados.itens, produtos)
-  const opcoes = [
-    { value: '', label: 'Escolha o produto' },
-    ...produtos.map((p) => ({ value: String(p.id), label: `${nomeCompleto(p)} · R$ ${precoParaTela(p.preco)} ${UNIDADES[p.unidade].selo}` })),
-  ]
+  const clienteFixo = editando && !podeTrocarCliente(pedido.status)
+  // Se o WhatsApp mudou num pedido Novo, é outro cliente: a autorização precisa ser confirmada (RN16)
+  const telefoneOriginal = pedido ? soDigitos(pedido.cliente.telefone).replace(/^55/, '') : ''
+  const pedeConsentimento = !editando || (!clienteFixo && dados.clienteWhatsapp !== telefoneOriginal)
+
+  function mudarWhatsapp(digitado) {
+    const novo = soDigitos(digitado).slice(0, 11)
+    setDados((atual) => ({ ...atual, clienteWhatsapp: novo, consentimentoLgpd: editando ? novo === telefoneOriginal : atual.consentimentoLgpd }))
+    limparErro('clienteWhatsapp')
+  }
+
+  const rotuloOpcao = (p, sufixo = '') => `${nomeCompleto(p)} · R$ ${precoParaTela(p.preco)} ${UNIDADES[p.unidade].selo}${sufixo}`
+
+  // Item que já estava no pedido: a primeira opção é ele, com o preço da época (RN10). Escolher
+  // outro produto da lista faz o item valer como novo, com o preço atual.
+  function opcoesDoItem(item) {
+    const fixo = item.congelado && produtoDoItem({ ...item, produtoId: CONGELADO }, produtos)
+    const mesmo = (p) => fixo && p.nome === fixo.nome && p.sabor === fixo.sabor && p.unidade === fixo.unidade
+    return [
+      fixo ? { value: CONGELADO, label: rotuloOpcao(fixo, ' (preço do pedido)') } : { value: '', label: 'Escolha o produto' },
+      ...produtos.filter((p) => !mesmo(p)).map((p) => ({ value: String(p.id), label: rotuloOpcao(p) })),
+    ]
+  }
 
   // Campo com rótulo sempre visível, marca de obrigatório ou opcional e erro ligado ao campo
   const propsCampo = (campo, rotulo, { obrigatorio = false, dica, limite } = {}) => ({
@@ -156,10 +191,19 @@ export function PaginaNovoPedido() {
           Pedidos
         </Button>
         <h1 ref={titulo} className={formulario.titulo} tabIndex={-1}>
-          Novo pedido
+          {editando ? `Editar pedido #${numero}` : 'Novo pedido'}
         </h1>
-        <p className={formulario.subtitulo}>Registre a encomenda que chegou pelo WhatsApp. Ela entra na coluna Novo.</p>
+        <p className={formulario.subtitulo}>{editando ? 'Mude o que precisar e salve.' : 'Registre a encomenda que chegou pelo WhatsApp. Ela entra na coluna Novo.'}</p>
       </div>
+
+      {clienteFixo && (
+        <p className={`${classes.avisoEdicao} ${classes.formulario}`}>
+          <IconAlertTriangle size={22} aria-hidden />
+          {pedido.status === STATUS.CONFIRMADO
+            ? `Este pedido já foi confirmado. Ao salvar uma mudança, o Zappi prepara uma confirmação atualizada para enviar a ${pedido.cliente.nome.split(' ')[0]}.`
+            : `${pedido.cliente.nome.split(' ')[0]} já recebeu a confirmação deste pedido. Depois de salvar, avise pelo WhatsApp sobre o que mudou.`}
+        </p>
+      )}
 
       <form
         className={`${formulario.formulario} ${classes.formulario}`}
@@ -171,12 +215,23 @@ export function PaginaNovoPedido() {
       >
         <section className={formulario.caixa} aria-labelledby="secao-cliente">
           <h2 id="secao-cliente" className={formulario.tituloCaixa}>Cliente</h2>
+          {clienteFixo ? (
+            <>
+              <dl className={classes.clienteFixo}>
+                <dt>Nome</dt>
+                <dd>{dados.clienteNome}</dd>
+                <dt>WhatsApp</dt>
+                <dd>+55 {mascaraTelefone(dados.clienteWhatsapp)}</dd>
+              </dl>
+              <p className={formulario.dica}>Depois de confirmado, o pedido não pode trocar de cliente.</p>
+            </>
+          ) : (
           <div className={classes.duasColunas}>
             <TextInput {...propsCampo('clienteNome', 'Nome do cliente', { obrigatorio: true, limite: LIMITES.clienteNome })} value={dados.clienteNome} onChange={(e) => mudar('clienteNome', e.currentTarget.value)} autoComplete="off" />
             <TextInput
               {...propsCampo('clienteWhatsapp', 'WhatsApp', { obrigatorio: true })}
               value={mascaraTelefone(dados.clienteWhatsapp)}
-              onChange={(e) => mudar('clienteWhatsapp', soDigitos(e.currentTarget.value).slice(0, 11))}
+              onChange={(e) => mudarWhatsapp(e.currentTarget.value)}
               leftSection={<span className={formulario.prefixo}>+55</span>}
               leftSectionWidth={56}
               inputMode="tel"
@@ -185,6 +240,8 @@ export function PaginaNovoPedido() {
               placeholder="(11) 90000-0000"
             />
           </div>
+          )}
+          {pedeConsentimento && (
           <Checkbox
             id="pedido-consentimentoLgpd"
             ref={(el) => {
@@ -198,13 +255,14 @@ export function PaginaNovoPedido() {
             error={erros.consentimentoLgpd}
             classNames={{ label: classes.rotuloCaixa, description: formulario.dica, error: formulario.erroCampo }}
           />
+          )}
         </section>
 
         <section className={formulario.caixa} aria-labelledby="secao-itens">
           <h2 id="secao-itens" className={formulario.tituloCaixa}>Itens</h2>
           <ol className={classes.itens}>
             {dados.itens.map((item, indice) => {
-              const produto = produtos.find((p) => String(p.id) === String(item.produtoId))
+              const produto = produtoDoItem(item, produtos)
               const sub = subtotalDoItem(item, produtos)
               const numero = indice + 1
               return (
@@ -220,7 +278,7 @@ export function PaginaNovoPedido() {
                   <div className={classes.produtoQuantidade}>
                     <NativeSelect
                       {...propsCampo(`item-${item.chave}-produto`, 'Produto', { obrigatorio: true })}
-                      data={opcoes}
+                      data={opcoesDoItem(item)}
                       value={item.produtoId}
                       onChange={(e) => mudarItem(item.chave, 'produtoId', e.currentTarget.value)}
                     />
@@ -302,7 +360,7 @@ export function PaginaNovoPedido() {
             Cancelar
           </Button>
           <Button type="submit" size="lg" loading={salvando} loaderProps={{ type: 'dots' }} leftSection={<IconCheck size={22} aria-hidden />}>
-            Salvar pedido
+            {editando ? 'Salvar alterações' : 'Salvar pedido'}
           </Button>
         </div>
       </form>

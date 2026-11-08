@@ -1,12 +1,12 @@
 // Leitura dos pedidos do estabelecimento da usuária logada e as ações sobre eles.
 // PENDENTE: as APIs são a ZAP-44 (listar), a ZAP-49 (confirmar), a ZAP-53 (recusar e cancelar),
-// a ZAP-75 e a ZAP-76 (andamento e voltar coluna) e a ZAP-50 (texto da mensagem, link wa.me e marcar
+// a ZAP-75 e a ZAP-76 (andamento e voltar coluna), a ZAP-88 e a ZAP-90 (cadastrar e editar) e a ZAP-50 (texto da mensagem, link wa.me e marcar
 // como enviada), que ainda não existem. Enquanto isso, no modo de
 // desenvolvimento os pedidos são simulados com clientes fictícios (nenhum dado real), guardados
 // só na memória; fora dele, a tela avisa que o serviço não está disponível.
 // Quando as APIs ficarem prontas, só este arquivo muda.
 
-import { AVANCO, dataLocal, dataRetiradaMensagem, moeda, MOTIVO_MAXIMO, nomeItem, podeRecusarOuCancelar, quantidadeTexto, STATUS, totalPedido, VOLTA } from './regrasPedidos'
+import { AVANCO, dataLocal, dataRetiradaMensagem, moeda, MOTIVO_MAXIMO, nomeItem, podeEditar, podeRecusarOuCancelar, podeTrocarCliente, quantidadeTexto, STATUS, totalPedido, VOLTA } from './regrasPedidos'
 
 export class ServicoIndisponivelError extends Error {}
 export class AcaoNaoPermitidaError extends Error {}
@@ -146,6 +146,40 @@ export async function cadastrarPedido(dados) {
   return copia(pedido)
 }
 
+export async function buscarPedido(numero) {
+  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
+  await esperar(300)
+  return copia(encontrar(numero))
+}
+
+// Depois que o pedido muda, a confirmação não pode ficar com dados antigos: a pendente é
+// refeita; se a última já foi enviada, entra uma nova para a Lídia enviar (ZAP-91)
+function atualizarConfirmacao(pedido) {
+  const indice = pedido.mensagens.findLastIndex((m) => m.tipo === 'Confirmação')
+  const nova = mensagem(pedido, 'Confirmação')
+  const ultima = pedido.mensagens[indice]
+  if (!ultima || ultima.texto === nova.texto) return
+  if (ultima.status === 'Pendente') pedido.mensagens[indice] = nova
+  else pedido.mensagens.push(nova)
+}
+
+// Edição do pedido conforme o status (ZAP-91, RF14, RN21). Depois de confirmado, o cliente não
+// troca. Os itens chegam com o preço já resolvido: o da época ou o atual, nos novos (RN10).
+export async function editarPedido(numero, dados) {
+  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
+  await esperar(700)
+  const pedido = encontrar(numero)
+  if (!podeEditar(pedido.status) || dados.itens.length === 0) throw new AcaoNaoPermitidaError()
+  if (podeTrocarCliente(pedido.status)) pedido.cliente = { nome: dados.cliente.nome, telefone: dados.cliente.telefone }
+  else if (dados.cliente.telefone !== pedido.cliente.telefone) throw new AcaoNaoPermitidaError()
+  pedido.dataRetirada = dados.dataRetirada
+  pedido.itens = dados.itens.map((item) => ({ ...item }))
+  if (dados.observacao) pedido.observacao = dados.observacao
+  else delete pedido.observacao
+  if (pedido.status === STATUS.CONFIRMADO) atualizarConfirmacao(pedido)
+  return copia(pedido)
+}
+
 // Novo → Confirmado, gerando a mensagem de confirmação pendente (RN03, RN06, RN07)
 export async function confirmarPedido(numero) {
   if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
@@ -202,6 +236,7 @@ export async function voltarPedido(numero) {
   if (pedido.status === STATUS.CONCLUIDO) delete pedido.concluidoEm
   else delete pedido.producaoEm
   pedido.status = volta.destino
+  if (pedido.status === STATUS.CONFIRMADO) atualizarConfirmacao(pedido)
   return copia(pedido)
 }
 
