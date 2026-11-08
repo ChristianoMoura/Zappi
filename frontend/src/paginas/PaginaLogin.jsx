@@ -116,7 +116,7 @@ export function PaginaLogin() {
               ao lado do símbolo. Sem logo da loja, fica só a marca do Zappi com o slogan. */}
           {marca?.logo ? (
             <div className={`${classes.marca} ${classes.marcaCollab}`}>
-              <img src={marca.logo} alt={`Logo da ${marca.nome}`} className={classes.logoLoja} />
+              <img src={marca.logo} alt={`Logo de ${marca.nome}`} className={classes.logoLoja} />
               <div className={classes.zappiLinha}>
                 <img src={zappiSimbolo} alt="" className={classes.zappiSimbolo} />
                 <img src={zappiNome} alt="Zappi" className={classes.zappiNome} />
