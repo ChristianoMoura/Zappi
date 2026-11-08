@@ -10,12 +10,12 @@
 
 - Leia este arquivo inteiro antes de propor qualquer plano.
 - Trabalhe por **planos**: um plano por entrega (sugestões na seção 15). Cada plano é revisado e aprovado pela equipe antes de qualquer código.
-- O escopo de implementação é o **MVP** (seção 5). Itens marcados como **Futuro** não devem ser implementados agora, mas o código não deve impedir a evolução para eles.
+- O escopo de implementação é a **entrega final** (seção 5), com o **Portal do Administrador** e o **Portal do Cliente**. Itens marcados como **Futuro** não devem ser implementados agora, mas o código não deve impedir a evolução para eles.
 - **Rastreabilidade:** cite nos planos, commits e testes os identificadores de origem (US, RF, RN, controle ISO 27002, requisito NBR 17225, artigo legal).
 - **Não invente regras de negócio.** Se algo não estiver definido aqui ou estiver em "Pontos em aberto" (seção 14), pergunte à equipe antes de decidir.
 - **Alterações não previstas na documentação original:** toda funcionalidade, regra, coluna do banco ou mudança de decisão que não esteja nos documentos entregues em sala (atividades do PI) deve ser registrada na **`ZAP-83`** para ser formalizada, com o que era antes, o que ficou agora e o motivo. Registre também neste arquivo (seção 17) e nos tickets afetados.
 - **Idioma:** interface, mensagens ao cliente e textos do sistema em português do Brasil. Tabelas e colunas com os nomes exatos do modelo (seção 12): `snake_case`, tabelas no singular.
-- Prazo final de todos os artefatos do PI: **22/11/2026**. Priorize o que é necessário para o MVP funcionar de ponta a ponta.
+- Prazo final de todos os artefatos do PI: **22/11/2026**. Priorize o que é necessário para os dois portais funcionarem de ponta a ponta.
 - **Jira e Git:** todo trabalho parte de uma subtarefa do Jira, e toda branch, commit e pull request leva a chave dessa subtarefa. Mantenha o status do ticket atualizado conforme o trabalho avança. Siga as regras da **seção 18** antes de criar qualquer branch ou commit.
 
 ---
@@ -81,7 +81,7 @@ Observações sobre a equipe:
 **Cliente**
 - Na maioria, pessoas conhecidas ou indicadas.
 - Faz o pedido pelo WhatsApp, retira e paga presencialmente.
-- No MVP, só recebe mensagens pelo WhatsApp. No futuro, fará o pedido pelo cardápio público.
+- Faz o pedido pelo Portal do Cliente (cardápio público) ou pelo WhatsApp, e recebe as mensagens pelo WhatsApp. Não tem usuário nem login (RN02).
 
 **Perfil geral:** trabalhadoras com várias responsabilidades ao mesmo tempo, que aprenderam o ofício na prática, sem formação em gestão e sem ferramentas digitais. Isso gera sobrecarga e risco de erro, sobretudo em períodos de mais demanda.
 
@@ -92,7 +92,7 @@ Observações sobre a equipe:
 ## 3. Problema e demandas
 
 ### 3.1 Demanda prioritária
-**Organização e gestão de pedidos.** Foi escolhida pela própria Lídia e é o foco do MVP e da ação extensionista.
+**Organização e gestão de pedidos.** Foi escolhida pela própria Lídia e é o foco do sistema e da ação extensionista.
 
 ### 3.2 Demandas levantadas (Atividade #2), por categoria
 
@@ -111,7 +111,7 @@ Observações sobre a equipe:
 | Marca e divulgação | Dependência total de indicação, sem presença digital | Lídia |
 | Pós-venda | Sem mecanismo de fidelização | Lídia, Clientes |
 
-O MVP ataca principalmente **Gestão de pedidos** e parte de **Atendimento** (confirmação formal e comunicação organizada). As demais demandas ficam como evolução futura.
+A entrega final ataca principalmente **Gestão de pedidos** e **Atendimento e catálogo** (cardápio visual, canal para consultar sabores e preços, confirmação formal e comunicação organizada). As demais demandas ficam como evolução futura.
 
 ---
 
@@ -127,16 +127,19 @@ O MVP ataca principalmente **Gestão de pedidos** e parte de **Atendimento** (co
 
 **Lídia:** o pedido chega no quadro Kanban → avalia disponibilidade e capacidade → confirma, ou recusa informando o motivo → o sistema prepara a mensagem ao cliente → produz com a Romilda → move o card até "Concluído" → o sistema prepara o aviso de pronto → recebe o cliente e o pagamento.
 
-> Os passos do cliente pelo cardápio público são **Futuro**. No MVP, os pedidos vêm do seed (seção 5.3) ou são cadastrados pela Lídia a partir do que ela recebe no WhatsApp (US7).
+> Os passos do cliente pelo cardápio público fazem parte da entrega final (Portal do Cliente). Os pedidos chegam por ele ou são cadastrados pela Lídia a partir do que ela recebe no WhatsApp (US7).
 
 ---
 
-## 5. Escopo do MVP
+## 5. Escopo da entrega final
 
 ### 5.1 Decisão
-O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado aprovado pela equipe depois da Atividade #5.
+A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administrador** (Lídia) e o **Portal do Cliente** juntos. O projeto deixou de ser tratado como MVP em 08/11/2026 (registro na `ZAP-83`). Antes, o escopo cobria só o lado administrativo, ampliado depois da Atividade #5.
 
-### 5.2 Dentro do MVP
+### 5.2 Dentro da entrega final
+
+**Portal do Administrador**
+
 1. Login da Lídia (e-mail e senha).
 2. Cadastro e edição das informações do estabelecimento (Casa Belt).
 3. Cadastro, edição e exclusão lógica de produtos (nome, sabor, unidade, preço, descrição e foto com texto alternativo).
@@ -152,6 +155,12 @@ O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado ap
 13. **Cadastrar e editar pedidos** (US7): a Lídia registra as encomendas que recebe pelo WhatsApp e corrige um pedido, com a edição limitada pelo status (RN21).
 14. **Anonimizar os dados de um cliente** a pedido do titular (RN17, LGPD), sem apagar o histórico de pedidos (decisão da ZAP-64).
 
+**Portal do Cliente** (épico `ZAP-2`; requisitos e regras em definição na `ZAP-18`)
+
+15. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo e o contato da Lídia.
+16. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio, cobertura, observações e data de retirada.
+17. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
+
 ### 5.3 Dados iniciais (seed)
 - Estabelecimento: **Casa Belt**.
 - Unidades de medida: 1-KG e 2-UN.
@@ -159,8 +168,7 @@ O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado ap
 - **Pelo menos 2 pedidos de exemplo** com clientes de exemplo (com consentimento LGPD), para a demonstração: um será confirmado e o outro recusado com motivo.
 - Use dados fictícios para os clientes, nunca dados reais.
 
-### 5.4 Fora do MVP (Futuro / backlog)
-- Cardápio público, em que o cliente monta e envia o pedido (link pelo `slug`).
+### 5.4 Fora da entrega (Futuro / backlog)
 - Envio automático pela **WhatsApp Cloud API** (Meta).
 - Pagamento online.
 - Controle de estoque de ingredientes.
@@ -168,8 +176,8 @@ O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado ap
 - Divulgação e fidelização.
 - Acesso da Romilda ao sistema.
 
-### 5.5 Por que o MVP importa além do PI
-A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 horas** com a Lídia e a Romilda, que **só acontece depois que o MVP estiver funcional**. Nele, a Lídia opera o Kanban do Zappi (login, ver pedidos, confirmar um e recusar outro com motivo). O MVP precisa estar estável e utilizável por uma pessoa leiga.
+### 5.5 Por que a entrega importa além do PI
+A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 horas** com a Lídia e a Romilda, que **só acontece depois que o sistema estiver funcional**. Nele, a Lídia opera o Kanban do Zappi (login, ver pedidos, confirmar um e recusar outro com motivo). O sistema precisa estar estável e utilizável por uma pessoa leiga.
 
 ---
 
@@ -220,7 +228,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN14 | Excluir um produto é **lógico** (`ativo = FALSE`): ele some do cardápio, mas o histórico continua. | RF06 |
 | RN15 | Toda foto de produto exige **texto alternativo**. | NBR 5.9.1 |
 | RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. | LGPD |
-| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Entra no MVP. | LGPD / ZAP-64 |
+| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. | LGPD / ZAP-64 |
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
 | RN19 | Não há delivery: o pedido tem `data_retirada`, e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
@@ -285,14 +293,14 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Acesso | Navegador (computador ou celular) | Sistema web, sem instalar aplicativo |
 | Hospedagem | **Render** (plano gratuito) | Frontend como Static Site e backend como Web Service (Docker); deploy automático a cada merge na `main`. O Docker Compose fica só no ambiente local |
 | Endereço e HTTPS | Render | Subdomínio gratuito `*.onrender.com`; HTTPS/TLS gerenciado, com HTTP redirecionando para HTTPS; regra de reescrita (`/*` → `/index.html`) para as rotas do React |
-| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos, Kanban com filtro de recusados, cadastro e edição de pedidos, botão "Enviar no WhatsApp". Futuro: cardápio público |
+| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos, Kanban com filtro de recusados, cadastro e edição de pedidos, botão "Enviar no WhatsApp". Portal do Cliente: cardápio público e montagem do pedido |
 | Backend | **Java 21 + Spring Boot 4** (build com **Maven**, com Maven Wrapper) | API REST (JSON); regras de negócio; upload de fotos; geração das mensagens e links `wa.me`; isolamento por estabelecimento; CORS liberado só para o endereço do frontend |
 | Persistência | **Spring Data JPA** + **Flyway** | Acesso ao banco; migrações em SQL puro em `backend/src/main/resources/db/migration`, só para frente |
 | Segurança | **Spring Security** | Login, BCrypt, JWT, política de senha |
 | Auditoria | Backend + `log_auditoria` | Logins e ações administrativas |
 | Banco | **PostgreSQL (Supabase)** | Banco relacional gerenciado; TLS; criptografia em repouso; RLS em todas as tabelas; o backend e o Flyway conectam pelo session pooler (IPv4, porta 5432) |
 | Arquivos | **Supabase Storage** | Bucket `produtos`; o banco guarda só o caminho; upload só pelo backend; leitura pública |
-| Mensagens (MVP) | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
+| Mensagens | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
 | Mensagens (Futuro) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS |
 | Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
 | Testes (frontend) | **Vitest e React Testing Library** (jsdom, user-event e jest-dom) | Testes das telas e das regras do painel, escritos ao lado do código (`*.test.jsx`), com o backend simulado |
@@ -309,7 +317,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 7. A Lídia envia, e o cliente recebe no WhatsApp.
 8. O GitHub Actions testa cada pull request, e o Render publica cada alteração aprovada na `main`.
 
-### 12.3 Como funciona a mensagem no MVP
+### 12.3 Como funciona a mensagem
 - O backend monta o texto e um link no formato `https://wa.me/<telefone_destino>?text=<texto codificado em URL>`.
 - A Lídia clica em "Enviar no WhatsApp". O WhatsApp abre com a mensagem pronta e ela só aperta enviar.
 - O clique marca a mensagem como 2-Enviada e grava `enviado_em`, porque o sistema não tem como saber se ela apertou enviar dentro do WhatsApp. O botão continua disponível para reenviar, e o reenvio mantém o primeiro `enviado_em` (ZAP-64).
@@ -361,7 +369,7 @@ Confeitaria cadastrada (tenant). Exemplo: Casa Belt.
 |---|---|---|---|---|
 | id | BIGINT | Sim | PK | IDENTITY |
 | nome | VARCHAR(100) | Sim | | Nome fantasia. Ex.: Casa Belt |
-| slug | VARCHAR(60) | Sim | UK | Minúsculas, números e hífen. Ex.: casa-belt (link do cardápio futuro) |
+| slug | VARCHAR(60) | Sim | UK | Minúsculas, números e hífen. Ex.: casa-belt (link do cardápio público) |
 | descricao | VARCHAR(500) | Não | | RF03 |
 | telefone_whatsapp | VARCHAR(13) | Sim | | Só dígitos com DDI e DDD. Ex.: 5511900000000. Canal direto (CDC) |
 | email_contato | VARCHAR(150) | Não | | |
@@ -471,7 +479,7 @@ Produto do pedido, com quantidade e personalização.
 | observacao | VARCHAR(300) | Não | | |
 
 #### mensagem_whatsapp
-Mensagem gerada a cada decisão sobre o pedido (RF10/RF12). No MVP, a Lídia envia pelo `wa.me`.
+Mensagem gerada a cada decisão sobre o pedido (RF10/RF12). A Lídia envia pelo `wa.me`.
 
 | Coluna | Tipo | Obr. | Chave | Observação |
 |---|---|---|---|---|
@@ -526,7 +534,7 @@ Trilha de auditoria (ISO 8.16).
    - **cancelar** pedidos Confirmados e Em produção pelo fluxo de recusa: o pedido vai para Recusado, com motivo obrigatório; um status próprio "Cancelado" fica como melhoria futura;
    - **voltar** só para desfazer o último passo da produção: Concluído → Em produção e Em produção → Confirmado, com confirmação; ao voltar de Concluído, se o aviso de pronto já foi enviado, a tela lembra a Lídia de avisar o cliente;
    - nada volta para antes da confirmação, e um pedido Recusado não volta para o quadro.
-4. **Massa do bolo.** **Decidido (ZAP-64):** sem campo próprio, e o DER não muda. A massa padrão de cada bolo vai na **descrição do produto** (ex.: "Massa de chocolate, recheio de brigadeiro…"). Quando o cliente pede outra massa, a Lídia anota na **observação do item** (`item_pedido.observacao`). Se o cardápio público (Futuro) precisar que o cliente escolha a massa na tela, avaliar um campo próprio.
+4. **Massa do bolo.** **Decidido (ZAP-64):** sem campo próprio, e o DER não muda. A massa padrão de cada bolo vai na **descrição do produto** (ex.: "Massa de chocolate, recheio de brigadeiro…"). Quando o cliente pede outra massa, a Lídia anota na **observação do item** (`item_pedido.observacao`). Como o cliente vai escolher a massa no Portal do Cliente fica para a definição da `ZAP-18` (seção 14, item 11).
 5. **Salgados.** **Decidido (ZAP-64):** vendidos por **unidade (UN)**, sem unidade de medida nova. O cento, o meio cento e pacotes viram produtos próprios no cardápio (ex.: "Cento de coxinha"), o que também dá o desconto do cento. O sistema não obriga um mínimo de unidades: a Lídia combina com o cliente. No cadastro, o nome é o tipo ("Salgado") e o sabor é o item ("Coxinha de frango").
 6. **Consistência de tenant.** **Decidido (ZAP-64):** as duas proteções. No banco, a FK composta da seção 13.3 garante que o pedido e o cliente pertencem ao mesmo estabelecimento; no backend, a criação e a edição de pedidos conferem isso antes de gravar, para devolver uma mensagem clara.
 7. **Geração do número do pedido** por estabelecimento. **Decidido (ZAP-64):** `MAX + 1` com bloqueio da linha do estabelecimento, na mesma transação da criação do pedido (RN09).
@@ -541,6 +549,11 @@ Trilha de auditoria (ISO 8.16).
    - ainda em aberto: quem será dono das contas do Render e do Supabase, e a validação do plano gratuito do Render (ZAP-86).
 9. **Criar e editar pedidos.** **Decidido (ZAP-64):** a Lídia pode **criar** pedidos (botão "Novo pedido" no quadro) e **editar** pedidos, com a edição limitada pelo status (RN21). Os produtos vêm do cardápio, o total é calculado pelo sistema, os itens antigos mantêm o preço (RN10) e toda criação e edição vai para o log. Virou a US7 (história `ZAP-87`).
 10. **Região dos servidores e LGPD.** O Render não tem região em São Paulo. Avaliar com a equipe uma nota na seção 9 sobre a localização dos dados.
+11. **Portal do Cliente** (definir na `ZAP-18`, com a Lídia quando for regra do negócio):
+    - prazo mínimo de antecedência para encomendar;
+    - limite de pedidos por data, sobretudo em datas comemorativas;
+    - como o cliente escolhe a massa, já que não há campo próprio (item 4);
+    - proteção do envio de pedidos sem login, contra abuso e pedidos falsos.
 
 ---
 
@@ -562,6 +575,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | 10 | Infra e deploy | Render (Static Site e Web Service) com HTTPS, Supabase, GitHub Actions (build e testes) e deploy automático do Render | Arquitetura |
 | 11 | Preparação da demonstração | Roteiro e dados para o vídeo e para o treinamento da Lídia | Entregas finais |
 | 12 | Cadastro e edição de pedidos | Botão "Novo pedido", formulário com produtos do cardápio, edição conforme o status, número por `MAX + 1`, logs de criação e edição | US7, RF13–RF14, RN09, RN10, RN21 |
+| 13 | Portal do Cliente | Requisitos (ZAP-18), cardápio público pelo `slug`, montagem e envio do pedido, consentimento LGPD e proteção do acesso sem login | Épico ZAP-2, RN02, RN09–RN12, RN16–RN19, LGPD, CDC, NBR 17225 |
 
 ---
 
@@ -571,7 +585,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 - **Relatório técnico** do projeto.
 - **Material de apoio** para a apresentação final.
 - Demais atividades do PI até a #17 (Propostas de divulgação do sistema).
-- **Treinamento da ação extensionista** (Empreendedorismo): encontro de 2 horas, depois do MVP pronto:
+- **Treinamento da ação extensionista** (Empreendedorismo): encontro de 2 horas, depois do sistema pronto:
   - conversa sobre Kanban (25 min);
   - construção dos critérios de aceite e recusa (35 min);
   - treinamento prático no Zappi (35 min).
@@ -602,6 +616,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Mudar o pedido de coluna | Em aberto (botões ou arrastar) | **Botões** nos detalhes do pedido, só com o próximo passo possível (ZAP-64). Motivo: arrastar é difícil no celular e para a persona, e um botão com nome diz o que vai acontecer |
 | Recusar depois de confirmado | Em aberto | **"Cancelar pedido"** em Confirmado e Em produção, pelo fluxo de recusa (ZAP-64, proposta A). Motivo: não muda o banco nem os tipos de mensagem e cabe no prazo; o status "Cancelado" fica como melhoria futura |
 | Voltar uma coluna | Em aberto | **Só Concluído → Em produção e Em produção → Confirmado**, com confirmação (ZAP-64). Motivo: corrige os cliques errados mais prováveis; confirmar e recusar já avisaram o cliente |
+| Escopo da entrega | MVP só com o Portal do Administrador; Portal do Cliente como Futuro (seções 5.1 e 5.4) | **Entrega final em 22/11/2026 com o Portal do Administrador e o Portal do Cliente juntos** (08/11/2026, ZAP-83). Motivo: decisão da equipe de entregar o sistema real, e não um MVP. WhatsApp Cloud API, pagamento online, estoque, relatórios financeiros, fidelização e acesso da Romilda continuam como Futuro |
 | Mensagem "Enviada" | Em aberto (clique ou confirmação manual) | **Ao clicar em "Enviar no WhatsApp"** (ZAP-64). Motivo: o sistema não sabe se ela apertou enviar, e não acrescenta um passo extra para a Lídia |
 | Unidade de venda dos salgados | Em aberto (unidade ou cento) | **Por unidade (UN)**; o cento e os pacotes viram produtos próprios (ZAP-64). Motivo: não muda o banco nem as telas, e o desconto do cento sai do preço de cada produto |
 | Massa do bolo | Em aberto (campo próprio no item ou não) | **Sem campo próprio** (ZAP-64): massa padrão na descrição do produto e massa pedida pelo cliente na observação do item. Motivo: não muda o banco, e no MVP quem registra o pedido é a Lídia |
@@ -632,7 +647,7 @@ O repositório `ChristianoMoura/Zappi` está integrado ao Jira pelo app **GitHub
 
 ### 18.1 Estrutura do backlog
 
-- **Épicos:** `ZAP-1` Portal do Administrador (MVP) · `ZAP-2` Portal do Cliente (Futuro) · `ZAP-3` Entregas em Sala.
+- **Épicos:** `ZAP-1` Portal do Administrador · `ZAP-2` Portal do Cliente · `ZAP-3` Entregas em Sala.
 - **Histórias:** uma funcionalidade com valor para a Lídia (ex.: `ZAP-29` Confirmação de Pedido). Os **critérios de aceitação ficam na história**.
 - **Subtarefas:** a unidade de trabalho do dia a dia, com um único responsável, prefixo `[Backend]`, `[Frontend]`, `[Infra]` ou `[Testes]` e rótulo correspondente. É nela que o código é registrado.
 - **Tarefas:** trabalho que não é código de uma história (decisões, textos, revisão, demonstração).
