@@ -67,7 +67,7 @@ A paleta "Ciano com creme" parte do **DarkCyan (#008B8B)** e usa tons quentes de
 | Creme | #FFF8F0 | Fundos quentes de apoio, fora das telas internas | Cacau sobre ele: 12,75:1 |
 | Creme do login | #FDF6EC | Lado do formulário na tela de login e fundo das telas internas do app | Cacau: 12,51:1; texto secundário: 7,26:1; erro: 6,13:1 |
 | Creme da ilustração | #F7E7CC | Fundo do lado da ilustração no login | — |
-| Creme suave | #FEF9F1 | Topo, menu lateral e barra de baixo do celular, com a linha #EAD9C2 do login | Cacau: 12,81:1; texto secundário: 7,43:1; ciano: 5,88:1 |
+| Creme suave | #FEF9F1 | Menu lateral e barra de baixo do celular, com a linha #EAD9C2 do login | Cacau: 12,81:1; texto secundário: 7,43:1; ciano: 5,88:1 |
 | Branco | #FFFFFF | Campos e cartões | Cacau sobre ele: 13,43:1; texto secundário: 7,79:1 |
 | Cacau | #3D2B1F | Texto principal e borda de foco | Sobre o creme: 12,75:1 |
 | Texto secundário | #5C5048 | Textos de apoio e placeholder | Sobre o creme: 7,39:1 |
@@ -113,6 +113,12 @@ O estilo de imagem do Zappi é **3D lúdico, com acabamento de massinha brilhant
 - Ampliada 2× no Higgsfield (Topaz, modo CGI) para 3920 × 4040 px, em 08/11/2026, porque a versão de 1400 px ficava borrada em telas de alta densidade.
 - Usada em WebP de 1400, 2000 e 2800 px (cerca de 100, 160 e 240 KB), com `srcset`: o navegador baixa só o tamanho que a tela precisa. Arquivos: [`ilustracao-login-1400.webp`](../frontend/src/assets/ilustracao-login-1400.webp), [`-2000`](../frontend/src/assets/ilustracao-login-2000.webp) e [`-2800`](../frontend/src/assets/ilustracao-login-2800.webp).
 - Aparece só no computador; no celular, a tela mostra apenas o formulário.
+
+**Collab com a loja (Casa Belt × Zappi):** o painel mostra que o Zappi é usado em parceria com a loja.
+
+- **Topo do painel:** fundo Cacau #3D2B1F; selo redondo com o logo da loja, o nome da loja, um "×" e o logo do Zappi, tudo em creme #FDF6EC (contraste 12,51:1). O foco do teclado no topo fica em creme.
+- **Login:** logo da loja centralizado e, embaixo, o símbolo do Zappi com o nome ao lado. Sem logo da loja, o login mostra só a marca do Zappi com o slogan.
+- **Origem:** nome e logo vêm do Meu estabelecimento; ao salvar uma troca lá, o topo e o login mudam juntos. Sem logo, o topo usa as iniciais da loja.
 
 **Regras para novas imagens:**
 
@@ -223,6 +229,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 | Etapa | Decisão |
 | --- | --- |
 | Ilustração em alta | Ilustração do login ampliada 2× (Topaz) e servida em três tamanhos, em 08/11/2026, aprovada pelo grupo em protótipo de comparação |
+| Collab Casa Belt × Zappi | Em 08/11/2026, o grupo escolheu em protótipo o topo na cor Cacau #3D2B1F com "Casa Belt × Zappi" em creme (logo e nome da loja primeiro) e, no login, o logo da loja centralizado com o Zappi embaixo, nome ao lado do símbolo. Tamanhos ajustados pelo grupo: topo 68 px, logo da loja 44, nome 24, × 20, símbolo do Zappi 44 e nome 24; no login, logo da loja 108, símbolo 40 e nome 36. O logo e o nome vêm do Meu estabelecimento |
 | Fundo creme | Em 08/11/2026, o grupo pediu o creme #FDF6EC do login como fundo das telas internas. Para o topo e o menu, comparou em protótipo 7 tons (3 mais claros, 1 igual e 3 mais escuros) e escolheu o Creme suave #FEF9F1; testou também tirar a linha entre o topo e o menu e decidiu mantê-la. Cartões e campos continuam brancos. Contrastes no creme: cacau 12,51:1, secundário 7,26:1, erro 6,13:1 |
 | Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, Referência A com capa; o check de "campo confirmado" foi retirado a pedido do grupo) |
 | Implementação | Tela de login e identidade aplicadas em React no [PR #3](https://github.com/ChristianoMoura/Zappi/pull/3) |
