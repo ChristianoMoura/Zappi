@@ -193,7 +193,6 @@ export function PaginaFormularioPedido() {
         <h1 ref={titulo} className={formulario.titulo} tabIndex={-1}>
           {editando ? `Editar pedido #${numero}` : 'Novo pedido'}
         </h1>
-        <p className={formulario.subtitulo}>{editando ? 'Mude o que precisar e salve.' : 'Registre a encomenda que chegou pelo WhatsApp. Ela entra na coluna Novo.'}</p>
       </div>
 
       {clienteFixo && (
@@ -302,16 +301,14 @@ export function PaginaFormularioPedido() {
                           {' '}· R$ {precoParaTela(produto.preco)} {UNIDADES[produto.unidade].selo}
                         </span>
                       </>
-                    ) : (
-                      'Escolha o produto para ver o preço.'
-                    )}
+                    ) : null}
                   </p>
                   <div className={classes.duasColunas}>
                     <TextInput {...propsCampo(`item-${item.chave}-recheio`, 'Recheio', { limite: LIMITES.recheio })} value={item.recheio} onChange={(e) => mudarItem(item.chave, 'recheio', e.currentTarget.value)} autoComplete="off" />
                     <TextInput {...propsCampo(`item-${item.chave}-cobertura`, 'Cobertura', { limite: LIMITES.cobertura })} value={item.cobertura} onChange={(e) => mudarItem(item.chave, 'cobertura', e.currentTarget.value)} autoComplete="off" />
                   </div>
                   <TextInput
-                    {...propsCampo(`item-${item.chave}-observacao`, 'Observação do item', { dica: 'Ex.: massa branca ou escrever "Parabéns, Lia".', limite: LIMITES.observacaoItem })}
+                    {...propsCampo(`item-${item.chave}-observacao`, 'Observação do item', { limite: LIMITES.observacaoItem })}
                     value={item.observacao}
                     onChange={(e) => mudarItem(item.chave, 'observacao', e.currentTarget.value)}
                     autoComplete="off"
@@ -328,7 +325,7 @@ export function PaginaFormularioPedido() {
         <section className={formulario.caixa} aria-labelledby="secao-retirada">
           <h2 id="secao-retirada" className={formulario.tituloCaixa}>Retirada</h2>
           <TextInput
-            {...propsCampo('dataRetirada', 'Data de retirada', { obrigatorio: true, dica: 'Não há entrega: o cliente retira e paga na retirada.' })}
+            {...propsCampo('dataRetirada', 'Data de retirada', { obrigatorio: true })}
             type="date"
             min={hoje}
             value={dados.dataRetirada}
@@ -336,7 +333,7 @@ export function PaginaFormularioPedido() {
             className={classes.data}
           />
           <Textarea
-            {...propsCampo('observacao', 'Observações do pedido', { dica: 'Ocasião ou tema da festa. Ex.: Aniversário de 40 anos.', limite: LIMITES.observacao })}
+            {...propsCampo('observacao', 'Observações do pedido', { limite: LIMITES.observacao })}
             value={dados.observacao}
             onChange={(e) => mudar('observacao', e.currentTarget.value)}
             autosize
