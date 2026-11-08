@@ -1,11 +1,12 @@
 // Leitura dos pedidos do estabelecimento da usuária logada e as ações sobre eles.
-// PENDENTE: as APIs são a ZAP-44 (listar), a ZAP-49 (confirmar), a ZAP-53 (recusar e cancelar) e
-// a ZAP-50 (texto da mensagem, link wa.me e marcar como enviada), que ainda não existem. Enquanto isso, no modo de
+// PENDENTE: as APIs são a ZAP-44 (listar), a ZAP-49 (confirmar), a ZAP-53 (recusar e cancelar),
+// a ZAP-75 e a ZAP-76 (andamento e voltar coluna) e a ZAP-50 (texto da mensagem, link wa.me e marcar
+// como enviada), que ainda não existem. Enquanto isso, no modo de
 // desenvolvimento os pedidos são simulados com clientes fictícios (nenhum dado real), guardados
 // só na memória; fora dele, a tela avisa que o serviço não está disponível.
 // Quando as APIs ficarem prontas, só este arquivo muda.
 
-import { dataLocal, dataRetiradaMensagem, MOTIVO_MAXIMO, moeda, nomeItem, podeRecusarOuCancelar, quantidadeTexto, STATUS, totalPedido } from './regrasPedidos'
+import { AVANCO, dataLocal, dataRetiradaMensagem, moeda, MOTIVO_MAXIMO, nomeItem, podeRecusarOuCancelar, quantidadeTexto, STATUS, totalPedido, VOLTA } from './regrasPedidos'
 
 export class ServicoIndisponivelError extends Error {}
 export class AcaoNaoPermitidaError extends Error {}
@@ -78,13 +79,13 @@ function pedidosSimulados() {
       mensagens: [['Confirmação', dia(-3, '12:02')]],
     },
     {
-      numero: 9, status: STATUS.EM_PRODUCAO, dataRetirada: dia(0), criadoEm: dia(-5, '14:30'), confirmadoEm: dia(-5, '17:45'),
+      numero: 9, status: STATUS.EM_PRODUCAO, dataRetirada: dia(0), criadoEm: dia(-5, '14:30'), confirmadoEm: dia(-5, '17:45'), producaoEm: dia(-1, '08:00'),
       cliente: { nome: 'Beatriz Rocha', telefone: '5511987650009' },
       itens: [bolo('Ninho com morango', 2, 115, { recheio: 'Ninho com morango', cobertura: 'Chantilly', observacao: 'Escrever "Parabéns, Lia"' })],
       mensagens: [['Confirmação', dia(-5, '17:50')]],
     },
     {
-      numero: 8, status: STATUS.CONCLUIDO, dataRetirada: dia(0), criadoEm: dia(-6, '11:00'), confirmadoEm: dia(-6, '13:10'), concluidoEm: dia(0, '08:30'),
+      numero: 8, status: STATUS.CONCLUIDO, dataRetirada: dia(0), criadoEm: dia(-6, '11:00'), confirmadoEm: dia(-6, '13:10'), producaoEm: dia(-1, '07:30'), concluidoEm: dia(0, '08:30'),
       cliente: { nome: 'Pedro Alves', telefone: '5511987650008' },
       itens: [bolo('Brigadeiro de chocolate', 1, 100, { recheio: 'Brigadeiro', cobertura: 'Granulado' })],
       mensagens: [['Confirmação', dia(-6, '13:15')], ['Pronto para retirada']],
@@ -147,6 +148,37 @@ export async function recusarPedido(numero, motivo) {
   pedido.motivoRecusa = texto
   pedido.recusadoEm = agora()
   pedido.mensagens.push(mensagem(pedido, 'Recusa'))
+  return copia(pedido)
+}
+
+// Confirmado → Em produção e Em produção → Concluído. Ao concluir, gera o aviso de pronto
+// pendente (RN03, RN06, ZAP-77)
+export async function avancarPedido(numero) {
+  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
+  await esperar(600)
+  const pedido = encontrar(numero)
+  const avanco = AVANCO[pedido.status]
+  if (!avanco) throw new AcaoNaoPermitidaError()
+  pedido.status = avanco.destino
+  if (avanco.destino === STATUS.EM_PRODUCAO) pedido.producaoEm = agora()
+  else {
+    pedido.concluidoEm = agora()
+    pedido.mensagens.push(mensagem(pedido, 'Pronto para retirada'))
+  }
+  return copia(pedido)
+}
+
+// Em produção → Confirmado e Concluído → Em produção (decisão da ZAP-64). A data da etapa
+// desfeita sai do histórico; as mensagens já geradas continuam guardadas.
+export async function voltarPedido(numero) {
+  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
+  await esperar(600)
+  const pedido = encontrar(numero)
+  const volta = VOLTA[pedido.status]
+  if (!volta) throw new AcaoNaoPermitidaError()
+  if (pedido.status === STATUS.CONCLUIDO) delete pedido.concluidoEm
+  else delete pedido.producaoEm
+  pedido.status = volta.destino
   return copia(pedido)
 }
 

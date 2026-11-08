@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CartaoPedido } from '../pedidos/CartaoPedido'
 import { DetalhesPedido } from '../pedidos/DetalhesPedido'
 import { colunasVisiveis, pedidosDaColuna, STATUS } from '../pedidos/regrasPedidos'
-import { buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido } from '../pedidos/servicoPedidos'
+import { avancarPedido, buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from '../pedidos/servicoPedidos'
 import classes from '../pedidos/QuadroPedidos.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
@@ -102,41 +102,42 @@ export function PaginaPedidos() {
     setAberto(pedido)
   }
 
-  async function confirmar(pedido) {
+  // Executa uma ação sobre o pedido aberto. No celular, a aba acompanha o pedido para a coluna
+  // nova. Devolve se deu certo, para as janelas de confirmação fecharem só nesse caso.
+  async function agir(acao, chamada, oQueFazer) {
     setEnviando(true)
     setErroAcao('')
     try {
-      atualizar(await confirmarPedido(pedido.numero))
-      setAcabouDe('confirmar')
-      // No celular, a aba acompanha o pedido para a coluna Confirmado
-      if (!telaGrande) setAbaAtiva(String(STATUS.CONFIRMADO))
-    } catch {
-      setErroAcao('Não foi possível confirmar o pedido agora. Tente de novo em alguns minutos.')
-    } finally {
-      setEnviando(false)
-    }
-  }
-
-  // Recusar (Novo) e cancelar (Confirmado ou Em produção) levam o pedido para Recusado. O filtro
-  // "Mostrar recusados" liga sozinho, para a Lídia continuar vendo o pedido e enviar a mensagem.
-  // Devolve se deu certo, para a janela do motivo fechar só nesse caso.
-  async function recusar(pedido, motivo) {
-    const acao = pedido.status === STATUS.NOVO ? 'recusar' : 'cancelar'
-    setEnviando(true)
-    setErroAcao('')
-    try {
-      atualizar(await recusarPedido(pedido.numero, motivo))
+      const pedido = await chamada()
+      atualizar(pedido)
       setAcabouDe(acao)
-      setMostrarRecusados(true)
-      if (!telaGrande) setAbaAtiva(String(STATUS.RECUSADO))
+      if (pedido.status === STATUS.RECUSADO) setMostrarRecusados(true)
+      if (!telaGrande) setAbaAtiva(String(pedido.status))
       return true
     } catch {
-      setErroAcao(`Não foi possível ${acao} o pedido agora. Tente de novo em alguns minutos.`)
+      setErroAcao(`Não foi possível ${oQueFazer} agora. Tente de novo em alguns minutos.`)
       return false
     } finally {
       setEnviando(false)
     }
   }
+
+  const confirmar = (pedido) => agir('confirmar', () => confirmarPedido(pedido.numero), 'confirmar o pedido')
+
+  // Recusar (Novo) e cancelar (Confirmado ou Em produção) levam o pedido para Recusado. O filtro
+  // "Mostrar recusados" liga sozinho, para a Lídia continuar vendo o pedido e enviar a mensagem.
+  function recusar(pedido, motivo) {
+    const acao = pedido.status === STATUS.NOVO ? 'recusar' : 'cancelar'
+    return agir(acao, () => recusarPedido(pedido.numero, motivo), `${acao} o pedido`)
+  }
+
+  // "Iniciar produção" e "Marcar como pronto" (ZAP-77)
+  function avancar(pedido) {
+    const pronto = pedido.status === STATUS.EM_PRODUCAO
+    return agir(pronto ? 'pronto' : 'iniciar', () => avancarPedido(pedido.numero), pronto ? 'marcar o pedido como pronto' : 'iniciar a produção')
+  }
+
+  const voltar = (pedido) => agir('voltar', () => voltarPedido(pedido.numero), 'voltar o pedido')
 
   // O link do WhatsApp abre na hora; marcar como enviada acontece em seguida
   async function enviarMensagem(indice) {
@@ -206,6 +207,8 @@ export function PaginaPedidos() {
         telaGrande={telaGrande}
         aoConfirmar={confirmar}
         aoRecusar={recusar}
+        aoAvancar={avancar}
+        aoVoltar={voltar}
         aoEnviarMensagem={enviarMensagem}
         enviando={enviando}
         acabouDe={acabouDe}

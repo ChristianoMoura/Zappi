@@ -59,7 +59,15 @@ export const tema = createTheme({
   focusRing: 'auto',
 
   components: {
-    Button: Button.extend({ defaultProps: { size: 'lg' } }),
+    // O Mantine corta o texto do botão que não cabe ("Voltar para confirma"). Aqui o texto quebra
+    // em outra linha e o botão cresce, no celular estreito e com a fonte ampliada (NBR 17225 5.4.3)
+    Button: Button.extend({
+      defaultProps: { size: 'lg' },
+      styles: {
+        root: { height: 'auto', minHeight: 'var(--button-height)', paddingBlock: 8 },
+        label: { whiteSpace: 'normal', overflow: 'visible', textAlign: 'center', lineHeight: 1.25 },
+      },
+    }),
     Input: Input.extend({ defaultProps: { size: 'lg' } }),
     NavLink: NavLink.extend({
       styles: { root: { minHeight: 56, borderRadius: 'var(--mantine-radius-md)' } },

@@ -67,6 +67,21 @@ export const podeRecusar = (status) => status === STATUS.NOVO
 export const podeCancelar = (status) => status === STATUS.CONFIRMADO || status === STATUS.EM_PRODUCAO
 export const podeRecusarOuCancelar = (status) => podeRecusar(status) || podeCancelar(status)
 
+// Andamento entre as colunas (ZAP-77, RN03): cada etapa tem um só passo à frente e, pela decisão
+// da ZAP-64, só Em produção e Concluído podem voltar uma coluna
+export const AVANCO = {
+  [STATUS.CONFIRMADO]: { destino: STATUS.EM_PRODUCAO, rotulo: 'Iniciar produção' },
+  [STATUS.EM_PRODUCAO]: { destino: STATUS.CONCLUIDO, rotulo: 'Marcar como pronto' },
+}
+export const VOLTA = {
+  [STATUS.EM_PRODUCAO]: { destino: STATUS.CONFIRMADO, rotulo: 'Voltar para confirmado' },
+  [STATUS.CONCLUIDO]: { destino: STATUS.EM_PRODUCAO, rotulo: 'Voltar para produção' },
+}
+
+// Ao voltar de Concluído, o cliente precisa ser avisado se já recebeu o aviso de pronto
+export const avisoDeProntoEnviado = (pedido) =>
+  pedido.mensagens.some((mensagem) => mensagem.tipo === 'Pronto para retirada' && mensagem.status === 'Enviada')
+
 // Só a mensagem da etapa atual pode ser enviada (ZAP-51): Confirmado → confirmação,
 // Concluído → pronto, Recusado → recusa. Novo e Em produção não têm mensagem a enviar.
 export const TIPO_MENSAGEM_DA_ETAPA = {

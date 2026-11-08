@@ -1,8 +1,9 @@
 import { Alert, Button, Drawer } from '@mantine/core'
-import { IconAlertCircle, IconCheck, IconSend, IconX } from '@tabler/icons-react'
+import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconSend, IconToolsKitchen2, IconX } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { JanelaMotivo } from './JanelaMotivo'
-import { COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeCancelar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido } from './regrasPedidos'
+import { JanelaVoltar } from './JanelaVoltar'
+import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeCancelar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
 const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
@@ -90,35 +91,57 @@ function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef }) {
 }
 
 // Detalhes do pedido (ZAP-47, RF08). No computador abre pela direita; no celular, sobe de baixo.
-// A faixa de baixo mostra só os próximos passos possíveis (ZAP-64): "Confirmar pedido" e
-// "Recusar pedido" nos Novos (ZAP-51, ZAP-54) e "Cancelar pedido" nos Confirmados e Em produção
-// (ZAP-54). O andamento entre as colunas entra na ZAP-77.
+// A faixa de baixo mostra só os próximos passos possíveis (ZAP-64):
+// - Novo: "Confirmar pedido" e "Recusar pedido" (ZAP-51, ZAP-54);
+// - Confirmado: "Iniciar produção" e "Cancelar pedido" (ZAP-77, ZAP-54);
+// - Em produção: "Marcar como pronto", "Cancelar pedido" e "Voltar para confirmado";
+// - Concluído: "Voltar para produção". Recusado não tem ações.
 const SUCESSO = {
-  confirmar: 'Pedido confirmado e movido para a coluna Confirmado.',
-  recusar: 'Pedido recusado e movido para a coluna Recusado.',
-  cancelar: 'Pedido cancelado e movido para a coluna Recusado.',
+  confirmar: { texto: 'Pedido confirmado e movido para a coluna Confirmado.', enviar: true },
+  recusar: { texto: 'Pedido recusado e movido para a coluna Recusado.', enviar: true },
+  cancelar: { texto: 'Pedido cancelado e movido para a coluna Recusado.', enviar: true },
+  iniciar: { texto: 'Pedido movido para a coluna Em produção. Quando ficar pronto, marque como pronto.' },
+  pronto: { texto: 'Pedido pronto e movido para a coluna Concluído.', enviar: true },
+  voltar: { texto: 'Pedido voltou para a coluna' },
 }
 
-export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoEnviarMensagem, enviando, acabouDe, erroAcao }) {
+function textoSucesso(acabouDe, coluna, primeiroNome) {
+  const { texto, enviar } = SUCESSO[acabouDe]
+  if (acabouDe === 'voltar') return `${texto} ${coluna.nome}.`
+  return enviar ? `${texto} Agora envie a mensagem para ${primeiroNome}.` : texto
+}
+
+export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoAvancar, aoVoltar, aoEnviarMensagem, enviando, acabouDe, erroAcao }) {
   const coluna = pedido && COLUNAS.find((c) => c.status === pedido.status)
   const botaoEnviarRef = useRef(null)
+  const sucessoRef = useRef(null)
   const [janela, setJanela] = useState(null)
 
-  // Depois de confirmar, recusar ou cancelar, o botão some; o foco vai para o próximo passo,
-  // que é enviar a mensagem
+  // Depois de uma ação, o botão dela some. Se há mensagem a enviar, o foco vai para "Enviar no
+  // WhatsApp"; se não, para o aviso de sucesso, que diz onde o pedido foi parar.
   useEffect(() => {
-    if (acabouDe) botaoEnviarRef.current?.focus()
+    if (!acabouDe) return
+    if (SUCESSO[acabouDe].enviar && botaoEnviarRef.current) botaoEnviarRef.current.focus()
+    else sucessoRef.current?.focus()
   }, [acabouDe])
 
   async function concluirMotivo(motivo) {
     if (await aoRecusar(pedido, motivo)) setJanela(null)
   }
 
+  async function concluirVolta() {
+    if (await aoVoltar(pedido)) setJanela(null)
+  }
+
+  const avanco = pedido && AVANCO[pedido.status]
+  const volta = pedido && VOLTA[pedido.status]
+
   const primeiroNome = pedido?.cliente.nome.split(' ')[0]
   const historico = pedido
     ? [
         ['Recebido', pedido.criadoEm],
         ['Confirmado', pedido.confirmadoEm],
+        ['Em produção', pedido.producaoEm],
         [pedido.cancelado ? 'Cancelado' : 'Recusado', pedido.recusadoEm],
         ['Concluído', pedido.concluidoEm],
       ].filter(([, data]) => data)
@@ -142,8 +165,11 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
           </div>
 
           {acabouDe && (
-            <Alert color="#1d6b45" variant="outline" icon={<IconCheck size={22} aria-hidden />} className={classes.sucesso} role="status">
-              {SUCESSO[acabouDe]} Agora envie a mensagem para {primeiroNome}.
+            <Alert ref={sucessoRef} tabIndex={-1} color="#1d6b45" variant="outline" icon={<IconCheck size={22} aria-hidden />} className={classes.sucesso} role="status">
+              {textoSucesso(acabouDe, coluna, primeiroNome)}
+              {acabouDe === 'voltar' && pedido.status === STATUS.EM_PRODUCAO && avisoDeProntoEnviado(pedido) && (
+                <> Lembre de avisar {primeiroNome} pelo WhatsApp que o pedido ainda não está pronto.</>
+              )}
             </Alert>
           )}
 
@@ -239,19 +265,39 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
             </div>
           )}
 
-          {podeCancelar(pedido.status) && (
+          {(avanco || volta) && (
             <div className={classes.faixaAcoes}>
-              <Button fullWidth variant="outline" color="#b42318" onClick={() => setJanela('cancelar')} leftSection={<IconX size={22} aria-hidden />}>
-                Cancelar pedido
-              </Button>
-              <p className={classes.dicaAcao}>Use só se não for possível entregar. O Zappi prepara uma mensagem avisando {primeiroNome}.</p>
+              {avanco && (
+                <Button
+                  fullWidth
+                  onClick={() => aoAvancar(pedido)}
+                  loading={enviando && !janela}
+                  loaderProps={{ type: 'dots' }}
+                  leftSection={avanco.destino === STATUS.CONCLUIDO ? <IconCircleCheck size={22} aria-hidden /> : <IconToolsKitchen2 size={22} aria-hidden />}
+                >
+                  {avanco.rotulo}
+                </Button>
+              )}
+              {podeCancelar(pedido.status) && (
+                <Button fullWidth variant="outline" color="#b42318" onClick={() => setJanela('cancelar')} disabled={enviando} leftSection={<IconX size={22} aria-hidden />}>
+                  Cancelar pedido
+                </Button>
+              )}
+              {volta && (
+                <Button fullWidth variant="subtle" onClick={() => setJanela('voltar')} disabled={enviando} leftSection={<IconArrowBackUp size={22} aria-hidden />}>
+                  {volta.rotulo}
+                </Button>
+              )}
+              {avanco?.destino === STATUS.CONCLUIDO && <p className={classes.dicaAcao}>Ao marcar como pronto, o Zappi prepara o aviso para {primeiroNome}.</p>}
             </div>
           )}
+
+          <JanelaVoltar pedido={pedido} aberta={janela === 'voltar'} aoFechar={() => setJanela(null)} aoConfirmar={concluirVolta} enviando={enviando} erro={janela === 'voltar' ? erroAcao : ''} />
 
           <JanelaMotivo
             pedido={pedido}
             acao={janela}
-            aberta={janela !== null}
+            aberta={janela === 'recusar' || janela === 'cancelar'}
             aoFechar={() => setJanela(null)}
             aoConcluir={concluirMotivo}
             enviando={enviando}
