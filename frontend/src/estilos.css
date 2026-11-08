@@ -19,6 +19,12 @@ button:focus-visible {
   overflow: hidden;
 }
 
+/* O overflow acima tira a largura mínima natural do botão: numa linha apertada ele encolhia
+   menos que o próprio texto e o ícone e o texto passavam da borda. Volta a ser o conteúdo. */
+.mantine-Button-root {
+  min-width: min-content;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   /* Passar o mouse: botões sobem um pouco */
   .mantine-Button-root {
