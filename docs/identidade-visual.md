@@ -67,7 +67,8 @@ A paleta "Ciano com creme" parte do **DarkCyan (#008B8B)** e usa tons quentes de
 | Creme | #FFF8F0 | Fundos quentes de apoio, fora das telas internas | Cacau sobre ele: 12,75:1 |
 | Creme do login | #FDF6EC | Lado do formulário na tela de login e fundo das telas internas do app | Cacau: 12,51:1; texto secundário: 7,26:1; erro: 6,13:1 |
 | Creme da ilustração | #F7E7CC | Fundo do lado da ilustração no login | — |
-| Branco | #FFFFFF | Topo, menu, campos e cartões | Cacau sobre ele: 13,43:1; texto secundário: 7,79:1 |
+| Creme suave | #FEF9F1 | Topo, menu lateral e barra de baixo do celular, com a linha #EAD9C2 do login | Cacau: 12,81:1; texto secundário: 7,43:1; ciano: 5,88:1 |
+| Branco | #FFFFFF | Campos e cartões | Cacau sobre ele: 13,43:1; texto secundário: 7,79:1 |
 | Cacau | #3D2B1F | Texto principal e borda de foco | Sobre o creme: 12,75:1 |
 | Texto secundário | #5C5048 | Textos de apoio e placeholder | Sobre o creme: 7,39:1 |
 | Linha | #D9CBBE | Bordas de campos e divisões | — (não é texto) |
@@ -222,7 +223,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 | Etapa | Decisão |
 | --- | --- |
 | Ilustração em alta | Ilustração do login ampliada 2× (Topaz) e servida em três tamanhos, em 08/11/2026, aprovada pelo grupo em protótipo de comparação |
-| Fundo creme | Em 08/11/2026, o grupo pediu o creme #FDF6EC do login como fundo das telas internas; topo, menu e cartões continuam brancos. Contrastes no creme: cacau 12,51:1, secundário 7,26:1, erro 6,13:1 |
+| Fundo creme | Em 08/11/2026, o grupo pediu o creme #FDF6EC do login como fundo das telas internas. Para o topo e o menu, comparou em protótipo 7 tons (3 mais claros, 1 igual e 3 mais escuros) e escolheu o Creme suave #FEF9F1; testou também tirar a linha entre o topo e o menu e decidiu mantê-la. Cartões e campos continuam brancos. Contrastes no creme: cacau 12,51:1, secundário 7,26:1, erro 6,13:1 |
 | Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, Referência A com capa; o check de "campo confirmado" foi retirado a pedido do grupo) |
 | Implementação | Tela de login e identidade aplicadas em React no [PR #3](https://github.com/ChristianoMoura/Zappi/pull/3) |
 | Protótipo aprovado | Título "Entrar no painel" escondido; elementos do login maiores; slogan de volta sob o logo; ilustração sem texto |
