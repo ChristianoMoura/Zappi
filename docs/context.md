@@ -150,6 +150,7 @@ O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado ap
 11. Registro de auditoria (logins e ações administrativas).
 12. Infraestrutura: Docker Compose no ambiente local; em produção, Render e Supabase com HTTPS gerenciado, CI no GitHub Actions e deploy automático do Render a cada merge na `main`.
 13. **Cadastrar e editar pedidos** (US7): a Lídia registra as encomendas que recebe pelo WhatsApp e corrige um pedido, com a edição limitada pelo status (RN21).
+14. **Anonimizar os dados de um cliente** a pedido do titular (RN17, LGPD), sem apagar o histórico de pedidos (decisão da ZAP-64).
 
 ### 5.3 Dados iniciais (seed)
 - Estabelecimento: **Casa Belt**.
@@ -219,7 +220,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN14 | Excluir um produto é **lógico** (`ativo = FALSE`): ele some do cardápio, mas o histórico continua. | RF06 |
 | RN15 | Toda foto de produto exige **texto alternativo**. | NBR 5.9.1 |
 | RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. | LGPD |
-| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. | LGPD |
+| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Entra no MVP. | LGPD / ZAP-64 |
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
 | RN19 | Não há delivery: o pedido tem `data_retirada`, e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
@@ -511,6 +512,7 @@ Trilha de auditoria (ISO 8.16).
 - `CHECK (consentimento_lgpd = TRUE)` em `cliente`.
 - `CHECK (foto_caminho IS NULL OR foto_texto_alternativo IS NOT NULL)` em `produto`.
 - `ON DELETE CASCADE` em `item_pedido.pedido_id` e `mensagem_whatsapp.pedido_id`.
+- Consistência de tenant (decisão da ZAP-64): `UNIQUE (id, estabelecimento_id)` em `cliente` e FK composta `(cliente_id, estabelecimento_id)` em `pedido`, referenciando `cliente (id, estabelecimento_id)`. O banco recusa um pedido com cliente de outro estabelecimento.
 - RLS habilitado em todas as tabelas (somente o backend acessa).
 
 ---
@@ -526,7 +528,7 @@ Trilha de auditoria (ISO 8.16).
    - nada volta para antes da confirmação, e um pedido Recusado não volta para o quadro.
 4. **Massa do bolo.** **Decidido (ZAP-64):** sem campo próprio, e o DER não muda. A massa padrão de cada bolo vai na **descrição do produto** (ex.: "Massa de chocolate, recheio de brigadeiro…"). Quando o cliente pede outra massa, a Lídia anota na **observação do item** (`item_pedido.observacao`). Se o cardápio público (Futuro) precisar que o cliente escolha a massa na tela, avaliar um campo próprio.
 5. **Salgados.** **Decidido (ZAP-64):** vendidos por **unidade (UN)**, sem unidade de medida nova. O cento, o meio cento e pacotes viram produtos próprios no cardápio (ex.: "Cento de coxinha"), o que também dá o desconto do cento. O sistema não obriga um mínimo de unidades: a Lídia combina com o cliente. No cadastro, o nome é o tipo ("Salgado") e o sabor é o item ("Coxinha de frango").
-6. **Consistência de tenant.** Garantir que o pedido e o cliente pertencem ao mesmo estabelecimento (validação no backend ou FK composta).
+6. **Consistência de tenant.** **Decidido (ZAP-64):** as duas proteções. No banco, a FK composta da seção 13.3 garante que o pedido e o cliente pertencem ao mesmo estabelecimento; no backend, a criação e a edição de pedidos conferem isso antes de gravar, para devolver uma mensagem clara.
 7. **Geração do número do pedido** por estabelecimento. **Decidido (ZAP-64):** `MAX + 1` com bloqueio da linha do estabelecimento, na mesma transação da criação do pedido (RN09).
 8. **Decisões técnicas** (registradas na ZAP-62; histórico na seção 17):
    - build do backend: **Maven**, com Maven Wrapper;
@@ -609,6 +611,8 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Reenviar a mensagem | Não previsto (RF10 e RF12 só preparam a mensagem) | **Botão continua disponível para reenviar**, e o painel mostra só a mensagem da etapa atual, com as anteriores guardadas (ZAP-64, ZAP-51). Motivo: a Lídia pode fechar o WhatsApp sem mandar, e uma mensagem de outra etapa não deve ser enviada por engano |
 | Criar e editar pedidos | Pedidos só pelo seed (seção 5.3) | **US7, RF13, RF14 e RN21** (ZAP-64, história ZAP-87): cadastro pelo botão "Novo pedido" e edição limitada pelo status. Motivo: sem isso, a Lídia não consegue usar o Zappi com pedidos de verdade |
 | Data de entrada em produção | Sem coluna no dicionário de dados (Atividade #14) | **Coluna nova `producao_em`** em `pedido` (ZAP-83). Motivo: o histórico do pedido na tela mostra quando ele entrou em produção, e uma coluna é mais simples de consultar do que o log |
+| Consistência de tenant entre pedido e cliente | Em aberto (validação no backend ou FK composta) | **As duas** (ZAP-64): FK composta `(cliente_id, estabelecimento_id)` em `pedido` e validação no backend. Motivo: o banco é a garantia final contra dados de outro estabelecimento (RN01, ISO 27002 5.34), e o backend dá uma mensagem clara. Restrição nova, fora da lista da Atividade #14 (ZAP-83) |
+| Anonimização de clientes | Regra prevista (RN17, Atividade #9), fora da lista do MVP | **Entra no MVP** (ZAP-64). Motivo: atender ao direito de exclusão da LGPD; o banco não muda, porque `anonimizado_em` já existe. A tela, o valor do telefone anonimizado e a ação do log ficam para a tarefa de implementação (ZAP-83) |
 | Alterações fora da documentação original | Sem registro definido | **Toda alteração é registrada na `ZAP-83`** e nesta seção, com antes, agora e motivo (seção 0). Motivo: manter os documentos entregues em sala coerentes com o sistema entregue |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
