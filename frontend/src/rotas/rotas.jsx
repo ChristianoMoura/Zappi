@@ -4,6 +4,7 @@ import { PaginaEstabelecimento } from '../paginas/PaginaEstabelecimento'
 import { PaginaLogin } from '../paginas/PaginaLogin'
 import { PaginaNaoEncontrada } from '../paginas/PaginaNaoEncontrada'
 import { PaginaPedidos } from '../paginas/PaginaPedidos'
+import { PaginaProduto } from '../paginas/PaginaProduto'
 import { PaginaProdutos } from '../paginas/PaginaProdutos'
 import { RotaProtegida } from './RotaProtegida'
 
@@ -18,6 +19,8 @@ export const rotas = createBrowserRouter([
           { index: true, element: <Navigate to="/pedidos" replace /> },
           { path: '/pedidos', Component: PaginaPedidos },
           { path: '/produtos', Component: PaginaProdutos },
+          { path: '/produtos/novo', Component: PaginaProduto },
+          { path: '/produtos/:id', Component: PaginaProduto },
           { path: '/estabelecimento', Component: PaginaEstabelecimento },
         ],
       },

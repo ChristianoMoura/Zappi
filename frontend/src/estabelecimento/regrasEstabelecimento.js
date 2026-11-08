@@ -18,15 +18,8 @@ export const LIMITES = {
 // Endereço sem número: a caixa "Sem número" guarda este valor no campo numero
 export const SEM_NUMERO = 'S/N'
 
-// Fotos de capa e logo: JPG, PNG ou WebP de até 5 MB
-export const TIPOS_FOTO = ['image/jpeg', 'image/png', 'image/webp']
-export const TAMANHO_MAX_FOTO = 5 * 1024 * 1024
-
-export function validarFoto(arquivo) {
-  if (!TIPOS_FOTO.includes(arquivo.type)) return 'Use uma foto em JPG, PNG ou WebP.'
-  if (arquivo.size > TAMANHO_MAX_FOTO) return 'A foto passa de 5 MB. Escolha uma menor.'
-  return null
-}
+// Fotos de capa e logo: mesma regra da foto do produto (JPG, PNG ou WebP de até 5 MB)
+export { TAMANHO_MAX_FOTO, TIPOS_FOTO, validarFoto } from '../comum/regrasFoto'
 
 export const soDigitos =(texto) => String(texto ?? '').replace(/\D/g, '')
 
