@@ -67,6 +67,10 @@ export const podeRecusar = (status) => status === STATUS.NOVO
 export const podeCancelar = (status) => status === STATUS.CONFIRMADO || status === STATUS.EM_PRODUCAO
 export const podeRecusarOuCancelar = (status) => podeRecusar(status) || podeCancelar(status)
 
+// Edição do pedido (RN21): Concluído e Recusado não mudam; depois de confirmado, o cliente não troca
+export const podeEditar = (status) => [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(status)
+export const podeTrocarCliente = (status) => status === STATUS.NOVO
+
 // Andamento entre as colunas (ZAP-77, RN03): cada etapa tem um só passo à frente e, pela decisão
 // da ZAP-64, só Em produção e Concluído podem voltar uma coluna
 export const AVANCO = {

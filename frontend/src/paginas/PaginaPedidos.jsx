@@ -33,13 +33,15 @@ export function PaginaPedidos() {
   const [abaAtiva, setAbaAtiva] = useState(String(STATUS.NOVO))
   const [aberto, setAberto] = useState(null)
   const [enviando, setEnviando] = useState(false)
-  const [acabouDe, setAcabouDe] = useState(null)
+  const { state } = useLocation()
+  // Voltando da edição (ZAP-91), o painel do pedido abre de novo; depois de salvar, com o aviso
+  const [acabouDe, setAcabouDe] = useState(state?.editado ? 'editar' : null)
   const [erroAcao, setErroAcao] = useState('')
   const origemFoco = useRef(null)
+  const abrirAoVoltar = state?.abrir
 
   // Voltando do cadastro de pedido (ZAP-89): avisa e leva o foco ao card novo, na coluna Novo.
   // Voltando sem salvar, o foco volta para o botão "Novo pedido".
-  const { state } = useLocation()
   const novo = state?.novo
   const focoAoVoltar = state?.foco
   const [aviso, setAviso] = useState(() => (novo ? `Pedido #${novo.numero} de ${novo.cliente} cadastrado na coluna Novo.` : null))
@@ -48,7 +50,13 @@ export function PaginaPedidos() {
     let ativo = true
     buscarPedidos()
       .then((resposta) => {
-        if (ativo) setPedidos(resposta)
+        if (!ativo) return
+        setPedidos(resposta)
+        const pedido = resposta.find((p) => p.numero === abrirAoVoltar)
+        if (pedido) {
+          setAberto(pedido)
+          setAbaAtiva(String(pedido.status))
+        }
       })
       .catch(() => {
         if (ativo) setErroCarregar(true)
@@ -59,7 +67,7 @@ export function PaginaPedidos() {
     return () => {
       ativo = false
     }
-  }, [])
+  }, [abrirAoVoltar])
 
   useEffect(() => {
     if (carregando || (!novo && !focoAoVoltar)) return

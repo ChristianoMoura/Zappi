@@ -125,3 +125,38 @@
     margin-right: 0;
   }
 }
+
+/* Edição do pedido (ZAP-91) */
+.avisoEdicao {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-left: 4px solid #f2b134;
+  border-radius: 8px;
+  background: #fff4dc;
+  font-size: 1rem;
+
+  & svg {
+    flex: none;
+    color: #8a5a00;
+  }
+}
+
+.clienteFixo {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  font-size: 1.05rem;
+
+  & dt {
+    color: var(--mantine-color-dimmed);
+  }
+
+  & dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}

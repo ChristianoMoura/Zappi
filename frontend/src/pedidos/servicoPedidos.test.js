@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { STATUS } from './regrasPedidos'
-import { AcaoNaoPermitidaError, avancarPedido, buscarPedidos, cadastrarPedido, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from './servicoPedidos'
+import { AcaoNaoPermitidaError, avancarPedido, buscarPedidos, cadastrarPedido, confirmarPedido, editarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from './servicoPedidos'
 
 // Simulação usada em desenvolvimento até as APIs da ZAP-44, ZAP-49 e ZAP-50
 describe('serviço simulado de pedidos', () => {
@@ -80,6 +80,51 @@ describe('serviço simulado de pedidos', () => {
     expect(pedido.observacao).toBeUndefined()
     expect((await buscarPedidos()).some((p) => p.numero === pedido.numero)).toBe(true)
     await expect(cadastrarPedido({ ...dados, consentimentoLgpd: false })).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+  })
+
+  describe('edição (ZAP-91, RN21)', () => {
+    const itemNovo = { produto: 'Bolo', sabor: 'Ninho com morango', unidade: 'KG', quantidade: 3, precoUnitario: 115 }
+    const novoPedido = (nome) =>
+      cadastrarPedido({ cliente: { nome, telefone: '5511987650098' }, consentimentoLgpd: true, dataRetirada: '2030-01-15', observacao: 'Festa', itens: [{ ...itemNovo, quantidade: 1 }] })
+
+    test('no Novo muda o cliente e os itens, e não mexe nas mensagens', async () => {
+      const { numero, cliente } = await novoPedido('Maria Lima')
+
+      const editado = await editarPedido(numero, { cliente: { nome: 'Maria Souza', telefone: cliente.telefone }, dataRetirada: '2030-01-20', observacao: '', itens: [itemNovo] })
+
+      expect(editado).toMatchObject({ cliente: { nome: 'Maria Souza' }, dataRetirada: '2030-01-20', itens: [{ quantidade: 3 }], mensagens: [] })
+      expect(editado.observacao).toBeUndefined()
+    })
+
+    test('depois de confirmado, recusa trocar de cliente e refaz a confirmação que ainda não foi enviada', async () => {
+      const { numero, cliente } = await novoPedido('Paula Dias')
+      await confirmarPedido(numero)
+
+      await expect(editarPedido(numero, { cliente: { nome: 'Outra', telefone: '5511900000000' }, dataRetirada: '2030-01-15', observacao: '', itens: [itemNovo] })).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+      const editado = await editarPedido(numero, { cliente, dataRetirada: '2030-01-15', observacao: '', itens: [itemNovo] })
+
+      expect(editado.mensagens).toHaveLength(1)
+      expect(editado.mensagens[0].status).toBe('Pendente')
+      expect(editado.mensagens[0].texto).toContain('(3 kg)')
+    })
+
+    test('se a confirmação já foi enviada, guarda ela e cria uma nova só quando algo mudou', async () => {
+      const { numero, cliente } = await novoPedido('Rosa Melo')
+      await confirmarPedido(numero)
+      await marcarMensagemEnviada(numero, 0)
+      const igual = { cliente, dataRetirada: '2030-01-15', observacao: 'Festa', itens: [{ ...itemNovo, quantidade: 1 }] }
+
+      expect((await editarPedido(numero, igual)).mensagens).toHaveLength(1)
+      const editado = await editarPedido(numero, { ...igual, itens: [itemNovo] })
+
+      expect(editado.mensagens.map((m) => m.status)).toEqual(['Enviada', 'Pendente'])
+    })
+
+    test('não edita pedido Concluído nem Recusado', async () => {
+      const lista = await buscarPedidos()
+      const concluido = lista.find((p) => p.status === STATUS.CONCLUIDO)
+      await expect(editarPedido(concluido.numero, { cliente: concluido.cliente, dataRetirada: '2030-01-15', observacao: '', itens: [itemNovo] })).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+    })
   })
 
   test('marcar como enviada guarda a data do primeiro envio', async () => {
