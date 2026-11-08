@@ -6,7 +6,10 @@ import ilustracao1400 from '../assets/ilustracao-login-1400.webp'
 import ilustracao2000 from '../assets/ilustracao-login-2000.webp'
 import ilustracao2800 from '../assets/ilustracao-login-2800.webp'
 import logo from '../assets/zappi-logo.svg'
+import zappiNome from '../assets/zappi-nome.svg'
+import zappiSimbolo from '../assets/zappi-simbolo.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
+import { useMarcaLoja } from '../estabelecimento/useMarcaLoja'
 import { CredenciaisInvalidasError, LoginBloqueadoError } from '../autenticacao/servicoAutenticacao'
 import classes from './PaginaLogin.module.css'
 import { useTituloPagina } from './useTituloPagina'
@@ -39,6 +42,7 @@ export function PaginaLogin() {
     state?.sessaoExpirada ? 'Sua sessão terminou. Entre de novo para continuar.' : '',
   )
   const [enviando, setEnviando] = useState(false)
+  const marca = useMarcaLoja()
 
   const emailRef = useRef(null)
   const senhaRef = useRef(null)
@@ -108,10 +112,22 @@ export function PaginaLogin() {
 
       <div className={classes.ladoFormulario}>
         <Stack className={classes.cartao}>
-          <div className={classes.marca}>
-            <img src={logo} alt="Zappi" className={classes.logo} />
-            <Text className={classes.slogan}>Seu cardápio, direto no zap.</Text>
-          </div>
+          {/* Collab: logo da loja (o mesmo do Meu estabelecimento) e, embaixo, o Zappi com o nome
+              ao lado do símbolo. Sem logo da loja, fica só a marca do Zappi com o slogan. */}
+          {marca?.logo ? (
+            <div className={`${classes.marca} ${classes.marcaCollab}`}>
+              <img src={marca.logo} alt={`Logo de ${marca.nome}`} className={classes.logoLoja} />
+              <div className={classes.zappiLinha}>
+                <img src={zappiSimbolo} alt="" className={classes.zappiSimbolo} />
+                <img src={zappiNome} alt="Zappi" className={classes.zappiNome} />
+              </div>
+            </div>
+          ) : (
+            <div className={classes.marca}>
+              <img src={logo} alt="Zappi" className={classes.logo} />
+              <Text className={classes.slogan}>Seu cardápio, direto no zap.</Text>
+            </div>
+          )}
 
           {/* Título só para leitores de tela: nomeia o formulário sem aparecer na tela */}
           <Title order={1} id="tituloLogin" className={classes.somenteLeitor}>

@@ -2,9 +2,10 @@ import { ActionIcon, AppShell, Group, Menu, NavLink, Stack, Text, UnstyledButton
 import { useLocalStorage, useMediaQuery } from '@mantine/hooks'
 import { IconChevronDown, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout, IconUserCircle } from '@tabler/icons-react'
 import { NavLink as LinkRota, Outlet, useLocation } from 'react-router'
-import nome from '../assets/zappi-nome.svg'
-import simbolo from '../assets/zappi-simbolo.svg'
+import nome from '../assets/zappi-nome-creme.svg'
+import simbolo from '../assets/zappi-simbolo-creme.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
+import { iniciaisDaLoja, useMarcaLoja } from '../estabelecimento/useMarcaLoja'
 import { itensMenu } from './menu'
 import { useOndaAoClicar } from './useOndaAoClicar'
 import classes from './LayoutPrincipal.module.css'
@@ -16,6 +17,7 @@ export function LayoutPrincipal() {
   const { pathname } = useLocation()
   const telaGrande = useMediaQuery('(min-width: 48em)', false, { getInitialValueInEffect: false })
   const [recolhido, setRecolhido] = useLocalStorage({ key: 'zappi.menu-recolhido', defaultValue: false })
+  const marca = useMarcaLoja()
   useOndaAoClicar()
 
   const ativo = (caminho) => pathname.startsWith(caminho)
@@ -23,7 +25,7 @@ export function LayoutPrincipal() {
 
   return (
     <AppShell
-      header={{ height: 64 }}
+      header={{ height: 68 }}
       navbar={{ width: recolhido ? 84 : 280, breakpoint: 'sm', collapsed: { mobile: true } }}
       footer={{ height: 76, collapsed: telaGrande }}
       padding="md"
@@ -33,7 +35,7 @@ export function LayoutPrincipal() {
         Pular para o conteúdo
       </a>
 
-      <AppShell.Header className={classes.moldura}>
+      <AppShell.Header className={classes.topo}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <div className={classes.marca}>
             {telaGrande && (
@@ -51,8 +53,22 @@ export function LayoutPrincipal() {
                 {recolhido ? <IconLayoutSidebarLeftExpand size={24} aria-hidden /> : <IconLayoutSidebarLeftCollapse size={24} aria-hidden />}
               </ActionIcon>
             )}
-            <img src={simbolo} alt="" className={classes.marcaSimbolo} />
-            <img src={nome} alt="Zappi" className={classes.marcaNome} />
+            {/* Collab Casa Belt × Zappi: nome e logo vêm do Meu estabelecimento */}
+            {marca && (
+              <>
+                {marca.logo ? (
+                  <img src={marca.logo} alt="" className={classes.seloLoja} />
+                ) : (
+                  <span className={classes.seloLoja} aria-hidden="true">{iniciaisDaLoja(marca.nome)}</span>
+                )}
+                <span className={classes.nomeLoja}>{marca.nome}</span>
+                <span className={classes.vezes} aria-hidden="true">×</span>
+              </>
+            )}
+            <span className={classes.marcaZappi}>
+              <img src={simbolo} alt="" className={classes.marcaSimbolo} />
+              <img src={nome} alt="Zappi" className={classes.marcaNome} />
+            </span>
           </div>
           {/* Conta no canto superior direito, como na Referência A: o "Sair" fica no menu */}
           <Menu position="bottom-end" width={240} shadow="md" radius="md">
