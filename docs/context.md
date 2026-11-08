@@ -157,10 +157,10 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 
 15. **Envio automático das mensagens pela WhatsApp Cloud API** (Meta): o sistema envia ao cliente as mensagens de confirmação, recusa e pronto para retirada. As condições para ativar ainda precisam ser validadas (seção 14, item 12).
 
-**Portal do Cliente** (épico `ZAP-2`; requisitos e regras em definição na `ZAP-18`)
+**Portal do Cliente** (épico `ZAP-2`; requisitos e regras definidos na `ZAP-18`, seção 14, item 11)
 
 16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo e o contato da Lídia.
-17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio, cobertura, observações e data de retirada.
+17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio e cobertura (opcionais, só em produtos vendidos por KG), observações e data de retirada, com pelo menos 7 dias de antecedência (RN22).
 18. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
 
 ### 5.3 Dados iniciais (seed)
@@ -200,8 +200,14 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | **US6** — Como Lídia, quero recusar um pedido informando o motivo, para que o cliente entenda. | **RF11** Motivo obrigatório ao recusar. **RF12** Preparar a mensagem de recusa com o motivo via WhatsApp. |
 | **US7** — Como Lídia, quero cadastrar e editar pedidos, para registrar as encomendas que recebo pelo WhatsApp e corrigir um pedido quando o cliente pede uma mudança. | **RF13** Cadastro de pedido com cliente (nome e WhatsApp), itens do cardápio com quantidade, data de retirada e observações. **RF14** Edição do pedido conforme o status (RN21). |
 | **US8** — Como Lídia, quero mover o pedido para Em produção e Concluído, para acompanhar o andamento e avisar o cliente que o pedido está pronto. | **RF15** Mover o pedido para "Em produção" e "Concluído", com a volta de uma etapa para corrigir um clique errado (RN03). **RF16** Preparar a mensagem de pronto para retirada via WhatsApp. |
+| **US9** — Como cliente, quero ver o cardápio pelo link, para conhecer sabores e preços sem precisar de login. | **RF17** Cardápio público pelo `slug`, só com produtos ativos. **RF18** Exibir o contato da Lídia. |
+| **US10** — Como cliente, quero montar meu pedido, para encomendar sem depender de troca de mensagens. | **RF19** Escolher produtos, quantidade, recheio, cobertura e observações. **RF20** Escolher a data de retirada, com 7 dias de antecedência (RN22). |
+| **US11** — Como cliente, quero enviar meu pedido, para que a Lídia avalie se pode atender. | **RF21** Identificar com nome e WhatsApp, com consentimento (RN16). **RF22** Registrar o pedido como Novo e avisar que ainda não está confirmado. **RF23** Limitar os envios e descartar os automáticos. |
+| **US12** — Como Lídia, quero anonimizar os dados de um cliente, para atender ao pedido de exclusão. | **RF24** Anonimizar o cliente sem apagar o histórico (RN17). |
 
 **Adições depois da documentação entregue em sala** (formalizadas na `ZAP-83`):
+- **US9 a US11 e RF17 a RF23** são o Portal do Cliente (`ZAP-18`; histórias `ZAP-100` a `ZAP-103`).
+- **US12 e RF24** são a anonimização de clientes (`ZAP-18`; história `ZAP-114`).
 - **US7, RF13 e RF14** são novos (decisão da `ZAP-64`, item 14.9; história `ZAP-87`).
 - **US8, RF15 e RF16** numeram o escopo ampliado que já tinha sido aprovado sem RF (história `ZAP-60`).
 - **RF11 e RF12** passam a valer também para o **cancelamento** de pedidos Confirmados e Em produção (`ZAP-64`).
@@ -229,11 +235,12 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN14 | Excluir um produto é **lógico** (`ativo = FALSE`): ele some do cardápio, mas o histórico continua. | RF06 |
 | RN15 | Toda foto de produto exige **texto alternativo**. | NBR 5.9.1 |
 | RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. | LGPD |
-| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. | LGPD / ZAP-64 |
+| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. O cliente pede pelo WhatsApp da Lídia, e ela anonimiza no painel, o que fica bloqueado se houver pedido em aberto (Novo, Confirmado ou Em produção). O nome vira "Cliente anonimizado", o telefone vira `0` + id do cliente completado com zeros, em 13 dígitos, e nome e telefone também saem de `mensagem_whatsapp` e de `log_auditoria.detalhes`. As observações em texto livre não mudam. | LGPD / ZAP-64 / ZAP-18 |
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
 | RN19 | Não há delivery: o pedido tem `data_retirada`, e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
 | RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído e 5-Recusado: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 |
+| RN22 | **Antecedência mínima.** Pelo Portal do Cliente, a data de retirada deve ser de pelo menos 7 dias corridos após o envio do pedido, contados no horário de São Paulo e validados também no backend. No Portal do Administrador, a Lídia pode escolher hoje ou uma data futura, inclusive ao editar pedidos que vieram do portal. | RF20 / ZAP-18 |
 
 ---
 
@@ -249,7 +256,8 @@ O foco é **CDC (Lei nº 8.078/1990)** e **LGPD (Lei nº 13.709/2018)**. Aspecto
 | LGPD | Consentimento | Consentimento registrado antes de gravar nome e telefone |
 | LGPD | Finalidade específica | Dados usados só para processar e acompanhar pedidos; nada de compartilhar com terceiros |
 | LGPD | Segurança no armazenamento | Acesso restrito e dados segregados por estabelecimento |
-| LGPD | Direito de exclusão | Anonimização a pedido do titular |
+| LGPD | Direito de exclusão | Anonimização a pedido do titular, feito pelo WhatsApp da Lídia. O consentimento informa: "Para apagar seus dados, é só pedir à Lídia pelo WhatsApp." |
+| CDC | Informação clara sobre o pedido | O Portal do Cliente avisa, antes do envio e depois dele: "Seu pedido ainda não está confirmado. A Lídia vai avaliar e responder pelo WhatsApp." |
 
 ---
 
@@ -268,7 +276,7 @@ Autenticação por **token JWT** nas requisições depois do login. O token vale
 
 **Bloqueio de login (RF02):** 5 falhas seguidas para o mesmo e-mail bloqueiam novos logins por 15 minutos. A contagem usa os registros `LOGIN_FALHA` do `log_auditoria` desde o último `LOGIN_SUCESSO`, sem alterar o DER. A mensagem é em linguagem simples e não revela se o e-mail existe.
 
-Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ESTABELECIMENTO_EDITADO`, `PRODUTO_CRIADO`, `PRODUTO_EDITADO`, `PRODUTO_EXCLUIDO`, `PEDIDO_CRIADO`, `PEDIDO_EDITADO`, `PEDIDO_CONFIRMADO`, `PEDIDO_RECUSADO`, `PEDIDO_STATUS_ALTERADO`. Em `PEDIDO_EDITADO`, o campo `detalhes` guarda o que mudou. Cada registro guarda data, hora, IP de origem e user agent.
+Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ESTABELECIMENTO_EDITADO`, `PRODUTO_CRIADO`, `PRODUTO_EDITADO`, `PRODUTO_EXCLUIDO`, `PEDIDO_CRIADO`, `PEDIDO_EDITADO`, `PEDIDO_CONFIRMADO`, `PEDIDO_RECUSADO`, `PEDIDO_STATUS_ALTERADO`, `CLIENTE_ANONIMIZADO` (sem o nome e o telefone antigos). Em `PEDIDO_EDITADO`, o campo `detalhes` guarda o que mudou. Cada registro guarda data, hora, IP de origem e user agent.
 
 ---
 
@@ -535,7 +543,7 @@ Trilha de auditoria (ISO 8.16).
    - **cancelar** pedidos Confirmados e Em produção pelo fluxo de recusa: o pedido vai para Recusado, com motivo obrigatório; um status próprio "Cancelado" fica como melhoria futura;
    - **voltar** só para desfazer o último passo da produção: Concluído → Em produção e Em produção → Confirmado, com confirmação; ao voltar de Concluído, se o aviso de pronto já foi enviado, a tela lembra a Lídia de avisar o cliente;
    - nada volta para antes da confirmação, e um pedido Recusado não volta para o quadro.
-4. **Massa do bolo.** **Decidido (ZAP-64):** sem campo próprio, e o DER não muda. A massa padrão de cada bolo vai na **descrição do produto** (ex.: "Massa de chocolate, recheio de brigadeiro…"). Quando o cliente pede outra massa, a Lídia anota na **observação do item** (`item_pedido.observacao`). Como o cliente vai escolher a massa no Portal do Cliente fica para a definição da `ZAP-18` (seção 14, item 11).
+4. **Massa do bolo.** **Decidido (ZAP-64):** sem campo próprio, e o DER não muda. A massa padrão de cada bolo vai na **descrição do produto** (ex.: "Massa de chocolate, recheio de brigadeiro…"). Quando o cliente pede outra massa, a Lídia anota na **observação do item** (`item_pedido.observacao`). No Portal do Cliente, a massa também vai na observação do item, com uma dica no campo (`ZAP-18`, seção 14, item 11).
 5. **Salgados.** **Decidido (ZAP-64):** vendidos por **unidade (UN)**, sem unidade de medida nova. O cento, o meio cento e pacotes viram produtos próprios no cardápio (ex.: "Cento de coxinha"), o que também dá o desconto do cento. O sistema não obriga um mínimo de unidades: a Lídia combina com o cliente. No cadastro, o nome é o tipo ("Salgado") e o sabor é o item ("Coxinha de frango").
 6. **Consistência de tenant.** **Decidido (ZAP-64):** as duas proteções. No banco, a FK composta da seção 13.3 garante que o pedido e o cliente pertencem ao mesmo estabelecimento; no backend, a criação e a edição de pedidos conferem isso antes de gravar, para devolver uma mensagem clara.
 7. **Geração do número do pedido** por estabelecimento. **Decidido (ZAP-64):** `MAX + 1` com bloqueio da linha do estabelecimento, na mesma transação da criação do pedido (RN09).
@@ -550,11 +558,14 @@ Trilha de auditoria (ISO 8.16).
    - ainda em aberto: quem será dono das contas do Render e do Supabase, e a validação do plano gratuito do Render (ZAP-86).
 9. **Criar e editar pedidos.** **Decidido (ZAP-64):** a Lídia pode **criar** pedidos (botão "Novo pedido" no quadro) e **editar** pedidos, com a edição limitada pelo status (RN21). Os produtos vêm do cardápio, o total é calculado pelo sistema, os itens antigos mantêm o preço (RN10) e toda criação e edição vai para o log. Virou a US7 (história `ZAP-87`).
 10. **Região dos servidores e LGPD.** O Render não tem região em São Paulo. Avaliar com a equipe uma nota na seção 9 sobre a localização dos dados.
-11. **Portal do Cliente** (definir na `ZAP-18`, com a Lídia quando for regra do negócio):
-    - prazo mínimo de antecedência para encomendar;
-    - limite de pedidos por data, sobretudo em datas comemorativas;
-    - como o cliente escolhe a massa, já que não há campo próprio (item 4);
-    - proteção do envio de pedidos sem login, contra abuso e pedidos falsos.
+11. **Portal do Cliente.** **Decidido (ZAP-18):**
+    - **antecedência mínima:** 7 dias corridos pelo portal (RN22), confirmado pela Lídia. Abaixo do calendário, o portal mostra "Precisa para antes de 7 dias? Fale com a Lídia pelo WhatsApp", com link para o WhatsApp dela;
+    - **limite de pedidos por data:** sem limite automático; a Lídia recusa o que não couber, pelo fluxo de recusa com motivo. **Falta confirmar com a Lídia** (`ZAP-57`);
+    - **massa:** na observação do item, com a dica "Quer outra massa? Escreva aqui" nos produtos vendidos por KG (item 4);
+    - **recheio e cobertura:** texto livre e opcional, com os campos aparecendo só em produtos vendidos por KG;
+    - **validade do pedido:** aviso de que o pedido só vale depois da confirmação da Lídia (seção 9);
+    - **proteção do envio sem login:** 5 envios por hora por IP e 3 por dia por telefone, com o excesso recusado sem gravar nada e registrado no log, e um campo invisível que descarta envios automáticos. Sem captcha no início;
+    - **exclusão de dados:** pedido pelo WhatsApp da Lídia, que anonimiza no painel (RN17, história `ZAP-114`).
 12. **WhatsApp Cloud API** (decidido usar; a validar com a Meta e com a Lídia):
     - verificação da conta na Meta para um negócio informal, sem CNPJ/MEI, e os limites de envio sem verificação;
     - qual número será usado, sem a Lídia perder o WhatsApp que usa com os clientes;
@@ -625,7 +636,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Recusar depois de confirmado | Em aberto | **"Cancelar pedido"** em Confirmado e Em produção, pelo fluxo de recusa (ZAP-64, proposta A). Motivo: não muda o banco nem os tipos de mensagem e cabe no prazo; o status "Cancelado" fica como melhoria futura |
 | Voltar uma coluna | Em aberto | **Só Concluído → Em produção e Em produção → Confirmado**, com confirmação (ZAP-64). Motivo: corrige os cliques errados mais prováveis; confirmar e recusar já avisaram o cliente |
 | Envio pela WhatsApp Cloud API | Futuro (seção 5.4) | **Faz parte da entrega** (08/11/2026, ZAP-83), com as condições a validar na seção 14, item 12. Motivo: decisão da equipe de enviar as mensagens de forma automática |
-| Escopo da entrega | MVP só com o Portal do Administrador; Portal do Cliente como Futuro (seções 5.1 e 5.4) | **Entrega final em 22/11/2026 com o Portal do Administrador e o Portal do Cliente juntos** (08/11/2026, ZAP-83). Motivo: decisão da equipe de entregar o sistema real, e não um MVP. WhatsApp Cloud API, pagamento online, estoque, relatórios financeiros, fidelização e acesso da Romilda continuam como Futuro |
+| Escopo da entrega | MVP só com o Portal do Administrador; Portal do Cliente como Futuro (seções 5.1 e 5.4) | **Entrega final em 22/11/2026 com o Portal do Administrador e o Portal do Cliente juntos** (08/11/2026, ZAP-83). Motivo: decisão da equipe de entregar o sistema real, e não um MVP. Pagamento online, estoque, relatórios financeiros, fidelização e acesso da Romilda continuam como Futuro |
 | Mensagem "Enviada" | Em aberto (clique ou confirmação manual) | **Ao clicar em "Enviar no WhatsApp"** (ZAP-64). Motivo: o sistema não sabe se ela apertou enviar, e não acrescenta um passo extra para a Lídia |
 | Unidade de venda dos salgados | Em aberto (unidade ou cento) | **Por unidade (UN)**; o cento e os pacotes viram produtos próprios (ZAP-64). Motivo: não muda o banco nem as telas, e o desconto do cento sai do preço de cada produto |
 | Massa do bolo | Em aberto (campo próprio no item ou não) | **Sem campo próprio** (ZAP-64): massa padrão na descrição do produto e massa pedida pelo cliente na observação do item. Motivo: não muda o banco, e no MVP quem registra o pedido é a Lídia |
@@ -636,7 +647,13 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Criar e editar pedidos | Pedidos só pelo seed (seção 5.3) | **US7, RF13, RF14 e RN21** (ZAP-64, história ZAP-87): cadastro pelo botão "Novo pedido" e edição limitada pelo status. Motivo: sem isso, a Lídia não consegue usar o Zappi com pedidos de verdade |
 | Data de entrada em produção | Sem coluna no dicionário de dados (Atividade #14) | **Coluna nova `producao_em`** em `pedido` (ZAP-83). Motivo: o histórico do pedido na tela mostra quando ele entrou em produção, e uma coluna é mais simples de consultar do que o log |
 | Consistência de tenant entre pedido e cliente | Em aberto (validação no backend ou FK composta) | **As duas** (ZAP-64): FK composta `(cliente_id, estabelecimento_id)` em `pedido` e validação no backend. Motivo: o banco é a garantia final contra dados de outro estabelecimento (RN01, ISO 27002 5.34), e o backend dá uma mensagem clara. Restrição nova, fora da lista da Atividade #14 (ZAP-83) |
-| Anonimização de clientes | Regra prevista (RN17, Atividade #9), fora da lista do MVP | **Entra no MVP** (ZAP-64). Motivo: atender ao direito de exclusão da LGPD; o banco não muda, porque `anonimizado_em` já existe. A tela, o valor do telefone anonimizado e a ação do log ficam para a tarefa de implementação (ZAP-83) |
+| Anonimização de clientes | Regra prevista (RN17, Atividade #9), fora da lista do MVP | **Entra no MVP** (ZAP-64). Motivo: atender ao direito de exclusão da LGPD; o banco não muda, porque `anonimizado_em` já existe. A tela, o valor do telefone anonimizado e a ação do log foram definidos na ZAP-18 (RN17, história ZAP-114) |
+| Antecedência mínima para encomendar | Em aberto | **7 dias corridos pelo Portal do Cliente; no painel, hoje ou uma data futura** (RN22, ZAP-18). Motivo: regra confirmada pela Lídia; o pedido pelo portal chega sem avaliação prévia dela. Quem precisa antes é orientado a falar com ela pelo WhatsApp |
+| Limite de pedidos por data | Em aberto | **Sem limite automático** (ZAP-18): a Lídia recusa o que não couber. Motivo: não muda o banco nem cria tela, e a capacidade varia com o tamanho do pedido. Falta confirmar com a Lídia (ZAP-57) |
+| Massa, recheio e cobertura no portal | Em aberto | **Massa na observação do item, com dica; recheio e cobertura opcionais e só em produtos por KG** (ZAP-18). Motivo: não muda o banco, e recheio e cobertura não fazem sentido em salgados |
+| Validade do pedido feito no portal | Não previsto | **Aviso de que o pedido só vale após a confirmação da Lídia** (ZAP-18). Motivo: informação clara ao cliente (CDC), já que não há limite por data |
+| Proteção do envio sem login | Em aberto | **5 envios por hora por IP, 3 por dia por telefone e campo invisível, sem captcha no início** (ZAP-18). Motivo: protege o quadro da Lídia sem atrito para o cliente e sem depender de serviço externo |
+| Numeração do Portal do Cliente e da anonimização | Sem US nem RF | **US9 a US12 e RF17 a RF24** (ZAP-18). Motivo: mesma rastreabilidade das demais funcionalidades |
 | Alterações fora da documentação original | Sem registro definido | **Toda alteração é registrada na `ZAP-83`** e nesta seção, com antes, agora e motivo (seção 0). Motivo: manter os documentos entregues em sala coerentes com o sistema entregue |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
