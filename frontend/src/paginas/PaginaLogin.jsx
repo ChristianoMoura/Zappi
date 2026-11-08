@@ -16,9 +16,9 @@ const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // As mensagens não dizem se o erro está no e-mail ou na senha, nem se o e-mail existe
 // (critérios da ZAP-16)
 function mensagemDeErro(erro) {
-  if (erro instanceof CredenciaisInvalidasError) return 'E-mail ou senha incorretos. Confira e tente de novo.'
-  if (erro instanceof LoginBloqueadoError) return 'Muitas tentativas sem sucesso. Espere 15 minutos e tente de novo.'
-  return 'Não foi possível entrar agora. Tente de novo em alguns minutos.'
+  if (erro instanceof CredenciaisInvalidasError) return 'E-mail ou senha incorretos. Confira e tente novamente.'
+  if (erro instanceof LoginBloqueadoError) return 'Muitas tentativas sem sucesso. Espere 15 minutos e tente novamente.'
+  return 'Não foi possível entrar agora. Tente novamente em alguns minutos.'
 }
 
 // Tela de login (US1, RF01, RF02). No computador, ilustração à esquerda e formulário
@@ -60,7 +60,7 @@ export function PaginaLogin() {
     const emailLimpo = email.trim()
     if (!emailLimpo) novosErros.email = 'Digite seu e-mail.'
     else if (!EMAIL_VALIDO.test(emailLimpo)) {
-      novosErros.email = 'Confira o e-mail. Ele precisa ter "@" e um ponto, como lidia@casabelt.com.'
+      novosErros.email = 'E-mail inválido.'
     }
     if (!senha) novosErros.senha = 'Digite sua senha.'
 

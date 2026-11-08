@@ -5,8 +5,8 @@ export const LIMITES = { nome: 100, sabor: 100, descricao: 500, textoAlternativo
 
 // Unidades de medida do seed (seção 5.3): 1-KG aceita fração, 2-UN não (RN12)
 export const UNIDADES = {
-  KG: { rotuloOpcao: 'Quilo (kg)', rotuloPreco: 'Preço por kg', selo: 'por kg', dica: 'Nos pedidos, aceita quantidades como 1,5 kg.' },
-  UN: { rotuloOpcao: 'Unidade', rotuloPreco: 'Preço por unidade', selo: 'por unidade', dica: 'Nos pedidos, aceita só números inteiros, como 50 unidades.' },
+  KG: { rotuloOpcao: 'Quilo (kg)', rotuloPreco: 'Preço por kg', selo: 'por kg' },
+  UN: { rotuloOpcao: 'Unidade', rotuloPreco: 'Preço por unidade', selo: 'por unidade' },
 }
 
 // Ordem dos campos na tela, usada para levar o foco ao primeiro erro (NBR 17225 5.1.4)

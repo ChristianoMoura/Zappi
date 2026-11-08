@@ -14,7 +14,7 @@ A identidade do Zappi foi aprovada pelo grupo em 02/11/2026, na subtarefa ZAP-34
 
 **Princípios visuais:**
 
-- **Acolhedor:** tons quentes de creme e cacau na tela de login; dentro do app, fundo branco limpo com detalhes em ciano, para um visual profissional.
+- **Acolhedor:** tons quentes de creme e cacau em todo o app, com cartões brancos e detalhes em ciano, para um visual acolhedor e profissional.
 - **Claro:** poucos elementos por tela, letras grandes, um destaque de cada vez.
 - **Acessível:** todo texto com contraste de 4,5:1 ou mais e foco sempre visível (ABNT NBR 17225).
 - **Sem cara de IA:** ilustração 3D com tema de confeitaria e layout inspirado em sistemas de pedidos reais.
@@ -65,9 +65,10 @@ A paleta "Ciano com creme" parte do **DarkCyan (#008B8B)** e usa tons quentes de
 | Ciano escuro | #005A5A | Botão com o mouse em cima | Branco sobre ele: 7,64:1 |
 | Ciano claro | #E6F4F4 | Fundo leve ao passar o mouse | — |
 | Creme | #FFF8F0 | Fundos quentes de apoio, fora das telas internas | Cacau sobre ele: 12,75:1 |
-| Creme do login | #FDF6EC | Lado do formulário na tela de login | Texto secundário sobre ele: 7,26:1 |
+| Creme do login | #FDF6EC | Lado do formulário na tela de login e fundo das telas internas do app | Cacau: 12,51:1; texto secundário: 7,26:1; erro: 6,13:1 |
 | Creme da ilustração | #F7E7CC | Fundo do lado da ilustração no login | — |
-| Branco | #FFFFFF | Fundo das telas internas do app, campos e cartões | Cacau sobre ele: 13,43:1; texto secundário: 7,79:1 |
+| Creme suave | #FEF9F1 | Topo, menu lateral e barra de baixo do celular, com a linha #EAD9C2 do login | Cacau: 12,81:1; texto secundário: 7,43:1; ciano: 5,88:1 |
+| Branco | #FFFFFF | Campos e cartões | Cacau sobre ele: 13,43:1; texto secundário: 7,79:1 |
 | Cacau | #3D2B1F | Texto principal e borda de foco | Sobre o creme: 12,75:1 |
 | Texto secundário | #5C5048 | Textos de apoio e placeholder | Sobre o creme: 7,39:1 |
 | Linha | #D9CBBE | Bordas de campos e divisões | — (não é texto) |
@@ -138,7 +139,7 @@ As telas usam os componentes do **Mantine**, já ajustados no tema para seguir e
 | Menu | Lateral no computador, com botão para recolher e deixar só os ícones (a escolha fica lembrada); barra fixa embaixo no celular; item ativo em ciano profundo. A conta fica num ícone de usuário no canto superior direito, que abre o menu com o nome e o "Sair" |
 | Carregando | Botão com três pontinhos animados, sem mudar de tamanho |
 
-**Interatividade (ZAP-37):** botões sobem um pouco ao passar o mouse e mostram uma onda a partir do ponto do clique; cartões sobem e o ícone (círculo ciano) gira; as partes da tela entram em sequência, partindo de um estado já visível; a capa se aproxima devagar ao passar o mouse; o botão de salvar mostra "Salvo" com check. Tudo fica parado para quem pediu "reduzir movimento" no sistema.
+**Interatividade (ZAP-37):** botões sobem um pouco ao passar o mouse e mostram uma onda a partir do ponto do clique; cartões sobem e o ícone (círculo ciano) cresce um pouco e escurece, sem girar; as partes da tela entram em sequência, partindo de um estado já visível; capa, logo da loja e cartões de produto sobem um pouco com sombra ao passar o mouse, sem zoom nem giro, e os cartões de produto ganham borda ciano, como os do quadro de pedidos; o botão de salvar mostra "Salvo" com check. Tudo fica parado para quem pediu "reduzir movimento" no sistema.
 
 **Mostrar senha:** botão com ícone de olho e a palavra "Mostrar" (ou "Esconder") dentro do campo de senha, à direita.
 
@@ -222,6 +223,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 | Etapa | Decisão |
 | --- | --- |
 | Ilustração em alta | Ilustração do login ampliada 2× (Topaz) e servida em três tamanhos, em 08/11/2026, aprovada pelo grupo em protótipo de comparação |
+| Fundo creme | Em 08/11/2026, o grupo pediu o creme #FDF6EC do login como fundo das telas internas. Para o topo e o menu, comparou em protótipo 7 tons (3 mais claros, 1 igual e 3 mais escuros) e escolheu o Creme suave #FEF9F1; testou também tirar a linha entre o topo e o menu e decidiu mantê-la. Cartões e campos continuam brancos. Contrastes no creme: cacau 12,51:1, secundário 7,26:1, erro 6,13:1 |
 | Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, Referência A com capa; o check de "campo confirmado" foi retirado a pedido do grupo) |
 | Implementação | Tela de login e identidade aplicadas em React no [PR #3](https://github.com/ChristianoMoura/Zappi/pull/3) |
 | Protótipo aprovado | Título "Entrar no painel" escondido; elementos do login maiores; slogan de volta sob o logo; ilustração sem texto |

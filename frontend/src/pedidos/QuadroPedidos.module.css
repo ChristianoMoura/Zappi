@@ -58,9 +58,11 @@
   padding-bottom: 4px;
 }
 
+/* Cada coluna com a cor do seu status em tom bem claro, como a coluna Recusado
+   (fundo com ~7% da cor e borda com ~28%); os cards continuam brancos */
 .coluna {
-  background: #f3f7f7;
-  border: 1px solid #dbe3e3;
+  background: color-mix(in srgb, var(--cor-coluna, #8a7f77) 7%, #fff);
+  border: 1px solid color-mix(in srgb, var(--cor-coluna, #8a7f77) 28%, #fff);
   border-radius: 14px;
   padding: 12px;
   display: flex;

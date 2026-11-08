@@ -47,7 +47,7 @@ describe('regras do estabelecimento (ZAP-26)', () => {
   test('confere WhatsApp, e-mail, CEP, estado e tamanho', () => {
     const erros = validarEstabelecimento({ ...valido, whatsapp: '119000', emailContato: 'contato', cep: '0100000', uf: 'XX', bairro: 'a'.repeat(81) })
     expect(erros.whatsapp).toMatch(/DDD e 9 números/)
-    expect(erros.emailContato).toMatch(/@/)
+    expect(erros.emailContato).toBe('E-mail inválido.')
     expect(erros.cep).toMatch(/8 números/)
     expect(erros.uf).toBe('Escolha o estado na lista.')
     expect(erros.bairro).toBe('Use no máximo 80 caracteres.')

@@ -42,7 +42,7 @@ export function CartaoProduto({ produto, destaque, aoExcluir }) {
         >
           Editar
         </Button>
-        <Button variant="subtle" color="#b42318" onClick={() => aoExcluir(produto)} leftSection={<IconTrash size={22} aria-hidden />} aria-label={`Excluir ${nome}`}>
+        <Button variant="subtle" color="#b42318" className={classes.excluir} onClick={() => aoExcluir(produto)} leftSection={<IconTrash size={22} aria-hidden />} aria-label={`Excluir ${nome}`}>
           Excluir
         </Button>
       </div>

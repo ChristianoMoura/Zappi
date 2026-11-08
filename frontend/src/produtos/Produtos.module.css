@@ -29,7 +29,8 @@
 
 .cabecalho {
   display: flex;
-  align-items: flex-end;
+  /* Título e botão "Cadastrar produto" alinhados pelo centro */
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
@@ -93,6 +94,7 @@
   aspect-ratio: 4 / 3;
   max-width: 100%;
   background: #f7e7cc;
+  overflow: hidden;
 
   & img {
     width: 100%;
@@ -178,15 +180,23 @@
   padding: 1px 10px;
 }
 
+/* Editar e Excluir sempre lado a lado, em duas metades iguais. Texto e espaço interno mais
+   justos para caberem até no cartão mais estreito da grade (270 px) */
 .acoes {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   padding: 12px 18px 18px;
 }
 
-.editar {
-  flex: 1;
+.editar,
+.excluir {
+  padding-inline: 10px;
+  font-size: 1.05rem;
+
+  & :global(.mantine-Button-section[data-position='left']) {
+    margin-inline-end: 6px;
+  }
 }
 
 .vazio {
@@ -540,9 +550,10 @@
     border-radius: 12px;
   }
 
+  /* Cancelar do tamanho do texto; o botão de salvar fica com o resto da linha */
   .formAcoes {
     display: grid;
-    grid-template-columns: 1fr 1.7fr;
+    grid-template-columns: max-content minmax(0, 1fr);
     gap: 10px;
     padding: 10px var(--mantine-spacing-md) 12px;
 
@@ -558,6 +569,22 @@
     & > :last-child {
       order: -1;
     }
+  }
+}
+
+/* Realce ao passar o mouse, como nos cartões do Kanban: o cartão sobe, ganha sombra e borda ciano */
+.produto {
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.25s ease;
+
+  &:hover {
+    border-color: var(--mantine-color-zappi-7);
+    box-shadow: 0 14px 30px rgb(61 43 31 / 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .produto:hover {
+    transform: translateY(-3px);
   }
 }
 

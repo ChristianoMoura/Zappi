@@ -59,7 +59,7 @@ export function validarEstabelecimento(dados) {
   else if (whatsapp.length !== 11) erros.whatsapp = 'O WhatsApp precisa ter DDD e 9 números. Ex.: (11) 90000-0000'
 
   if (dados.emailContato && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.emailContato)) {
-    erros.emailContato = 'Confira o e-mail. Ele precisa ter "@" e um ponto.'
+    erros.emailContato = 'E-mail inválido.'
   }
 
   if (dados.cep && soDigitos(dados.cep).length !== 8) erros.cep = 'O CEP tem 8 números. Ex.: 01000-000'

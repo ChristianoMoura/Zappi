@@ -61,7 +61,7 @@ describe('PaginaLogin (US1, RF01, RF02)', () => {
 
     await preencherEEntrar(usuario, 'lidia')
 
-    expect(screen.getByText(/Confira o e-mail/)).toBeVisible()
+    expect(screen.getByText('E-mail inválido.')).toBeVisible()
     expect(entrarNoServidor).not.toHaveBeenCalled()
   })
 
@@ -77,9 +77,9 @@ describe('PaginaLogin (US1, RF01, RF02)', () => {
   })
 
   test.each([
-    [new CredenciaisInvalidasError(), 'E-mail ou senha incorretos. Confira e tente de novo.'],
-    [new LoginBloqueadoError(), 'Muitas tentativas sem sucesso. Espere 15 minutos e tente de novo.'],
-    [new ServicoIndisponivelError(), 'Não foi possível entrar agora. Tente de novo em alguns minutos.'],
+    [new CredenciaisInvalidasError(), 'E-mail ou senha incorretos. Confira e tente novamente.'],
+    [new LoginBloqueadoError(), 'Muitas tentativas sem sucesso. Espere 15 minutos e tente novamente.'],
+    [new ServicoIndisponivelError(), 'Não foi possível entrar agora. Tente novamente em alguns minutos.'],
   ])('avisa em linguagem simples, limpa a senha e não abre a sessão (%o)', async (erro, mensagem) => {
     const usuario = userEvent.setup()
     entrarNoServidor.mockRejectedValue(erro)

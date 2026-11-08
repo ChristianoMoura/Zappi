@@ -94,7 +94,7 @@ export function PaginaPedidos() {
   if (erroCarregar) {
     return (
       <Alert color="#b42318" variant="outline" icon={<IconAlertCircle size={22} aria-hidden />} className={classes.erroCarregar}>
-        Não foi possível carregar os pedidos agora. Tente de novo em alguns minutos.
+        Não foi possível carregar os pedidos agora. Tente novamente em alguns minutos.
       </Alert>
     )
   }
@@ -144,7 +144,7 @@ export function PaginaPedidos() {
       if (!telaGrande) setAbaAtiva(String(pedido.status))
       return true
     } catch {
-      setErroAcao(`Não foi possível ${oQueFazer} agora. Tente de novo em alguns minutos.`)
+      setErroAcao(`Não foi possível ${oQueFazer} agora. Tente novamente em alguns minutos.`)
       return false
     } finally {
       setEnviando(false)
@@ -173,7 +173,7 @@ export function PaginaPedidos() {
     try {
       atualizar(await marcarMensagemEnviada(aberto.numero, indice))
     } catch {
-      setErroAcao('A mensagem foi aberta no WhatsApp, mas não deu para marcar como enviada. Tente de novo.')
+      setErroAcao('A mensagem foi aberta no WhatsApp, mas não deu para marcar como enviada. Tente novamente.')
     }
   }
 
@@ -182,7 +182,6 @@ export function PaginaPedidos() {
       <div className={classes.cabecalho}>
         <div>
           <h1 className={classes.titulo}>Pedidos</h1>
-          <p className={classes.subtitulo}>Acompanhe suas encomendas.</p>
         </div>
         <div className={classes.acoesTopo}>
           <Switch
@@ -204,7 +203,7 @@ export function PaginaPedidos() {
           {colunas.map((coluna) => {
             const daColuna = pedidosDaColuna(pedidos, coluna.status)
             return (
-              <section key={coluna.status} className={classes.coluna} data-recusado={coluna.status === STATUS.RECUSADO || undefined} aria-labelledby={`coluna-${coluna.status}`}>
+              <section key={coluna.status} className={classes.coluna} style={{ '--cor-coluna': coluna.cor }} data-recusado={coluna.status === STATUS.RECUSADO || undefined} aria-labelledby={`coluna-${coluna.status}`}>
                 <h2 id={`coluna-${coluna.status}`} className={classes.tituloColuna}>
                   <span className={classes.ponto} style={{ background: coluna.cor }} aria-hidden />
                   {coluna.nome}
