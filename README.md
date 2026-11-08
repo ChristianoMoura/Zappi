@@ -164,7 +164,9 @@ No Windows (PowerShell ou Prompt de Comando), use `mvnw.cmd` no lugar de `./mvnw
 | `./mvnw test` | Roda os testes (precisa do Docker aberto, porque os testes sobem um PostgreSQL próprio com Testcontainers) |
 | `./mvnw verify` | Compila, roda os testes e gera o `.jar` em `backend/target` |
 
-O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS`, `PORT` e `LIDIA_SENHA_HASH`); o perfil `local` já traz os valores do banco do Docker Compose. A única rota aberta por enquanto é a verificação de saúde (`/actuator/health`); as demais respondem `401` até o login da ZAP-31.
+O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS`, `PORT`, `LIDIA_SENHA_HASH` e `JWT_CHAVE`); o perfil `local` já traz os valores do banco do Docker Compose.
+
+**Acesso à API:** só a verificação de saúde (`/actuator/health`) e o login (`POST /api/autenticacao/login`, ZAP-31) são abertos. Todas as outras rotas exigem o token JWT no header `Authorization: Bearer <token>` e respondem `401` sem ele, com ele inválido ou expirado (8 horas). O token é assinado com a chave da variável `JWT_CHAVE` (Base64, 32 bytes ou mais; gere com `openssl rand -base64 32`). Ela é obrigatória em produção; localmente e nos testes, se estiver vazia, o backend gera uma chave aleatória a cada subida, e os tokens antigos deixam de valer ao reiniciar. Os controllers recebem quem fez a requisição com `@AuthenticationPrincipal UsuarioAutenticado usuario` e filtram os dados pelo `estabelecimentoId` do token, nunca por um id vindo da requisição.
 
 As tabelas são criadas pelo **Flyway**, com migrações em SQL em `backend/src/main/resources/db/migration` (ex.: `V1__cria_tabelas.sql`). Elas rodam sozinhas na subida do backend, no banco local, nos testes e no Supabase. Nunca crie nem altere tabelas pelo painel do Supabase: toda mudança no banco é uma **nova** migração (`V2__...`, `V3__...`), sem editar as que já foram aplicadas. Na subida, o Hibernate confere se as entidades batem com as tabelas (`ddl-auto: validate`) e não sobe se houver diferença.
 
@@ -176,7 +178,7 @@ Em produção, o backend roda no Render a partir do `backend/Dockerfile`, com o 
 
 ```bash
 docker build -t zappi-backend backend
-docker run --rm --memory=512m --cpus=0.1 --network zappi_default -p 127.0.0.1:8081:8080 -e DB_URL=jdbc:postgresql://banco:5432/zappi -e DB_USUARIO=zappi -e DB_SENHA=zappi_local -e CORS_ORIGENS=http://localhost:5173 zappi-backend
+docker run --rm --memory=512m --cpus=0.1 --network zappi_default -p 127.0.0.1:8081:8080 -e DB_URL=jdbc:postgresql://banco:5432/zappi -e DB_USUARIO=zappi -e DB_SENHA=zappi_local -e CORS_ORIGENS=http://localhost:5173 -e JWT_CHAVE="$(openssl rand -base64 32)" -e LIDIA_SENHA_HASH="$LIDIA_SENHA_HASH" zappi-backend
 ```
 
 Variáveis de ambiente de produção, configuradas no painel do Render (nunca no repositório):
@@ -187,6 +189,8 @@ Variáveis de ambiente de produção, configuradas no painel do Render (nunca no
 | `DB_USUARIO` | Sim | Usuário do pooler, no formato `postgres.<id-do-projeto>` |
 | `DB_SENHA` | Sim | Senha do banco do Supabase |
 | `CORS_ORIGENS` | Sim | Endereço do frontend no Render (ex.: `https://<nome-do-site>.onrender.com`). Mais de um, separados por vírgula |
+| `JWT_CHAVE` | Sim | Chave de assinatura do token de login, em Base64 com 32 bytes ou mais (`openssl rand -base64 32`). Trocar a chave desloga todo mundo |
+| `LIDIA_SENHA_HASH` | Na primeira subida | Hash BCrypt da senha da Lídia, lido só quando a V2 (dados iniciais) roda |
 | `PORT` | Não | Porta do servidor; o Render preenche sozinho |
 | `DB_POOL_MAXIMO` | Não | Máximo de conexões com o banco (padrão 5), porque o pooler gratuito do Supabase aceita poucas |
 
@@ -235,7 +239,7 @@ O endereço final de cada serviço aparece no painel do Render depois da criaç�
 
 **Primeiro acesso do dia:** no plano gratuito, o backend "dorme" depois de 15 minutos sem uso e leva de 1 a 2,5 minutos para acordar. O Supabase gratuito pausa o projeto depois de 1 semana sem uso. Antes de demonstrações e do treinamento, abra o sistema alguns minutos antes.
 
-**Quem administra:** as contas do Render e do Supabase são do Henrique (no plano gratuito do Render, só uma pessoa tem acesso ao painel). Os segredos do banco (`DB_URL`, `DB_USUARIO` e `DB_SENHA`) e o hash da senha da Lídia (`LIDIA_SENHA_HASH`) ficam só no painel do Render, nunca no repositório.
+**Quem administra:** as contas do Render e do Supabase são do Henrique (no plano gratuito do Render, só uma pessoa tem acesso ao painel). Os segredos do banco (`DB_URL`, `DB_USUARIO` e `DB_SENHA`) , o hash da senha da Lídia (`LIDIA_SENHA_HASH`) e a chave do token (`JWT_CHAVE`) ficam só no painel do Render, nunca no repositório.
 
 ## Requisitos não funcionais
 

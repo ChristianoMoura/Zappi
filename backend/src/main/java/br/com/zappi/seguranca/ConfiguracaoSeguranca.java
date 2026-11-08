@@ -3,28 +3,34 @@ package br.com.zappi.seguranca;
 import java.time.Duration;
 import java.util.List;
 
+import jakarta.servlet.DispatcherType;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Regras de acesso da API (ISO 27002 5.15).
+ * Regras de acesso da API (RN02, ISO 27002 5.15).
  *
- * Só a verificação de saúde é aberta; todo o resto exige login. O login com JWT
- * entra na ZAP-31 e a proteção das rotas /api na ZAP-32.
+ * Abertos: a verificação de saúde e o login (ZAP-31). Todo o resto exige um token JWT
+ * válido no header {@code Authorization: Bearer} (ZAP-32). As rotas públicas do Portal
+ * do Cliente são liberadas aqui pelas tarefas delas.
  */
 @Configuration
 @EnableConfigurationProperties(PropriedadesCors.class)
 public class ConfiguracaoSeguranca {
+
+	/** Rota de login (ZAP-31), a única da API aberta sem token. */
+	public static final String ROTA_LOGIN = "/api/autenticacao/login";
 
 	@Bean
 	SecurityFilterChain filtroDeSeguranca(HttpSecurity http, CorsConfigurationSource fonteDeCors) throws Exception {
@@ -37,10 +43,17 @@ public class ConfiguracaoSeguranca {
 			.formLogin(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(rotas -> rotas
 				.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+				.requestMatchers(HttpMethod.POST, ROTA_LOGIN).permitAll()
+				// Erros (ex.: 404) mostram o status certo em vez de 401. Uma rota protegida
+				// sem token é barrada antes de chegar aqui.
+				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 				.anyRequest().authenticated())
-			// Sem login, responde 401 em vez do 403 padrão.
+			// Valida o token (assinatura, validade e emissor) e transforma em UsuarioAutenticado.
+			.oauth2ResourceServer(recurso -> recurso
+				.jwt(jwt -> jwt.jwtAuthenticationConverter(ConfiguracaoJwt::autenticacao)))
+			// Sem token ou com token inválido/expirado: 401, e o front volta para o login.
 			.exceptionHandling(erros -> erros
-				.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+				.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint()));
 		return http.build();
 	}
 

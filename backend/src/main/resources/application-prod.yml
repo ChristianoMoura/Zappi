@@ -14,6 +14,11 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
 
+zappi:
+  jwt:
+    # Em produção, a JWT_CHAVE é obrigatória: sem ela, o backend não sobe.
+    chave-obrigatoria: true
+
 server:
   # Ao reiniciar (deploy), termina as requisições em andamento antes de sair.
   shutdown: graceful
