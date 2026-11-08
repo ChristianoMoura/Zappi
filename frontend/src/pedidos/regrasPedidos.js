@@ -60,6 +60,13 @@ export function dataRetiradaMensagem(iso, hoje = new Date()) {
 export const retiraHoje = (pedido, hoje = new Date()) =>
   pedido.dataRetirada === dataLocal(hoje) && [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(pedido.status)
 
+// Recusar vale para pedidos Novos; cancelar, para Confirmados e Em produção. Os dois levam o pedido
+// para Recusado com motivo obrigatório de até 500 caracteres (RN03, RN05, ZAP-64)
+export const MOTIVO_MAXIMO = 500
+export const podeRecusar = (status) => status === STATUS.NOVO
+export const podeCancelar = (status) => status === STATUS.CONFIRMADO || status === STATUS.EM_PRODUCAO
+export const podeRecusarOuCancelar = (status) => podeRecusar(status) || podeCancelar(status)
+
 // Só a mensagem da etapa atual pode ser enviada (ZAP-51): Confirmado → confirmação,
 // Concluído → pronto, Recusado → recusa. Novo e Em produção não têm mensagem a enviar.
 export const TIPO_MENSAGEM_DA_ETAPA = {

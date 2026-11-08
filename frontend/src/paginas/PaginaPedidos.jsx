@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CartaoPedido } from '../pedidos/CartaoPedido'
 import { DetalhesPedido } from '../pedidos/DetalhesPedido'
 import { colunasVisiveis, pedidosDaColuna, STATUS } from '../pedidos/regrasPedidos'
-import { buscarPedidos, confirmarPedido, marcarMensagemEnviada } from '../pedidos/servicoPedidos'
+import { buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido } from '../pedidos/servicoPedidos'
 import classes from '../pedidos/QuadroPedidos.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
@@ -31,8 +31,8 @@ export function PaginaPedidos() {
   const [mostrarRecusados, setMostrarRecusados] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState(String(STATUS.NOVO))
   const [aberto, setAberto] = useState(null)
-  const [confirmando, setConfirmando] = useState(false)
-  const [acabouDeConfirmar, setAcabouDeConfirmar] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [acabouDe, setAcabouDe] = useState(null)
   const [erroAcao, setErroAcao] = useState('')
   const origemFoco = useRef(null)
 
@@ -82,16 +82,16 @@ export function PaginaPedidos() {
 
   function abrir(pedido, origem) {
     origemFoco.current = origem
-    setAcabouDeConfirmar(false)
+    setAcabouDe(null)
     setErroAcao('')
     setAberto(pedido)
   }
 
   function fechar() {
     setAberto(null)
-    setAcabouDeConfirmar(false)
+    setAcabouDe(null)
     setErroAcao('')
-    // Depois de confirmar, o card mudou de coluna: o foco volta para ele no lugar novo
+    // Depois de confirmar ou recusar, o card mudou de coluna: o foco volta para ele no lugar novo
     const numero = aberto?.numero
     const cartao = numero && document.querySelector(`[data-numero-pedido="${numero}"]`)
     ;(cartao ?? origemFoco.current)?.focus()
@@ -103,17 +103,38 @@ export function PaginaPedidos() {
   }
 
   async function confirmar(pedido) {
-    setConfirmando(true)
+    setEnviando(true)
     setErroAcao('')
     try {
       atualizar(await confirmarPedido(pedido.numero))
-      setAcabouDeConfirmar(true)
+      setAcabouDe('confirmar')
       // No celular, a aba acompanha o pedido para a coluna Confirmado
       if (!telaGrande) setAbaAtiva(String(STATUS.CONFIRMADO))
     } catch {
       setErroAcao('Não foi possível confirmar o pedido agora. Tente de novo em alguns minutos.')
     } finally {
-      setConfirmando(false)
+      setEnviando(false)
+    }
+  }
+
+  // Recusar (Novo) e cancelar (Confirmado ou Em produção) levam o pedido para Recusado. O filtro
+  // "Mostrar recusados" liga sozinho, para a Lídia continuar vendo o pedido e enviar a mensagem.
+  // Devolve se deu certo, para a janela do motivo fechar só nesse caso.
+  async function recusar(pedido, motivo) {
+    const acao = pedido.status === STATUS.NOVO ? 'recusar' : 'cancelar'
+    setEnviando(true)
+    setErroAcao('')
+    try {
+      atualizar(await recusarPedido(pedido.numero, motivo))
+      setAcabouDe(acao)
+      setMostrarRecusados(true)
+      if (!telaGrande) setAbaAtiva(String(STATUS.RECUSADO))
+      return true
+    } catch {
+      setErroAcao(`Não foi possível ${acao} o pedido agora. Tente de novo em alguns minutos.`)
+      return false
+    } finally {
+      setEnviando(false)
     }
   }
 
@@ -184,9 +205,10 @@ export function PaginaPedidos() {
         aoFechar={fechar}
         telaGrande={telaGrande}
         aoConfirmar={confirmar}
+        aoRecusar={recusar}
         aoEnviarMensagem={enviarMensagem}
-        confirmando={confirmando}
-        acabouDeConfirmar={acabouDeConfirmar}
+        enviando={enviando}
+        acabouDe={acabouDe}
         erroAcao={erroAcao}
       />
     </div>

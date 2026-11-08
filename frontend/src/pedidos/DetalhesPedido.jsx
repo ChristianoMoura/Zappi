@@ -1,7 +1,8 @@
 import { Alert, Button, Drawer } from '@mantine/core'
-import { IconAlertCircle, IconCheck, IconSend } from '@tabler/icons-react'
-import { useEffect, useRef } from 'react'
-import { COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido } from './regrasPedidos'
+import { IconAlertCircle, IconCheck, IconSend, IconX } from '@tabler/icons-react'
+import { useEffect, useRef, useState } from 'react'
+import { JanelaMotivo } from './JanelaMotivo'
+import { COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeCancelar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
 const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
@@ -89,21 +90,36 @@ function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef }) {
 }
 
 // Detalhes do pedido (ZAP-47, RF08). No computador abre pela direita; no celular, sobe de baixo.
-// A faixa de baixo mostra só o próximo passo possível (ZAP-64): aqui, "Confirmar pedido" nos
-// pedidos Novos (ZAP-51). Recusar, cancelar e o andamento entram nas próximas subtarefas.
-export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoEnviarMensagem, confirmando, acabouDeConfirmar, erroAcao }) {
+// A faixa de baixo mostra só os próximos passos possíveis (ZAP-64): "Confirmar pedido" e
+// "Recusar pedido" nos Novos (ZAP-51, ZAP-54) e "Cancelar pedido" nos Confirmados e Em produção
+// (ZAP-54). O andamento entre as colunas entra na ZAP-77.
+const SUCESSO = {
+  confirmar: 'Pedido confirmado e movido para a coluna Confirmado.',
+  recusar: 'Pedido recusado e movido para a coluna Recusado.',
+  cancelar: 'Pedido cancelado e movido para a coluna Recusado.',
+}
+
+export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoEnviarMensagem, enviando, acabouDe, erroAcao }) {
   const coluna = pedido && COLUNAS.find((c) => c.status === pedido.status)
   const botaoEnviarRef = useRef(null)
+  const [janela, setJanela] = useState(null)
 
-  // Depois de confirmar, o botão some; o foco vai para o próximo passo, que é enviar a mensagem
+  // Depois de confirmar, recusar ou cancelar, o botão some; o foco vai para o próximo passo,
+  // que é enviar a mensagem
   useEffect(() => {
-    if (acabouDeConfirmar) botaoEnviarRef.current?.focus()
-  }, [acabouDeConfirmar])
+    if (acabouDe) botaoEnviarRef.current?.focus()
+  }, [acabouDe])
+
+  async function concluirMotivo(motivo) {
+    if (await aoRecusar(pedido, motivo)) setJanela(null)
+  }
+
+  const primeiroNome = pedido?.cliente.nome.split(' ')[0]
   const historico = pedido
     ? [
         ['Recebido', pedido.criadoEm],
         ['Confirmado', pedido.confirmadoEm],
-        ['Recusado', pedido.recusadoEm],
+        [pedido.cancelado ? 'Cancelado' : 'Recusado', pedido.recusadoEm],
         ['Concluído', pedido.concluidoEm],
       ].filter(([, data]) => data)
     : []
@@ -125,13 +141,13 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
             {retiraHoje(pedido) && <span className={`${classes.selo} ${classes.seloHoje}`}>Retira hoje</span>}
           </div>
 
-          {acabouDeConfirmar && (
+          {acabouDe && (
             <Alert color="#1d6b45" variant="outline" icon={<IconCheck size={22} aria-hidden />} className={classes.sucesso} role="status">
-              Pedido confirmado e movido para a coluna Confirmado. Agora envie a mensagem para {pedido.cliente.nome.split(' ')[0]}.
+              {SUCESSO[acabouDe]} Agora envie a mensagem para {primeiroNome}.
             </Alert>
           )}
 
-          {erroAcao && (
+          {erroAcao && !janela && (
             <Alert color="#b42318" variant="outline" icon={<IconAlertCircle size={22} aria-hidden />} className={classes.erroAcao} role="alert">
               {erroAcao}
             </Alert>
@@ -141,7 +157,7 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
 
           {pedido.motivoRecusa && (
             <p className={classes.motivo}>
-              <strong>Motivo da recusa:</strong> {pedido.motivoRecusa}
+              <strong>{pedido.cancelado ? 'Motivo do cancelamento:' : 'Motivo da recusa:'}</strong> {pedido.motivoRecusa}
             </p>
           )}
 
@@ -211,14 +227,36 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
             </dl>
           </section>
 
-          {pedido.status === STATUS.NOVO && (
+          {podeRecusar(pedido.status) && (
             <div className={classes.faixaAcoes}>
-              <Button fullWidth onClick={() => aoConfirmar(pedido)} loading={confirmando} loaderProps={{ type: 'dots' }} leftSection={<IconCheck size={22} aria-hidden />}>
+              <Button fullWidth onClick={() => aoConfirmar(pedido)} loading={enviando && !janela} loaderProps={{ type: 'dots' }} leftSection={<IconCheck size={22} aria-hidden />}>
                 Confirmar pedido
               </Button>
-              <p className={classes.dicaAcao}>Ao confirmar, o Zappi prepara a mensagem para {pedido.cliente.nome.split(' ')[0]}.</p>
+              <Button fullWidth variant="outline" color="#b42318" onClick={() => setJanela('recusar')} disabled={enviando} leftSection={<IconX size={22} aria-hidden />}>
+                Recusar pedido
+              </Button>
+              <p className={classes.dicaAcao}>Nos dois casos, o Zappi prepara a mensagem para {primeiroNome}.</p>
             </div>
           )}
+
+          {podeCancelar(pedido.status) && (
+            <div className={classes.faixaAcoes}>
+              <Button fullWidth variant="outline" color="#b42318" onClick={() => setJanela('cancelar')} leftSection={<IconX size={22} aria-hidden />}>
+                Cancelar pedido
+              </Button>
+              <p className={classes.dicaAcao}>Use só se não for possível entregar. O Zappi prepara uma mensagem avisando {primeiroNome}.</p>
+            </div>
+          )}
+
+          <JanelaMotivo
+            pedido={pedido}
+            acao={janela}
+            aberta={janela !== null}
+            aoFechar={() => setJanela(null)}
+            aoConcluir={concluirMotivo}
+            enviando={enviando}
+            erro={janela ? erroAcao : ''}
+          />
         </div>
       )}
     </Drawer>

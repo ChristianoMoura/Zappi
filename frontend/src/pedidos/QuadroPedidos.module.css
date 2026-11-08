@@ -523,3 +523,57 @@
     }
   }
 }
+
+/* Janela do motivo de recusa ou cancelamento (ZAP-54) */
+.formMotivo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.explicacaoMotivo {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.rotuloMotivo {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.obrigatorio {
+  font-weight: 400;
+  color: #5c5048;
+}
+
+.dicaMotivo {
+  font-size: 0.95rem;
+  color: #5c5048;
+}
+
+.erroMotivo {
+  font-size: 0.95rem;
+  color: #b42318;
+}
+
+.contadorMotivo {
+  align-self: flex-end;
+  margin-top: -6px;
+  font-size: 0.85rem;
+  color: #5c5048;
+}
+
+/* O botão vermelho vem primeiro na tela e na ordem do Tab; no celular, um embaixo do outro */
+.botoesMotivo {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 30em) {
+  .botoesMotivo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
