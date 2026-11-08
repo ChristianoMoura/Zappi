@@ -3,8 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos, recusarPedido } from '../pedidos/servicoPedidos'
-import { renderizarComRotas } from '../testes/renderizarComRotas'
-import { PaginaPedidos } from './PaginaPedidos'
+import { abrirPedido, mensagemDeTeste, pedidoDeTeste, usarTela } from '../testes/pedidosDeTeste'
 
 // O backend é simulado aqui para os testes não dependerem da ZAP-53
 vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({
@@ -13,18 +12,8 @@ vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({
   recusarPedido: vi.fn(),
 }))
 
-const mensagem = (tipo, extras = {}) => ({ tipo, status: 'Pendente', texto: `Texto de ${tipo}`, link: 'https://wa.me/?text=teste', ...extras })
-
-const pedido = (numero, status, nome, extras = {}) => ({
-  numero,
-  status,
-  dataRetirada: '2030-01-15',
-  criadoEm: '2030-01-10T10:00',
-  cliente: { nome, telefone: '5511987650000' },
-  itens: [{ produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100 }],
-  mensagens: [],
-  ...extras,
-})
+const mensagem = mensagemDeTeste
+const pedido = pedidoDeTeste
 
 const enviada = mensagem('Confirmação', { status: 'Enviada', enviadoEm: '2030-01-10T12:00' })
 const pedidos = [
@@ -42,24 +31,6 @@ const recusado = (original, motivo) => ({
   recusadoEm: '2030-01-11T09:00',
   mensagens: [...original.mensagens, mensagem('Recusa')],
 })
-
-function usarTela(grande) {
-  window.matchMedia.mockImplementation((consulta) => ({
-    matches: grande,
-    media: consulta,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }))
-}
-
-async function abrirPedido(usuario, numero) {
-  renderizarComRotas([{ path: '/pedidos', Component: PaginaPedidos }], '/pedidos')
-  await usuario.click(await screen.findByRole('button', { name: new RegExp(`Pedido ${numero},`) }))
-  return screen.findByRole('dialog', { name: `Pedido #${numero}` })
-}
 
 async function abrirJanela(usuario, detalhes, botao, titulo) {
   await usuario.click(within(detalhes).getByRole('button', { name: botao }))

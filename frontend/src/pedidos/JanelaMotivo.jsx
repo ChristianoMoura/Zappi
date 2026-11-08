@@ -4,6 +4,13 @@ import { useState } from 'react'
 import { MOTIVO_MAXIMO, STATUS } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
+function explicacao(pedido, cancelar) {
+  const aviso = 'vai para Recusados e o Zappi prepara uma mensagem avisando o cliente.'
+  if (!cancelar) return `Ao recusar, o pedido de ${pedido.cliente.nome} ${aviso}`
+  const etapa = pedido.status === STATUS.CONFIRMADO ? 'confirmado' : 'em produção'
+  return `O pedido de ${pedido.cliente.nome} já estava ${etapa}. Ao cancelar, ele ${aviso}`
+}
+
 // Janela que pede o motivo antes de recusar ou cancelar (ZAP-54, RF11, RN05). Ela mesma é a
 // confirmação: nada muda até a Lídia escrever o motivo e apertar o botão vermelho.
 export function JanelaMotivo({ pedido, acao, aberta, aoFechar, aoConcluir, enviando, erro: erroServico }) {
@@ -45,11 +52,7 @@ export function JanelaMotivo({ pedido, acao, aberta, aoFechar, aoConcluir, envia
     >
       {pedido && (
         <form onSubmit={concluir} noValidate className={classes.formMotivo}>
-          <p className={classes.explicacaoMotivo}>
-            {cancelar
-              ? `O pedido de ${pedido.cliente.nome} já estava ${pedido.status === STATUS.CONFIRMADO ? 'confirmado' : 'em produção'}. Ao cancelar, ele vai para Recusados e o Zappi prepara uma mensagem avisando o cliente.`
-              : `Ao recusar, o pedido de ${pedido.cliente.nome} vai para Recusados e o Zappi prepara uma mensagem avisando o cliente.`}
-          </p>
+          <p className={classes.explicacaoMotivo}>{explicacao(pedido, cancelar)}</p>
           <Textarea
             data-autofocus
             id="motivo-recusa"
