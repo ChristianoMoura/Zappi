@@ -9,6 +9,9 @@ export default defineConfig({
     // No contêiner do Docker no Windows, o Vite não percebe as alterações
     // nos arquivos sem polling. O Docker Compose liga isto.
     watch: { usePolling: process.env.VITE_USAR_POLLING === 'true' },
+    // Em desenvolvimento, /api vai para o backend local, como o Render faz em produção.
+    // No Docker Compose, o endereço é o do contêiner do backend.
+    proxy: { '/api': process.env.API_LOCAL ?? 'http://localhost:8080' },
   },
   test: {
     environment: 'jsdom',

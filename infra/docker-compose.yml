@@ -49,6 +49,8 @@ services:
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
     environment:
       VITE_USAR_POLLING: "true"
+      # O proxy do Vite repassa /api ao contêiner do backend
+      API_LOCAL: http://backend:8080
     ports:
       # Acessível apenas pela própria máquina
       - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
