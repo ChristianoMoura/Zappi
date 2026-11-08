@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { STATUS } from './regrasPedidos'
-import { AcaoNaoPermitidaError, avancarPedido, buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from './servicoPedidos'
+import { AcaoNaoPermitidaError, avancarPedido, buscarPedidos, cadastrarPedido, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from './servicoPedidos'
 
 // Simulação usada em desenvolvimento até as APIs da ZAP-44, ZAP-49 e ZAP-50
 describe('serviço simulado de pedidos', () => {
@@ -62,6 +62,24 @@ describe('serviço simulado de pedidos', () => {
     expect(voltou.concluidoEm).toBeUndefined()
     expect((await voltarPedido(confirmado.numero)).status).toBe(STATUS.CONFIRMADO)
     await expect(voltarPedido(confirmado.numero)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+  })
+
+  test('cadastra o pedido como Novo com o próximo número, e não grava sem consentimento (RN03, RN09, RN16)', async () => {
+    const maior = Math.max(...(await buscarPedidos()).map((p) => p.numero))
+    const dados = {
+      cliente: { nome: 'Fernanda Costa', telefone: '5511987650099' },
+      consentimentoLgpd: true,
+      dataRetirada: '2030-01-15',
+      observacao: '',
+      itens: [{ produtoId: 1, produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100 }],
+    }
+
+    const pedido = await cadastrarPedido(dados)
+
+    expect(pedido).toMatchObject({ numero: maior + 1, status: STATUS.NOVO, mensagens: [] })
+    expect(pedido.observacao).toBeUndefined()
+    expect((await buscarPedidos()).some((p) => p.numero === pedido.numero)).toBe(true)
+    await expect(cadastrarPedido({ ...dados, consentimentoLgpd: false })).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
   })
 
   test('marcar como enviada guarda a data do primeiro envio', async () => {
