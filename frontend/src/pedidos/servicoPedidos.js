@@ -123,6 +123,29 @@ export async function buscarPedidos() {
   return copia(simulados)
 }
 
+// Cadastro de pedido pela Lídia (ZAP-89, US7, RF13). O pedido começa como Novo (RN03) e recebe
+// o próximo número do estabelecimento; na API (ZAP-88), por MAX + 1 com bloqueio (RN09). Os itens
+// chegam com o preço do cardápio, que fica congelado no pedido (RN10). Sem o consentimento do
+// cliente, o pedido não é gravado (RN16).
+export async function cadastrarPedido(dados) {
+  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
+  await esperar(700)
+  if (!dados.consentimentoLgpd || dados.itens.length === 0) throw new AcaoNaoPermitidaError()
+  simulados ??= pedidosSimulados()
+  const pedido = {
+    numero: Math.max(0, ...simulados.map((p) => p.numero)) + 1,
+    status: STATUS.NOVO,
+    dataRetirada: dados.dataRetirada,
+    criadoEm: agora(),
+    cliente: { nome: dados.cliente.nome, telefone: dados.cliente.telefone },
+    ...(dados.observacao ? { observacao: dados.observacao } : {}),
+    itens: dados.itens.map((item) => ({ ...item })),
+    mensagens: [],
+  }
+  simulados.push(pedido)
+  return copia(pedido)
+}
+
 // Novo → Confirmado, gerando a mensagem de confirmação pendente (RN03, RN06, RN07)
 export async function confirmarPedido(numero) {
   if (!import.meta.env.DEV) throw new ServicoIndisponivelError()

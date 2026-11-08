@@ -1,7 +1,8 @@
-import { Alert, Loader, Switch, Tabs } from '@mantine/core'
+import { Alert, Button, Loader, Switch, Tabs } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { IconAlertCircle } from '@tabler/icons-react'
+import { IconAlertCircle, IconCheck, IconPlus } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router'
 import { CartaoPedido } from '../pedidos/CartaoPedido'
 import { DetalhesPedido } from '../pedidos/DetalhesPedido'
 import { colunasVisiveis, pedidosDaColuna, STATUS } from '../pedidos/regrasPedidos'
@@ -36,6 +37,13 @@ export function PaginaPedidos() {
   const [erroAcao, setErroAcao] = useState('')
   const origemFoco = useRef(null)
 
+  // Voltando do cadastro de pedido (ZAP-89): avisa e leva o foco ao card novo, na coluna Novo.
+  // Voltando sem salvar, o foco volta para o botão "Novo pedido".
+  const { state } = useLocation()
+  const novo = state?.novo
+  const focoAoVoltar = state?.foco
+  const [aviso, setAviso] = useState(() => (novo ? `Pedido #${novo.numero} de ${novo.cliente} cadastrado na coluna Novo.` : null))
+
   useEffect(() => {
     let ativo = true
     buscarPedidos()
@@ -52,6 +60,19 @@ export function PaginaPedidos() {
       ativo = false
     }
   }, [])
+
+  useEffect(() => {
+    if (carregando || (!novo && !focoAoVoltar)) return
+    const alvo = novo ? document.querySelector(`[data-numero-pedido="${novo.numero}"]`) : document.getElementById(focoAoVoltar)
+    alvo?.focus()
+    alvo?.scrollIntoView?.({ block: 'center' })
+  }, [carregando, novo, focoAoVoltar])
+
+  useEffect(() => {
+    if (!aviso) return undefined
+    const tempo = setTimeout(() => setAviso(null), 4000)
+    return () => clearTimeout(tempo)
+  }, [aviso])
 
   if (carregando) {
     return (
@@ -155,14 +176,19 @@ export function PaginaPedidos() {
           <h1 className={classes.titulo}>Pedidos</h1>
           <p className={classes.subtitulo}>Acompanhe suas encomendas.</p>
         </div>
-        <Switch
-          id="mostrar-recusados"
-          label="Mostrar recusados"
-          size="lg"
-          checked={mostrarRecusados}
-          onChange={(evento) => mudarFiltro(evento.currentTarget.checked)}
-          classNames={{ label: classes.rotuloFiltro }}
-        />
+        <div className={classes.acoesTopo}>
+          <Switch
+            id="mostrar-recusados"
+            label="Mostrar recusados"
+            size="lg"
+            checked={mostrarRecusados}
+            onChange={(evento) => mudarFiltro(evento.currentTarget.checked)}
+            classNames={{ label: classes.rotuloFiltro }}
+          />
+          <Button component={Link} to="/pedidos/novo" id="novo-pedido" size="lg" leftSection={<IconPlus size={22} aria-hidden />} className={classes.novoPedido}>
+            Novo pedido
+          </Button>
+        </div>
       </div>
 
       {telaGrande ? (
@@ -214,6 +240,13 @@ export function PaginaPedidos() {
         acabouDe={acabouDe}
         erroAcao={erroAcao}
       />
+
+      {aviso && (
+        <div className={classes.aviso} role="status">
+          <IconCheck size={20} aria-hidden />
+          {aviso}
+        </div>
+      )}
     </div>
   )
 }
