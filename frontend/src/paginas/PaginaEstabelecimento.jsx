@@ -80,7 +80,7 @@ export function PaginaEstabelecimento() {
   if (erroCarregar) {
     return (
       <Alert color="#b42318" variant="outline" icon={<IconAlertCircle size={22} aria-hidden />} className={classes.erroCarregar}>
-        Não foi possível carregar os dados agora. Tente de novo em alguns minutos.
+        Não foi possível carregar os dados agora. Tente novamente em alguns minutos.
       </Alert>
     )
   }
@@ -142,7 +142,7 @@ export function PaginaEstabelecimento() {
         refs.current.slug?.focus()
         setAviso({ tipo: 'erro', texto: 'Confira o link do cardápio.' })
       } else {
-        setAviso({ tipo: 'erro', texto: 'Não foi possível salvar agora. Tente de novo em alguns minutos.' })
+        setAviso({ tipo: 'erro', texto: 'Não foi possível salvar agora. Tente novamente em alguns minutos.' })
       }
     } finally {
       setSalvando(false)

@@ -52,7 +52,7 @@ export function PaginaFormularioPedido() {
         setDados(formularioDoPedido(salvo))
       })
       .catch(() => {
-        if (ativo) setErroCarregar(editando ? 'Não foi possível abrir este pedido agora. Tente de novo em alguns minutos.' : 'Não foi possível carregar os produtos do cardápio agora. Tente de novo em alguns minutos.')
+        if (ativo) setErroCarregar(editando ? 'Não foi possível abrir este pedido agora. Tente novamente em alguns minutos.' : 'Não foi possível carregar os produtos do cardápio agora. Tente novamente em alguns minutos.')
       })
       .finally(() => {
         if (ativo) setCarregando(false)
@@ -136,7 +136,7 @@ export function PaginaFormularioPedido() {
       }
     } catch {
       setSalvando(false)
-      setErroSalvar('Não foi possível salvar o pedido agora. Tente de novo em alguns minutos.')
+      setErroSalvar('Não foi possível salvar o pedido agora. Tente novamente em alguns minutos.')
     }
   }
 

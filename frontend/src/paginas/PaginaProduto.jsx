@@ -42,7 +42,7 @@ export function PaginaProduto() {
         setDados(paraTela(produto))
       })
       .catch((erro) => {
-        if (ativo) setErroCarregar(erro instanceof ProdutoNaoEncontradoError ? 'Este produto não está mais no cardápio.' : 'Não foi possível carregar o produto agora. Tente de novo em alguns minutos.')
+        if (ativo) setErroCarregar(erro instanceof ProdutoNaoEncontradoError ? 'Este produto não está mais no cardápio.' : 'Não foi possível carregar o produto agora. Tente novamente em alguns minutos.')
       })
       .finally(() => {
         if (ativo) setCarregando(false)
@@ -137,7 +137,7 @@ export function PaginaProduto() {
       navegar('/produtos', { state: { salvo: { id: salvo.id, novo: !editando, nome: nomeCompleto(salvo) } } })
     } catch {
       setSalvando(false)
-      setAviso({ tipo: 'erro', texto: 'Não foi possível salvar agora. Tente de novo em alguns minutos.' })
+      setAviso({ tipo: 'erro', texto: 'Não foi possível salvar agora. Tente novamente em alguns minutos.' })
     }
   }
 

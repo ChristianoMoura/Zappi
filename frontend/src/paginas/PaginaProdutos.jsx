@@ -71,7 +71,7 @@ export function PaginaProdutos() {
   if (erroCarregar) {
     return (
       <Alert color="#b42318" variant="outline" icon={<IconAlertCircle size={22} aria-hidden />} className={classes.erroCarregar}>
-        Não foi possível carregar os produtos agora. Tente de novo em alguns minutos.
+        Não foi possível carregar os produtos agora. Tente novamente em alguns minutos.
       </Alert>
     )
   }
@@ -97,7 +97,7 @@ export function PaginaProdutos() {
       origemExclusao.current = titulo.current
       setParaExcluir(null)
     } catch {
-      setErroExcluir('Não foi possível excluir agora. Tente de novo em alguns minutos.')
+      setErroExcluir('Não foi possível excluir agora. Tente novamente em alguns minutos.')
     } finally {
       setExcluindo(false)
     }
