@@ -13,6 +13,7 @@
 - O escopo de implementação é o **MVP** (seção 5). Itens marcados como **Futuro** não devem ser implementados agora, mas o código não deve impedir a evolução para eles.
 - **Rastreabilidade:** cite nos planos, commits e testes os identificadores de origem (US, RF, RN, controle ISO 27002, requisito NBR 17225, artigo legal).
 - **Não invente regras de negócio.** Se algo não estiver definido aqui ou estiver em "Pontos em aberto" (seção 14), pergunte à equipe antes de decidir.
+- **Alterações não previstas na documentação original:** toda funcionalidade, regra, coluna do banco ou mudança de decisão que não esteja nos documentos entregues em sala (atividades do PI) deve ser registrada na **`ZAP-83`** para ser formalizada, com o que era antes, o que ficou agora e o motivo. Registre também neste arquivo (seção 17) e nos tickets afetados.
 - **Idioma:** interface, mensagens ao cliente e textos do sistema em português do Brasil. Tabelas e colunas com os nomes exatos do modelo (seção 12): `snake_case`, tabelas no singular.
 - Prazo final de todos os artefatos do PI: **22/11/2026**. Priorize o que é necessário para o MVP funcionar de ponta a ponta.
 - **Jira e Git:** todo trabalho parte de uma subtarefa do Jira, e toda branch, commit e pull request leva a chave dessa subtarefa. Mantenha o status do ticket atualizado conforme o trabalho avança. Siga as regras da **seção 18** antes de criar qualquer branch ou commit.
@@ -126,7 +127,7 @@ O MVP ataca principalmente **Gestão de pedidos** e parte de **Atendimento** (co
 
 **Lídia:** o pedido chega no quadro Kanban → avalia disponibilidade e capacidade → confirma, ou recusa informando o motivo → o sistema prepara a mensagem ao cliente → produz com a Romilda → move o card até "Concluído" → o sistema prepara o aviso de pronto → recebe o cliente e o pagamento.
 
-> Os passos do cliente pelo cardápio público são **Futuro**. No MVP, os pedidos já existem no sistema (seção 5.3).
+> Os passos do cliente pelo cardápio público são **Futuro**. No MVP, os pedidos vêm do seed (seção 5.3) ou são cadastrados pela Lídia a partir do que ela recebe no WhatsApp (US7).
 
 ---
 
@@ -145,9 +146,10 @@ O MVP cobre **somente o lado administrativo (Lídia)**, com o escopo ampliado ap
 7. **Confirmar** um pedido.
 8. **Recusar** um pedido com **motivo obrigatório**, e **cancelar** um pedido Confirmado ou Em produção pelo mesmo fluxo.
 9. Mover o pedido para **Em produção** e **Concluído**, e voltar uma etapa da produção para corrigir um clique errado.
-10. Geração da mensagem ao cliente (confirmação, recusa e pronto para retirada) e botão **"Enviar no WhatsApp"** com link `wa.me`.
+10. Geração da mensagem ao cliente (confirmação, recusa e pronto para retirada) e botão **"Enviar no WhatsApp"** com link `wa.me`, que continua disponível para reenviar.
 11. Registro de auditoria (logins e ações administrativas).
 12. Infraestrutura: Docker Compose no ambiente local; em produção, Render e Supabase com HTTPS gerenciado, CI no GitHub Actions e deploy automático do Render a cada merge na `main`.
+13. **Cadastrar e editar pedidos** (US7): a Lídia registra as encomendas que recebe pelo WhatsApp e corrige um pedido, com a edição limitada pelo status (RN21).
 
 ### 5.3 Dados iniciais (seed)
 - Estabelecimento: **Casa Belt**.
@@ -186,8 +188,14 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído). **RF08** Detalhes do pedido ao selecionar um card. |
 | **US5** — Como Lídia, quero confirmar um pedido, para informar ao cliente que ele será atendido. | **RF09** Mover o pedido para "Confirmado". **RF10** Preparar a mensagem de confirmação ao cliente via WhatsApp. |
 | **US6** — Como Lídia, quero recusar um pedido informando o motivo, para que o cliente entenda. | **RF11** Motivo obrigatório ao recusar. **RF12** Preparar a mensagem de recusa com o motivo via WhatsApp. |
+| **US7** — Como Lídia, quero cadastrar e editar pedidos, para registrar as encomendas que recebo pelo WhatsApp e corrigir um pedido quando o cliente pede uma mudança. | **RF13** Cadastro de pedido com cliente (nome e WhatsApp), itens do cardápio com quantidade, data de retirada e observações. **RF14** Edição do pedido conforme o status (RN21). |
+| **US8** — Como Lídia, quero mover o pedido para Em produção e Concluído, para acompanhar o andamento e avisar o cliente que o pedido está pronto. | **RF15** Mover o pedido para "Em produção" e "Concluído", com a volta de uma etapa para corrigir um clique errado (RN03). **RF16** Preparar a mensagem de pronto para retirada via WhatsApp. |
 
-Escopo ampliado do MVP, sem RF numerado nas atividades: mover para "Em produção" e "Concluído" e preparar a mensagem de "pronto para retirada". Usar os mesmos padrões do RF09/RF10.
+**Adições depois da documentação entregue em sala** (formalizadas na `ZAP-83`):
+- **US7, RF13 e RF14** são novos (decisão da `ZAP-64`, item 14.9; história `ZAP-87`).
+- **US8, RF15 e RF16** numeram o escopo ampliado que já tinha sido aprovado sem RF (história `ZAP-60`).
+- **RF11 e RF12** passam a valer também para o **cancelamento** de pedidos Confirmados e Em produção (`ZAP-64`).
+- **RF10, RF12 e RF16:** o botão "Enviar no WhatsApp" continua disponível para **reenviar** a mensagem, e o painel mostra só a mensagem da etapa atual, com as anteriores guardadas para consulta (`ZAP-64`, `ZAP-51`).
 
 ---
 
@@ -200,11 +208,11 @@ Escopo ampliado do MVP, sem RF numerado nas atividades: mover para "Em produçã
 | RN03 | Status do pedido: 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado. Transições permitidas: Novo → Confirmado ou Recusado; Confirmado → Em produção ou Recusado (cancelamento); Em produção → Concluído ou Recusado (cancelamento); e as voltas Em produção → Confirmado e Concluído → Em produção. Nada volta para antes da confirmação, e Recusado não muda mais. A mudança é feita por botões nos detalhes do pedido, sem arrastar. | DER / RF07 / ZAP-64 |
 | RN04 | Recusados ficam ocultos no Kanban por padrão e aparecem pelo filtro "Recusados". | Arquitetura |
 | RN05 | Recusar ou cancelar exige `motivo_recusa` (obrigatório quando status = 5). O cancelamento usa o mesmo fluxo da recusa. | RF11 / ZAP-64 |
-| RN06 | Confirmar grava `confirmado_em`; recusar ou cancelar grava `recusado_em`; concluir grava `concluido_em`. Voltar de Concluído para Em produção apaga `concluido_em`. | DER / ZAP-64 |
+| RN06 | Confirmar grava `confirmado_em`; iniciar a produção grava `producao_em`; recusar ou cancelar grava `recusado_em`; concluir grava `concluido_em`. Voltar de Concluído para Em produção apaga `concluido_em`; voltar de Em produção para Confirmado apaga `producao_em`. | DER / ZAP-64 / ZAP-83 |
 | RN07 | Confirmar, recusar, cancelar ou concluir **gera uma mensagem** (`mensagem_whatsapp`) dos tipos 1-Confirmação, 2-Recusa e 3-Pronto. Iniciar a produção e as voltas não geram mensagem. | RF10 / RF12 / ZAP-64 |
 | RN08 | Mudar o status, gerar a mensagem e gravar o log acontecem **na mesma transação**. | Justificativa do banco |
 | RN09 | O número do pedido é sequencial e único **por estabelecimento** e aparece no card (ex.: #1). É gerado com `MAX + 1` e bloqueio da linha do estabelecimento (`SELECT ... FOR UPDATE`), na mesma transação da criação do pedido. | DER / ZAP-64 |
-| RN10 | O item do pedido **congela o preço** (`preco_unitario`). Mudar o cardápio não altera pedidos antigos. | DER |
+| RN10 | O item do pedido **congela o preço** (`preco_unitario`). Mudar o cardápio não altera pedidos antigos. Na edição, os itens que já estavam no pedido mantêm o preço; só um item novo copia o preço atual. | DER / ZAP-64 |
 | RN11 | `subtotal = quantidade × preco_unitario`; `valor_total = soma dos subtotais`. | DER |
 | RN12 | Quantidade > 0. KG aceita fração (ex.: 1,5); UN não aceita. | DER |
 | RN13 | Preço do produto > 0. | DER |
@@ -215,6 +223,7 @@ Escopo ampliado do MVP, sem RF numerado nas atividades: mover para "Em produçã
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
 | RN19 | Não há delivery: o pedido tem `data_retirada`, e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
+| RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído e 5-Recusado: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 |
 
 ---
 
@@ -249,7 +258,7 @@ Autenticação por **token JWT** nas requisições depois do login. O token vale
 
 **Bloqueio de login (RF02):** 5 falhas seguidas para o mesmo e-mail bloqueiam novos logins por 15 minutos. A contagem usa os registros `LOGIN_FALHA` do `log_auditoria` desde o último `LOGIN_SUCESSO`, sem alterar o DER. A mensagem é em linguagem simples e não revela se o e-mail existe.
 
-Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ESTABELECIMENTO_EDITADO`, `PRODUTO_CRIADO`, `PRODUTO_EDITADO`, `PRODUTO_EXCLUIDO`, `PEDIDO_CONFIRMADO`, `PEDIDO_RECUSADO`, `PEDIDO_STATUS_ALTERADO`. Cada registro guarda data, hora, IP de origem e user agent.
+Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ESTABELECIMENTO_EDITADO`, `PRODUTO_CRIADO`, `PRODUTO_EDITADO`, `PRODUTO_EXCLUIDO`, `PEDIDO_CRIADO`, `PEDIDO_EDITADO`, `PEDIDO_CONFIRMADO`, `PEDIDO_RECUSADO`, `PEDIDO_STATUS_ALTERADO`. Em `PEDIDO_EDITADO`, o campo `detalhes` guarda o que mudou. Cada registro guarda data, hora, IP de origem e user agent.
 
 ---
 
@@ -259,7 +268,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 |---|---|---|
 | 5.11.2 Contraste para texto | 1.4.3 (AA) | Contraste mínimo de 4,5:1, sobretudo em preços e descrições |
 | 5.1.1 Indicador de foco visível | 2.4.7 (AA) | Borda destacada nos campos ao receber foco pelo teclado (começando pelo login) |
-| 5.1.4 Ordem de foco previsível | 2.4.3 (A) | Cadastro de produto: nome → sabor → preço → foto → "Salvar" (encaixar os demais campos na mesma lógica) |
+| 5.1.4 Ordem de foco previsível | 2.4.3 (A) | Cadastro de produto: nome → sabor → preço → foto → "Salvar" (encaixar os demais campos na mesma lógica). Cadastro de pedido: cliente → itens → data de retirada → observações → "Salvar" |
 | 5.9.1 Texto alternativo | 1.1.1 (A) | Toda foto de produto com texto alternativo (`foto_texto_alternativo`) |
 | 5.12.12 Nível de linguagem | 3.1.5 (AAA) | Mensagens do WhatsApp em linguagem simples, sem termos técnicos |
 | 5.3.1 Rótulos ou instruções | 3.3.2 (A) | Todo campo de formulário com rótulo visível |
@@ -275,7 +284,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Acesso | Navegador (computador ou celular) | Sistema web, sem instalar aplicativo |
 | Hospedagem | **Render** (plano gratuito) | Frontend como Static Site e backend como Web Service (Docker); deploy automático a cada merge na `main`. O Docker Compose fica só no ambiente local |
 | Endereço e HTTPS | Render | Subdomínio gratuito `*.onrender.com`; HTTPS/TLS gerenciado, com HTTP redirecionando para HTTPS; regra de reescrita (`/*` → `/index.html`) para as rotas do React |
-| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos, Kanban com filtro de recusados, botão "Enviar no WhatsApp". Futuro: cardápio público |
+| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos, Kanban com filtro de recusados, cadastro e edição de pedidos, botão "Enviar no WhatsApp". Futuro: cardápio público |
 | Backend | **Java 21 + Spring Boot 4** (build com **Maven**, com Maven Wrapper) | API REST (JSON); regras de negócio; upload de fotos; geração das mensagens e links `wa.me`; isolamento por estabelecimento; CORS liberado só para o endereço do frontend |
 | Persistência | **Spring Data JPA** + **Flyway** | Acesso ao banco; migrações em SQL puro em `backend/src/main/resources/db/migration`, só para frente |
 | Segurança | **Spring Security** | Login, BCrypt, JWT, política de senha |
@@ -425,7 +434,7 @@ Consumidor. Dados pessoais protegidos pela LGPD.
 | atualizado_em | TIMESTAMPTZ | Sim | | |
 
 #### pedido
-Encomenda. Cada pedido é um card do Kanban (RF07–RF12).
+Encomenda. Cada pedido é um card do Kanban (RF07–RF16).
 
 | Coluna | Tipo | Obr. | Chave | Observação |
 |---|---|---|---|---|
@@ -440,6 +449,7 @@ Encomenda. Cada pedido é um card do Kanban (RF07–RF12).
 | valor_total | NUMERIC(10,2) | Sim | | Soma dos subtotais. Pago na retirada |
 | criado_em | TIMESTAMPTZ | Sim | | Pedido recebido. Padrão now() |
 | confirmado_em | TIMESTAMPTZ | Não | | RF09 |
+| producao_em | TIMESTAMPTZ | Não | | RF15. Entrada em Em produção. **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-83) |
 | recusado_em | TIMESTAMPTZ | Não | | RF11 |
 | concluido_em | TIMESTAMPTZ | Não | | Dispara a mensagem de "pronto" |
 | atualizado_em | TIMESTAMPTZ | Sim | | |
@@ -453,7 +463,7 @@ Produto do pedido, com quantidade e personalização.
 | pedido_id | BIGINT | Sim | FK | → pedido.id, ON DELETE CASCADE |
 | produto_id | BIGINT | Sim | FK | → produto.id |
 | quantidade | NUMERIC(8,3) | Sim | | Ex.: 1,500 (KG) ou 10 (UN). > 0 |
-| preco_unitario | NUMERIC(10,2) | Sim | | Preço congelado no momento do pedido |
+| preco_unitario | NUMERIC(10,2) | Sim | | Preço congelado quando o item entra no pedido (RN10) |
 | subtotal | NUMERIC(10,2) | Sim | | quantidade × preco_unitario |
 | recheio | VARCHAR(100) | Não | | Texto livre |
 | cobertura | VARCHAR(100) | Não | | Texto livre |
@@ -527,7 +537,7 @@ Trilha de auditoria (ISO 8.16).
    - expiração do JWT: **8 horas**, sem refresh token; onde guardar o JWT no frontend: **`sessionStorage`** (ZAP-34);
    - bloqueio após falhas de login (RF02): **5 falhas seguidas bloqueiam por 15 minutos**;
    - ainda em aberto: quem será dono das contas do Render e do Supabase, e a validação do plano gratuito do Render (ZAP-86).
-9. **Edição de pedidos.** No MVP, os pedidos vêm do seed. Não está definido se a Lídia pode criar ou editar pedidos manualmente.
+9. **Criar e editar pedidos.** **Decidido (ZAP-64):** a Lídia pode **criar** pedidos (botão "Novo pedido" no quadro) e **editar** pedidos, com a edição limitada pelo status (RN21). Os produtos vêm do cardápio, o total é calculado pelo sistema, os itens antigos mantêm o preço (RN10) e toda criação e edição vai para o log. Virou a US7 (história `ZAP-87`).
 10. **Região dos servidores e LGPD.** O Render não tem região em São Paulo. Avaliar com a equipe uma nota na seção 9 sobre a localização dos dados.
 
 ---
@@ -544,11 +554,12 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | 4 | Estabelecimento | API e tela de cadastro/edição, log de edição | US2, RF03–RF04 |
 | 5 | Produtos | CRUD com exclusão lógica, upload para o Storage, texto alternativo, ordem de foco | US3, RF05–RF06, NBR 5.9.1, 5.1.4 |
 | 6 | Kanban de pedidos | Colunas por status, filtro de recusados, detalhes do pedido | US4, RF07–RF08 |
-| 7 | Decisões sobre pedidos | Confirmar, recusar ou cancelar com motivo, em produção, concluir e voltar uma etapa da produção; transação status + mensagem + log | US5–US6, RF09–RF12, RN03, RN05–RN08 |
+| 7 | Decisões sobre pedidos | Confirmar, recusar ou cancelar com motivo, em produção, concluir e voltar uma etapa da produção; transação status + mensagem + log | US5, US6, US8, RF09–RF12, RF15–RF16, RN03, RN05–RN08 |
 | 8 | Mensagens WhatsApp | Textos, geração do link `wa.me`, botão "Enviar no WhatsApp", status da mensagem | RF10, RF12, CDC, NBR 5.12.12 |
 | 9 | Acessibilidade e UX | Revisão de contraste, foco, rótulos e uso no celular | Ativ. #11 |
 | 10 | Infra e deploy | Render (Static Site e Web Service) com HTTPS, Supabase, GitHub Actions (build e testes) e deploy automático do Render | Arquitetura |
 | 11 | Preparação da demonstração | Roteiro e dados para o vídeo e para o treinamento da Lídia | Entregas finais |
+| 12 | Cadastro e edição de pedidos | Botão "Novo pedido", formulário com produtos do cardápio, edição conforme o status, número por `MAX + 1`, logs de criação e edição | US7, RF13–RF14, RN09, RN10, RN21 |
 
 ---
 
@@ -570,7 +581,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Decisão | Antes | Agora |
 |---|---|---|
 | Stack do backend | Node.js (Atividade #3, hipótese inicial) | **Java 21 + Spring Boot 4** |
-| Escopo do MVP | Login, estabelecimento, produtos, confirmar/recusar 2 pedidos (Atividade #5) | **Escopo ampliado** (seção 5.2): Em produção, Concluído, mensagem de pronto, fotos, auditoria, CI/CD |
+| Escopo do MVP | Login, estabelecimento, produtos, confirmar/recusar 2 pedidos (Atividade #5) | **Escopo ampliado** (seção 5.2): Em produção, Concluído, mensagem de pronto, fotos, auditoria, CI/CD; depois, cancelamento, voltar uma etapa e cadastro e edição de pedidos |
 | Envio ao WhatsApp | "Resposta automática" (Atividades #5, #6 e #9) | **MVP semiautomático com `wa.me`**; Cloud API no futuro |
 | Demanda prioritária | Várias demandas (Etapa 1 de Empreendedorismo) | **Organização e gestão de pedidos**, escolhida pela Lídia |
 | Usuários do sistema | — | Só a Lídia; a Romilda fica sem acesso |
@@ -592,6 +603,11 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Mensagem "Enviada" | Em aberto (clique ou confirmação manual) | **Ao clicar em "Enviar no WhatsApp"** (ZAP-64). Motivo: o sistema não sabe se ela apertou enviar, e não acrescenta um passo extra para a Lídia |
 | Número do pedido | Em aberto (sequência ou `MAX + 1`) | **`MAX + 1` com bloqueio** da linha do estabelecimento (ZAP-64). Motivo: não muda o banco e não deixa buracos na numeração |
 | Textos das mensagens do WhatsApp | Não redigidos | **Três textos** em `docs/mensagens-whatsapp.md` (ZAP-63), validados com autorização do Lucas. Motivo: linguagem simples (NBR 17225 5.12.12), identificação do Zappi (CDC), sem emojis e sem expor o endereço da Lídia |
+| Andamento da produção | Escopo ampliado sem US nem RF numerado | **US8, RF15 e RF16** (ZAP-83, história ZAP-60). Motivo: formalizar o que já tinha sido aprovado, para ter rastreabilidade como as demais funcionalidades |
+| Reenviar a mensagem | Não previsto (RF10 e RF12 só preparam a mensagem) | **Botão continua disponível para reenviar**, e o painel mostra só a mensagem da etapa atual, com as anteriores guardadas (ZAP-64, ZAP-51). Motivo: a Lídia pode fechar o WhatsApp sem mandar, e uma mensagem de outra etapa não deve ser enviada por engano |
+| Criar e editar pedidos | Pedidos só pelo seed (seção 5.3) | **US7, RF13, RF14 e RN21** (ZAP-64, história ZAP-87): cadastro pelo botão "Novo pedido" e edição limitada pelo status. Motivo: sem isso, a Lídia não consegue usar o Zappi com pedidos de verdade |
+| Data de entrada em produção | Sem coluna no dicionário de dados (Atividade #14) | **Coluna nova `producao_em`** em `pedido` (ZAP-83). Motivo: o histórico do pedido na tela mostra quando ele entrou em produção, e uma coluna é mais simples de consultar do que o log |
+| Alterações fora da documentação original | Sem registro definido | **Toda alteração é registrada na `ZAP-83`** e nesta seção, com antes, agora e motivo (seção 0). Motivo: manter os documentos entregues em sala coerentes com o sistema entregue |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
@@ -652,6 +668,7 @@ Refs: US5, RF09, RN06, RN07, RN08, ISO 27002 8.16
 - **Não comite na `main`** e não faça merge sem revisão.
 - **Mantenha o status dos tickets atualizado**, seguindo a seção 18.4.
 - Se o trabalho revelar algo que não está no Jira (bug, regra faltando, ponto em aberto), registre na resposta para a equipe criar o item, em vez de resolver por conta própria.
+- **Se o trabalho criar algo que não está na documentação entregue em sala** (funcionalidade, regra, coluna ou mudança de decisão), avise e registre na **`ZAP-83`**, com antes, agora e motivo, além da seção 17 deste arquivo (regra da seção 0).
 
 ### 18.4 Atualização de status no Jira
 
@@ -684,7 +701,8 @@ Regras:
 5. `ZAP-26` Estabelecimento e `ZAP-27` Produtos.
 6. `ZAP-28` Kanban de pedidos.
 7. `ZAP-29` Confirmação, `ZAP-30` Recusa e `ZAP-60` Em produção/Concluído.
-8. `ZAP-61` Infraestrutura e deploy (pode começar em paralelo assim que a `ZAP-58` estiver pronta).
-9. `ZAP-65` Revisão de acessibilidade e `ZAP-66` Demonstração e treinamento.
+8. `ZAP-87` Cadastro e edição de pedidos.
+9. `ZAP-61` Infraestrutura e deploy (pode começar em paralelo assim que a `ZAP-58` estiver pronta).
+10. `ZAP-65` Revisão de acessibilidade e `ZAP-66` Demonstração e treinamento.
 
 Em paralelo, desde o início: `ZAP-63` (textos das mensagens) e `ZAP-64` (regras em aberto), que dependem de conversas com a Lídia.
