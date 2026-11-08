@@ -133,8 +133,8 @@ class ProtecaoDasRotasTests {
 
 	@Test
 	void deixaALoginAbertaSemToken() throws Exception {
-		// O endpoint chega na ZAP-31; até lá, a rota responde 404, e não 401.
-		mockMvc.perform(post(ConfiguracaoSeguranca.ROTA_LOGIN)).andExpect(status().isNotFound());
+		// Sem token, a rota de login chega ao controller: o corpo vazio dá 400, e não 401.
+		mockMvc.perform(post(ConfiguracaoSeguranca.ROTA_LOGIN)).andExpect(status().isBadRequest());
 	}
 
 	/** Token válido para o usuário 7 do estabelecimento 3, com o ajuste do teste. */

@@ -13,19 +13,21 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
 
+	/**
+	 * Senha da Lídia nos testes: aleatória, gerada a cada execução. A V2 grava o hash dela,
+	 * então nenhuma senha nem hash fica no repositório.
+	 */
+	public static final String SENHA_DA_LIDIA = "Teste@" + UUID.randomUUID();
+
 	@Bean
 	@ServiceConnection
 	PostgreSQLContainer postgresContainer() {
 		return new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"));
 	}
 
-	/**
-	 * Nos testes, a V2 grava para a Lídia o hash de uma senha aleatória, gerada a cada
-	 * execução. Assim nenhum hash fica no repositório.
-	 */
 	@Bean
 	DynamicPropertyRegistrar senhaDaLidiaNosTestes() {
-		String hash = new BCryptPasswordEncoder(12).encode(UUID.randomUUID().toString());
+		String hash = new BCryptPasswordEncoder(12).encode(SENHA_DA_LIDIA);
 		return registro -> registro.add("LIDIA_SENHA_HASH", () -> hash);
 	}
 

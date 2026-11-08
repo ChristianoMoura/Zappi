@@ -12,6 +12,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
@@ -73,6 +75,12 @@ public class ConfiguracaoSeguranca {
 		UrlBasedCorsConfigurationSource fonte = new UrlBasedCorsConfigurationSource();
 		fonte.registerCorsConfiguration("/api/**", configuracao);
 		return fonte;
+	}
+
+	/** Senhas em hash BCrypt com custo 12 (ISO 27002 8.24), o mesmo do hash da V2. */
+	@Bean
+	PasswordEncoder codificadorDeSenha() {
+		return new BCryptPasswordEncoder(12);
 	}
 
 }
