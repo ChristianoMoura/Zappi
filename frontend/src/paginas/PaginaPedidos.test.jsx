@@ -3,8 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos } from '../pedidos/servicoPedidos'
-import { renderizarComRotas } from '../testes/renderizarComRotas'
-import { PaginaPedidos } from './PaginaPedidos'
+import { abrirQuadro, pedidoDeTeste, renderizarQuadro, usarTela } from '../testes/pedidosDeTeste'
 
 // O backend é simulado aqui para os testes não dependerem da ZAP-44
 vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({
@@ -12,16 +11,7 @@ vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({
   buscarPedidos: vi.fn(),
 }))
 
-const pedido = (numero, status, nome, extras = {}) => ({
-  numero,
-  status,
-  dataRetirada: '2030-01-15',
-  criadoEm: '2030-01-10T10:00',
-  cliente: { nome, telefone: '5511987650000' },
-  itens: [{ produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100 }],
-  mensagens: [],
-  ...extras,
-})
+const pedido = pedidoDeTeste
 
 const pedidos = [
   pedido(12, STATUS.NOVO, 'Ana Souza', { observacao: 'Festa infantil' }),
@@ -30,24 +20,6 @@ const pedidos = [
   pedido(8, STATUS.CONCLUIDO, 'Pedro Alves'),
   pedido(7, STATUS.RECUSADO, 'Rita Gomes', { motivoRecusa: 'Agenda cheia nesse dia.' }),
 ]
-
-// Simula a largura da tela: o quadro usa (min-width: 48em) para separar computador e celular
-function usarTela(grande) {
-  window.matchMedia.mockImplementation((consulta) => ({
-    matches: grande,
-    media: consulta,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }))
-}
-
-async function abrirQuadro() {
-  renderizarComRotas([{ path: '/pedidos', Component: PaginaPedidos }], '/pedidos')
-  return screen.findByRole('heading', { level: 1, name: 'Pedidos' })
-}
 
 describe('PaginaPedidos (US4, RF07, RF08)', () => {
   beforeEach(() => {
@@ -143,7 +115,7 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
 
   test('avisa quando não consegue carregar', async () => {
     buscarPedidos.mockRejectedValue(new Error('falhou'))
-    renderizarComRotas([{ path: '/pedidos', Component: PaginaPedidos }], '/pedidos')
+    renderizarQuadro()
 
     expect(await screen.findByText(/Não foi possível carregar os pedidos agora/)).toBeVisible()
   })

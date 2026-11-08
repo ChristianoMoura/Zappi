@@ -1,11 +1,11 @@
 // Leitura dos pedidos do estabelecimento da usuária logada e as ações sobre eles.
-// PENDENTE: as APIs são a ZAP-44 (listar), a ZAP-49 (confirmar) e a ZAP-50 (texto da mensagem,
-// link wa.me e marcar como enviada), que ainda não existem. Enquanto isso, no modo de
+// PENDENTE: as APIs são a ZAP-44 (listar), a ZAP-49 (confirmar), a ZAP-53 (recusar e cancelar) e
+// a ZAP-50 (texto da mensagem, link wa.me e marcar como enviada), que ainda não existem. Enquanto isso, no modo de
 // desenvolvimento os pedidos são simulados com clientes fictícios (nenhum dado real), guardados
 // só na memória; fora dele, a tela avisa que o serviço não está disponível.
 // Quando as APIs ficarem prontas, só este arquivo muda.
 
-import { dataLocal, dataRetiradaMensagem, moeda, nomeItem, quantidadeTexto, STATUS, totalPedido } from './regrasPedidos'
+import { dataLocal, dataRetiradaMensagem, MOTIVO_MAXIMO, moeda, nomeItem, podeRecusarOuCancelar, quantidadeTexto, STATUS, totalPedido } from './regrasPedidos'
 
 export class ServicoIndisponivelError extends Error {}
 export class AcaoNaoPermitidaError extends Error {}
@@ -131,6 +131,22 @@ export async function confirmarPedido(numero) {
   pedido.status = STATUS.CONFIRMADO
   pedido.confirmadoEm = agora()
   pedido.mensagens.push(mensagem(pedido, 'Confirmação'))
+  return copia(pedido)
+}
+
+// Recusa um pedido Novo ou cancela um Confirmado ou Em produção: o pedido vai para Recusado,
+// com o motivo, e ganha a mensagem de recusa pendente (RN03, RN05, RN06, RN07, ZAP-64)
+export async function recusarPedido(numero, motivo) {
+  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
+  await esperar(600)
+  const pedido = encontrar(numero)
+  const texto = motivo.trim()
+  if (!podeRecusarOuCancelar(pedido.status) || !texto || texto.length > MOTIVO_MAXIMO) throw new AcaoNaoPermitidaError()
+  pedido.cancelado = pedido.status !== STATUS.NOVO
+  pedido.status = STATUS.RECUSADO
+  pedido.motivoRecusa = texto
+  pedido.recusadoEm = agora()
+  pedido.mensagens.push(mensagem(pedido, 'Recusa'))
   return copia(pedido)
 }
 

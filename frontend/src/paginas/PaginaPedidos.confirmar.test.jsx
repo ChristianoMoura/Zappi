@@ -3,8 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos, confirmarPedido, marcarMensagemEnviada } from '../pedidos/servicoPedidos'
-import { renderizarComRotas } from '../testes/renderizarComRotas'
-import { PaginaPedidos } from './PaginaPedidos'
+import { abrirPedido, mensagemDeTeste, pedidoDeTeste, usarTela } from '../testes/pedidosDeTeste'
 
 // O backend é simulado aqui para os testes não dependerem da ZAP-49 e da ZAP-50
 vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({
@@ -14,18 +13,8 @@ vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({
   marcarMensagemEnviada: vi.fn(),
 }))
 
-const mensagem = (tipo, extras = {}) => ({ tipo, status: 'Pendente', texto: `Texto de ${tipo}`, link: 'https://wa.me/?text=teste', ...extras })
-
-const pedido = (numero, status, nome, extras = {}) => ({
-  numero,
-  status,
-  dataRetirada: '2030-01-15',
-  criadoEm: '2030-01-10T10:00',
-  cliente: { nome, telefone: '5511987650000' },
-  itens: [{ produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100 }],
-  mensagens: [],
-  ...extras,
-})
+const mensagem = mensagemDeTeste
+const pedido = pedidoDeTeste
 
 const ana = pedido(12, STATUS.NOVO, 'Ana Souza')
 const anaConfirmada = { ...ana, status: STATUS.CONFIRMADO, confirmadoEm: '2030-01-11T09:00', mensagens: [mensagem('Confirmação')] }
@@ -37,24 +26,6 @@ const pedidos = [
     mensagens: [mensagem('Confirmação', { status: 'Enviada', enviadoEm: '2030-01-08T13:15' }), mensagem('Pronto para retirada')],
   }),
 ]
-
-function usarTela(grande) {
-  window.matchMedia.mockImplementation((consulta) => ({
-    matches: grande,
-    media: consulta,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }))
-}
-
-async function abrirPedido(usuario, numero) {
-  renderizarComRotas([{ path: '/pedidos', Component: PaginaPedidos }], '/pedidos')
-  await usuario.click(await screen.findByRole('button', { name: new RegExp(`Pedido ${numero},`) }))
-  return screen.findByRole('dialog', { name: `Pedido #${numero}` })
-}
 
 describe('Confirmar pedido e enviar no WhatsApp (ZAP-51, RF09, RF10)', () => {
   beforeEach(() => {
