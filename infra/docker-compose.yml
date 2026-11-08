@@ -29,6 +29,8 @@ services:
       DB_URL: jdbc:postgresql://banco:5432/${POSTGRES_DB:-zappi}
       DB_USUARIO: ${POSTGRES_USER:-zappi}
       DB_SENHA: ${POSTGRES_PASSWORD:-zappi_local}
+      # Hash da senha da Lídia para os dados iniciais (README, "Migrações do banco")
+      LIDIA_SENHA_HASH: ${LIDIA_SENHA_HASH:-}
     ports:
       # Acessível apenas pela própria máquina
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"

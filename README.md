@@ -164,9 +164,11 @@ No Windows (PowerShell ou Prompt de Comando), use `mvnw.cmd` no lugar de `./mvnw
 | `./mvnw test` | Roda os testes (precisa do Docker aberto, porque os testes sobem um PostgreSQL próprio com Testcontainers) |
 | `./mvnw verify` | Compila, roda os testes e gera o `.jar` em `backend/target` |
 
-O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS` e `PORT`); o perfil `local` já traz os valores do banco do Docker Compose. A única rota aberta por enquanto é a verificação de saúde (`/actuator/health`); as demais respondem `401` até o login da ZAP-31.
+O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS`, `PORT` e `LIDIA_SENHA_HASH`); o perfil `local` já traz os valores do banco do Docker Compose. A única rota aberta por enquanto é a verificação de saúde (`/actuator/health`); as demais respondem `401` até o login da ZAP-31.
 
 As tabelas são criadas pelo **Flyway**, com migrações em SQL em `backend/src/main/resources/db/migration` (ex.: `V1__cria_tabelas.sql`). Elas rodam sozinhas na subida do backend, no banco local, nos testes e no Supabase. Nunca crie nem altere tabelas pelo painel do Supabase: toda mudança no banco é uma **nova** migração (`V2__...`, `V3__...`), sem editar as que já foram aplicadas. Na subida, o Hibernate confere se as entidades batem com as tabelas (`ddl-auto: validate`) e não sobe se houver diferença.
+
+A migração `V2__dados_iniciais.sql` cria os dados iniciais em todos os ambientes, inclusive na produção, para a demonstração e o treinamento: o estabelecimento **Casa Belt**, a usuária **Lídia** (`lidia@casabelt.com`), produtos de exemplo e 2 pedidos Novos com clientes fictícios. A senha da Lídia é a mesma em todos os ambientes e **não fica no repositório**, nem em hash: a V2 lê o hash BCrypt da variável de ambiente `LIDIA_SENHA_HASH` e para com erro se ela estiver vazia. Peça a senha e o hash para a equipe. Localmente, coloque o hash no `infra/.env` (entre aspas simples, porque ele tem cifrões) ou, rodando direto na máquina, no terminal (`$env:LIDIA_SENHA_HASH = '<hash>'` no PowerShell). No Render, ele fica nas variáveis do serviço do backend. Nos testes, a V2 recebe o hash de uma senha aleatória. A variável só é lida na primeira subida, quando a V2 roda. Para começar do zero localmente, apague o banco com `docker compose -f infra/docker-compose.yml down -v`.
 
 ### Imagem do backend para produção (Render)
 
@@ -233,7 +235,7 @@ O endereço final de cada serviço aparece no painel do Render depois da criaç�
 
 **Primeiro acesso do dia:** no plano gratuito, o backend "dorme" depois de 15 minutos sem uso e leva de 1 a 2,5 minutos para acordar. O Supabase gratuito pausa o projeto depois de 1 semana sem uso. Antes de demonstrações e do treinamento, abra o sistema alguns minutos antes.
 
-**Quem administra:** as contas do Render e do Supabase são do Henrique (no plano gratuito do Render, só uma pessoa tem acesso ao painel). Os segredos do banco (`DB_URL`, `DB_USUARIO` e `DB_SENHA`) ficam só no painel do Render, nunca no repositório.
+**Quem administra:** as contas do Render e do Supabase são do Henrique (no plano gratuito do Render, só uma pessoa tem acesso ao painel). Os segredos do banco (`DB_URL`, `DB_USUARIO` e `DB_SENHA`) e o hash da senha da Lídia (`LIDIA_SENHA_HASH`) ficam só no painel do Render, nunca no repositório.
 
 ## Requisitos não funcionais
 
