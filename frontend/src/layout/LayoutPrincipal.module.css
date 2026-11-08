@@ -51,33 +51,105 @@
   }
 }
 
+/* Topo na cor Cacau com a collab Casa Belt × Zappi em creme (tamanhos ajustados pelo grupo
+   no protótipo). Contraste do creme sobre o cacau: 12,51:1. O foco vira creme aqui dentro. */
+.topo {
+  --zappi-cor-foco: #fdf6ec;
+  background: #3d2b1f;
+  color: #fdf6ec;
+  border-color: #2c1f16;
+}
+
 .marca {
   display: flex;
   align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.seloLoja {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+  background: var(--mantine-color-zappi-6);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.nomeLoja {
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.vezes {
+  font-size: 1.25rem;
+  font-weight: 300;
+  line-height: 1;
+  opacity: 0.75;
+  margin: 0 3px;
+}
+
+.marcaZappi {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex: none;
 }
 
 .marcaSimbolo {
-  height: 42px;
+  height: 44px;
   width: auto;
   display: block;
 }
 
 .marcaNome {
-  height: 26px;
+  height: 24px;
   width: auto;
   display: block;
 }
 
+/* Celular: a mesma collab, um pouco menor, para caber com o botão da conta */
+@media (max-width: 48em) {
+  .seloLoja {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nomeLoja {
+    font-size: 1.15rem;
+  }
+
+  .marcaSimbolo {
+    height: 34px;
+  }
+
+  .marcaNome {
+    height: 19px;
+  }
+}
+
 .botaoMenu {
-  color: var(--mantine-color-text);
+  color: #fdf6ec;
   /* Centro em 42 px, na mesma linha dos ícones do menu recolhido (84 px) */
   margin-left: 4px;
   margin-right: 4px;
 
+  /* No topo cacau, o fundo ao passar o mouse é um creme translúcido */
   &:hover {
-    background: var(--mantine-color-zappi-0);
-    color: var(--mantine-color-zappi-7);
+    background: rgb(253 246 236 / 0.14);
+    color: #fdf6ec;
   }
 }
 
@@ -87,11 +159,11 @@
   gap: 2px;
   padding: 4px 6px;
   border-radius: 999px;
-  color: var(--mantine-color-zappi-7);
+  color: #fdf6ec;
 
   &:hover,
   &[aria-expanded='true'] {
-    background: var(--mantine-color-zappi-0);
+    background: rgb(253 246 236 / 0.14);
   }
 }
 
