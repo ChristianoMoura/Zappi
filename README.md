@@ -6,7 +6,7 @@ Cardápio digital com integração ao WhatsApp, feito para organizar os pedidos 
 
 Projeto Integrador do curso de Tecnologia em Análise e Desenvolvimento de Sistemas do **Senac SP**, com ação extensionista em parceria com a disciplina de Empreendedorismo, Inovação e Economia Criativa.
 
-> 🚧 **Em desenvolvimento.** Prazo de entrega do MVP: **22/11/2026**.
+> 🚧 **Em desenvolvimento.** Prazo da entrega final, com o Portal do Administrador e o Portal do Cliente: **22/11/2026**.
 
 ---
 
@@ -14,23 +14,36 @@ Projeto Integrador do curso de Tecnologia em Análise e Desenvolvimento de Siste
 
 A Casa Belt produz bolos e salgados sob encomenda. Hoje todos os pedidos chegam pelo WhatsApp, misturados com conversas pessoais, e são controlados à mão em um caderno. Não há confirmação formal ao cliente, e em datas comemorativas fica difícil saber quanto ainda dá para aceitar.
 
-O Zappi resolve a demanda escolhida pela própria Lídia: **organizar e gerir os pedidos**. Ela passa a acompanhar cada encomenda em um quadro Kanban, confirma ou recusa com um clique e o sistema prepara a mensagem para o cliente no WhatsApp.
+O Zappi resolve a demanda escolhida pela própria Lídia: **organizar e gerir os pedidos**. Ela passa a acompanhar cada encomenda em um quadro Kanban, confirma ou recusa com um clique e o sistema prepara a mensagem para o cliente no WhatsApp. O cliente consulta o cardápio e faz o pedido pelo link da Casa Belt, sem precisar criar conta.
 
 **ODS 8 — Trabalho Decente e Crescimento Econômico (meta 8.3):** apoio à organização e ao crescimento de um pequeno negócio informal.
 
-## Escopo do MVP
+## Escopo da entrega final
 
-O MVP cobre o **painel administrativo da Lídia**, a única usuária do sistema.
+### Portal do Administrador
+
+O painel da **Lídia**, a única usuária com login.
 
 - Login com e-mail e senha
 - Cadastro e edição dos dados do estabelecimento
 - Cadastro, edição e exclusão lógica de produtos, com foto e texto alternativo
 - Quadro Kanban de pedidos: **Novo → Confirmado → Em produção → Concluído**, com filtro para os **Recusados**
-- Confirmar e recusar pedidos (recusa com motivo obrigatório)
+- Cadastro e edição de pedidos, com a edição limitada pelo status
+- Confirmar, recusar ou cancelar pedidos (com motivo obrigatório na recusa e no cancelamento), mover para Em produção e Concluído e voltar uma etapa da produção
 - Mensagem ao cliente gerada pelo sistema e botão **"Enviar no WhatsApp"** (link `wa.me`)
 - Registro de auditoria de logins e ações administrativas
+- Anonimização dos dados do cliente a pedido do titular (LGPD)
 
-**Fora do MVP (futuro):** cardápio público para o cliente fazer o pedido, envio automático pela WhatsApp Cloud API, pagamento online, controle de estoque, relatórios financeiros e fidelização.
+### Portal do Cliente
+
+O cardápio público da Casa Belt, sem login.
+
+- Cardápio pelo link do estabelecimento, com produtos ativos, fotos, descrições e preços
+- Montagem do pedido: produtos, quantidade, recheio, cobertura, observações e data de retirada
+- Identificação com nome e WhatsApp, com consentimento LGPD
+- O pedido entra na coluna **Novo** do quadro da Lídia
+
+**Fora da entrega (futuro):** envio automático pela WhatsApp Cloud API, pagamento online, controle de estoque, relatórios financeiros e fidelização.
 
 ## Tecnologias
 
