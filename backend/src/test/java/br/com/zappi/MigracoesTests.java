@@ -54,21 +54,23 @@ class MigracoesTests {
 
 	@Test
 	void aceitaPedidoComClienteDoMesmoEstabelecimento() {
-		long estabelecimento = criarEstabelecimento("casa-belt");
+		long estabelecimento = criarEstabelecimento("confeitaria-a");
 		long cliente = criarCliente(estabelecimento, "5511900000001");
 
 		criarPedido(estabelecimento, cliente);
 
-		assertThat(jdbc.queryForObject("select count(*) from pedido", Integer.class)).isEqualTo(1);
+		assertThat(jdbc.queryForObject("select count(*) from pedido where estabelecimento_id = ?", Integer.class,
+				estabelecimento))
+			.isEqualTo(1);
 	}
 
 	@Test
 	void recusaPedidoComClienteDeOutroEstabelecimento() {
-		long casaBelt = criarEstabelecimento("casa-belt");
-		long outraConfeitaria = criarEstabelecimento("outra-confeitaria");
-		long clienteDaOutra = criarCliente(outraConfeitaria, "5511900000002");
+		long confeitariaA = criarEstabelecimento("confeitaria-a");
+		long confeitariaB = criarEstabelecimento("confeitaria-b");
+		long clienteDaB = criarCliente(confeitariaB, "5511900000002");
 
-		assertThatThrownBy(() -> criarPedido(casaBelt, clienteDaOutra))
+		assertThatThrownBy(() -> criarPedido(confeitariaA, clienteDaB))
 			.isInstanceOf(DataIntegrityViolationException.class)
 			.hasMessageContaining("fk_pedido_cliente");
 	}

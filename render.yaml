@@ -26,6 +26,9 @@ services:
         sync: false
       - key: DB_SENHA
         sync: false
+      # Hash BCrypt da senha da Lídia, usado só pela V2 (dados iniciais, ZAP-73).
+      - key: LIDIA_SENHA_HASH
+        sync: false
       # Endereço do frontend: o rewrite de /api repassa a origem do navegador.
       - key: CORS_ORIGENS
         value: https://zappi-casabelt.onrender.com
