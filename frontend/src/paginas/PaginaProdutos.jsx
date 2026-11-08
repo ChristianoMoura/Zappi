@@ -110,7 +110,6 @@ export function PaginaProdutos() {
           <h1 ref={titulo} className={classes.titulo} tabIndex={-1}>
             Produtos
           </h1>
-          <p className={classes.subtitulo}>Os produtos que aparecem nos pedidos.</p>
         </div>
         <Button component={Link} to="/produtos/novo" id="cadastrar" size="lg" leftSection={<IconPlus size={22} aria-hidden />} className={classes.cadastrar}>
           Cadastrar produto
