@@ -6,6 +6,13 @@ spring:
       # O session pooler gratuito do Supabase aceita poucas conexões por projeto.
       maximum-pool-size: ${DB_POOL_MAXIMO:5}
       minimum-idle: 1
+  flyway:
+    # O schema public do Supabase já vem com objetos próprios (ex.: a função do RLS
+    # automático), e o Flyway recusa um schema que não está vazio e não tem o histórico
+    # dele. Com a linha de base na versão 0, ele cria o histórico e aplica todas as
+    # migrações a partir da V1.
+    baseline-on-migrate: true
+    baseline-version: 0
 
 server:
   # Ao reiniciar (deploy), termina as requisições em andamento antes de sair.
