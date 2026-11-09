@@ -156,12 +156,6 @@ class DetalhesPedidoTests {
 	}
 
 	@Test
-	void aListagemNaoTrazAsMensagens() throws Exception {
-		mockMvc.perform(get("/api/pedidos").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-			.andExpect(jsonPath("$[0].mensagens").doesNotExist());
-	}
-
-	@Test
 	void exigeOToken() throws Exception {
 		mockMvc.perform(get("/api/pedidos/1")).andExpect(status().isUnauthorized());
 	}

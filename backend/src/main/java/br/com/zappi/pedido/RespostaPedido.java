@@ -18,8 +18,8 @@ import br.com.zappi.mensagem.MensagemWhatsapp;
  *
  * @param cancelado {@code true} quando o pedido recusado já tinha sido confirmado: a tela
  *        mostra "Motivo do cancelamento" (ZAP-64)
- * @param mensagens mensagens geradas para o cliente, só nos detalhes do pedido (ZAP-45); na
- *        listagem, o campo não aparece
+ * @param mensagens mensagens geradas para o cliente (ZAP-45), da mais antiga para a mais nova; a
+ *        listagem também traz, para o painel aberto pelo quadro (ZAP-122)
  * @param avisoDeProntoEnviado só na volta de Concluído para Em produção (ZAP-75): {@code true}
  *        quando a mensagem de pronto já tinha sido enviada, para a tela avisar a Lídia de que o
  *        cliente precisa saber da volta (ZAP-64); nas outras respostas, o campo não aparece
@@ -37,12 +37,7 @@ public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada,
 				confirmadoEm, producaoEm, concluidoEm, recusadoEm, motivoRecusa, cancelado, mensagens, enviado);
 	}
 
-	/** Para a listagem do quadro, sem as mensagens. */
-	static RespostaPedido de(Pedido pedido, List<ItemPedido> itens) {
-		return de(pedido, itens, null);
-	}
-
-	/** Para os detalhes, com as mensagens geradas. */
+	/** Pedido com os itens e as mensagens geradas, para a listagem e os detalhes. */
 	static RespostaPedido de(Pedido pedido, List<ItemPedido> itens, List<MensagemWhatsapp> mensagens) {
 		boolean cancelado = pedido.getStatus() == StatusPedido.RECUSADO && pedido.getConfirmadoEm() != null;
 		boolean anonimizado = pedido.getCliente().getAnonimizadoEm() != null;

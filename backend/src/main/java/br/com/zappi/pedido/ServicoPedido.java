@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.zappi.mensagem.MensagemWhatsapp;
 import br.com.zappi.mensagem.MensagemWhatsappRepositorio;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 
@@ -58,13 +59,18 @@ public class ServicoPedido {
 			return List.of();
 		}
 
-		// Itens de todos os pedidos numa consulta só, sem uma consulta por pedido
-		Map<Long, List<ItemPedido>> itensPorPedido = itens
-			.buscarDosPedidos(encontrados.stream().map(Pedido::getId).toList())
+		// Itens e mensagens de todos os pedidos numa consulta só cada, sem uma consulta por pedido
+		List<Long> ids = encontrados.stream().map(Pedido::getId).toList();
+		Map<Long, List<ItemPedido>> itensPorPedido = itens.buscarDosPedidos(ids)
 			.stream()
 			.collect(Collectors.groupingBy(item -> item.getPedido().getId()));
+		// As mensagens vão junto para o painel aberto pelo quadro mostrar a mensagem da etapa (ZAP-122)
+		Map<Long, List<MensagemWhatsapp>> mensagensPorPedido = mensagens.findByPedidoIdInOrderByCriadoEmAscIdAsc(ids)
+			.stream()
+			.collect(Collectors.groupingBy(mensagem -> mensagem.getPedido().getId()));
 		return encontrados.stream()
-			.map(pedido -> RespostaPedido.de(pedido, itensPorPedido.getOrDefault(pedido.getId(), List.of())))
+			.map(pedido -> RespostaPedido.de(pedido, itensPorPedido.getOrDefault(pedido.getId(), List.of()),
+					mensagensPorPedido.getOrDefault(pedido.getId(), List.of())))
 			.toList();
 	}
 

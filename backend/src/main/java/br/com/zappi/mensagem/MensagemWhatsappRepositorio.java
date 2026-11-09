@@ -1,5 +1,6 @@
 package br.com.zappi.mensagem;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,6 +12,9 @@ public interface MensagemWhatsappRepositorio extends JpaRepository<MensagemWhats
 
 	/** Mensagens geradas para o pedido, da mais antiga para a mais nova. */
 	List<MensagemWhatsapp> findByPedidoIdOrderByCriadoEmAscIdAsc(Long pedidoId);
+
+	/** As mensagens de vários pedidos numa consulta só, para a listagem do quadro (ZAP-122). */
+	List<MensagemWhatsapp> findByPedidoIdInOrderByCriadoEmAscIdAsc(Collection<Long> pedidoIds);
 
 	/** A mensagem só é encontrada se for daquele pedido, no estabelecimento do token (RN01). */
 	@Query("""
