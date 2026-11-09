@@ -89,6 +89,47 @@ public class Pedido {
 		this.atualizadoEm = agora;
 	}
 
+	/** Confirmado → Em produção, gravando {@code producao_em} (RN06, ZAP-83). */
+	public void iniciarProducao(OffsetDateTime agora) {
+		exigir(StatusPedido.CONFIRMADO, "Só pedidos confirmados podem entrar em produção.");
+		this.status = StatusPedido.EM_PRODUCAO;
+		this.producaoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
+	/** Volta de Em produção para Confirmado, apagando {@code producao_em} (RN06, ZAP-64). */
+	public void voltarParaConfirmado(OffsetDateTime agora) {
+		exigir(StatusPedido.EM_PRODUCAO, "Só pedidos em produção podem voltar para confirmado.");
+		this.status = StatusPedido.CONFIRMADO;
+		this.producaoEm = null;
+		this.atualizadoEm = agora;
+	}
+
+	/**
+	 * Volta de Concluído para Em produção, apagando {@code concluido_em} e mantendo
+	 * {@code producao_em} (RN06, ZAP-64).
+	 */
+	public void voltarParaProducao(OffsetDateTime agora) {
+		exigir(StatusPedido.CONCLUIDO, "Só pedidos concluídos podem voltar para produção.");
+		this.status = StatusPedido.EM_PRODUCAO;
+		this.concluidoEm = null;
+		this.atualizadoEm = agora;
+	}
+
+	/** Em produção → Concluído, gravando {@code concluido_em} (RN06, ZAP-76). */
+	public void concluir(OffsetDateTime agora) {
+		exigir(StatusPedido.EM_PRODUCAO, "Só pedidos em produção podem ser concluídos.");
+		this.status = StatusPedido.CONCLUIDO;
+		this.concluidoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
+	private void exigir(StatusPedido origem, String mensagem) {
+		if (status != origem) {
+			throw new TransicaoNaoPermitidaException(mensagem);
+		}
+	}
+
 	/**
 	 * Recusa (Novo) ou cancela (Confirmado ou Em produção) o pedido, com o motivo obrigatório,
 	 * gravando {@code recusado_em} (RN03, RN05, RN06, ZAP-64). Concluído e Recusado não mudam.

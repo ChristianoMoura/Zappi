@@ -20,12 +20,22 @@ import br.com.zappi.mensagem.MensagemWhatsapp;
  *        mostra "Motivo do cancelamento" (ZAP-64)
  * @param mensagens mensagens geradas para o cliente, só nos detalhes do pedido (ZAP-45); na
  *        listagem, o campo não aparece
+ * @param avisoDeProntoEnviado só na volta de Concluído para Em produção (ZAP-75): {@code true}
+ *        quando a mensagem de pronto já tinha sido enviada, para a tela avisar a Lídia de que o
+ *        cliente precisa saber da volta (ZAP-64); nas outras respostas, o campo não aparece
  */
 public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada, String observacao,
 		BigDecimal valorTotal, ClienteDoPedido cliente, List<ItemDoPedido> itens, OffsetDateTime criadoEm,
 		OffsetDateTime confirmadoEm, OffsetDateTime producaoEm, OffsetDateTime concluidoEm,
 		OffsetDateTime recusadoEm, String motivoRecusa, boolean cancelado,
-		@JsonInclude(JsonInclude.Include.NON_NULL) List<MensagemDoPedido> mensagens) {
+		@JsonInclude(JsonInclude.Include.NON_NULL) List<MensagemDoPedido> mensagens,
+		@JsonInclude(JsonInclude.Include.NON_NULL) Boolean avisoDeProntoEnviado) {
+
+	/** A mesma resposta, informando se o aviso de pronto já tinha sido enviado. */
+	RespostaPedido comAvisoDeProntoEnviado(boolean enviado) {
+		return new RespostaPedido(numero, status, dataRetirada, observacao, valorTotal, cliente, itens, criadoEm,
+				confirmadoEm, producaoEm, concluidoEm, recusadoEm, motivoRecusa, cancelado, mensagens, enviado);
+	}
 
 	/** Para a listagem do quadro, sem as mensagens. */
 	static RespostaPedido de(Pedido pedido, List<ItemPedido> itens) {
@@ -41,7 +51,8 @@ public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada,
 				itens.stream().map(ItemDoPedido::de).toList(), pedido.getCriadoEm(), pedido.getConfirmadoEm(),
 				pedido.getProducaoEm(), pedido.getConcluidoEm(), pedido.getRecusadoEm(), pedido.getMotivoRecusa(),
 				cancelado,
-				mensagens == null ? null : mensagens.stream().map(m -> MensagemDoPedido.de(m, anonimizado)).toList());
+				mensagens == null ? null : mensagens.stream().map(m -> MensagemDoPedido.de(m, anonimizado)).toList(),
+				null);
 	}
 
 	/**
