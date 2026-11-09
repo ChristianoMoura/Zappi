@@ -27,6 +27,10 @@ public interface PedidoRepositorio extends JpaRepository<Pedido, Long> {
 	 * Mesmo pedido, com a linha bloqueada até o fim da transação: duas ações ao mesmo tempo no
 	 * mesmo pedido (ex.: dois cliques em "Confirmar") ficam uma depois da outra.
 	 */
+	/** Próximo número do estabelecimento (RN09). Chamar com o estabelecimento bloqueado. */
+	@Query("select coalesce(max(p.numero), 0) + 1 from Pedido p where p.estabelecimento.id = :estabelecimento")
+	Integer proximoNumero(@Param("estabelecimento") Long estabelecimentoId);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select p from Pedido p join fetch p.cliente where p.estabelecimento.id = :estabelecimento and p.numero = :numero")
 	Optional<Pedido> buscarParaAlterar(@Param("estabelecimento") Long estabelecimentoId, @Param("numero") Integer numero);
