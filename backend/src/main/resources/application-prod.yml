@@ -18,6 +18,9 @@ zappi:
   jwt:
     # Em produção, a JWT_CHAVE é obrigatória: sem ela, o backend não sobe.
     chave-obrigatoria: true
+  armazenamento:
+    # Em produção, SUPABASE_URL e SUPABASE_CHAVE_SECRETA são obrigatórias.
+    obrigatorio: true
 
 server:
   # Ao reiniciar (deploy), termina as requisições em andamento antes de sair.

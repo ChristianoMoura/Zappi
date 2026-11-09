@@ -164,7 +164,7 @@ No Windows (PowerShell ou Prompt de Comando), use `mvnw.cmd` no lugar de `./mvnw
 | `./mvnw test` | Roda os testes (precisa do Docker aberto, porque os testes sobem um PostgreSQL próprio com Testcontainers) |
 | `./mvnw verify` | Compila, roda os testes e gera o `.jar` em `backend/target` |
 
-O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS`, `PORT`, `LIDIA_SENHA_HASH` e `JWT_CHAVE`); o perfil `local` já traz os valores do banco do Docker Compose.
+O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS`, `PORT`, `LIDIA_SENHA_HASH`, `JWT_CHAVE`, `SUPABASE_URL` e `SUPABASE_CHAVE_SECRETA`); o perfil `local` já traz os valores do banco do Docker Compose.
 
 **Acesso à API:** só a verificação de saúde (`/actuator/health`) e o login (`POST /api/autenticacao/login`, ZAP-31) são abertos. Todas as outras rotas exigem o token JWT no header `Authorization: Bearer <token>` e respondem `401` sem ele, com ele inválido ou expirado (8 horas). O token é assinado com a chave da variável `JWT_CHAVE` (Base64, 32 bytes ou mais; gere com `openssl rand -base64 32`). Ela é obrigatória em produção; localmente e nos testes, se estiver vazia, o backend gera uma chave aleatória a cada subida, e os tokens antigos deixam de valer ao reiniciar. Os controllers recebem quem fez a requisição com `@AuthenticationPrincipal UsuarioAutenticado usuario` e filtram os dados pelo `estabelecimentoId` do token, nunca por um id vindo da requisição.
 
@@ -196,7 +196,7 @@ A resposta de erro é a mesma nos três casos do `401`, e leva o mesmo tempo, pa
 | `PUT /api/produtos/{id}` | `200` com o produto editado |
 | `DELETE /api/produtos/{id}` | `204`. A exclusão é lógica (`ativo = false`, RN14): o produto some do cardápio, mas continua nos pedidos antigos com o preço congelado |
 
-O corpo do `POST` e do `PUT` (e a resposta) usa os nomes da tela: `{ "nome", "sabor", "unidade": "KG" ou "UN", "preco", "descricao", "textoAlternativo" }`, e a resposta traz também `id`, `ativo` e `foto` (o endereço da imagem, que chega com a ZAP-40; até lá, nulo). Nome, sabor, unidade e preço são obrigatórios; o preço é maior que zero, com até 2 casas (RN13); produto com foto exige o texto alternativo (RN15). Dados inválidos recebem `400 DADOS_INVALIDOS` com a mensagem de cada campo em `campos`, ex.: `{ "campos": { "preco": "Informe um preço maior que zero." } }`. Produto inexistente, já excluído ou de outro estabelecimento recebe `404 PRODUTO_NAO_ENCONTRADO`. Cada cadastro, edição e exclusão vai para o `log_auditoria` (`PRODUTO_CRIADO`, `PRODUTO_EDITADO` e `PRODUTO_EXCLUIDO`), com os valores de antes e depois em `detalhes`.
+O corpo do `POST` e do `PUT` (e a resposta) usa os nomes da tela: `{ "nome", "sabor", "unidade": "KG" ou "UN", "preco", "descricao", "textoAlternativo" }`, e a resposta traz também `id`, `ativo` e `foto` (o endereço público da imagem, ou nulo sem foto). Nome, sabor, unidade e preço são obrigatórios; o preço é maior que zero, com até 2 casas (RN13); produto com foto exige o texto alternativo (RN15). Dados inválidos recebem `400 DADOS_INVALIDOS` com a mensagem de cada campo em `campos`, ex.: `{ "campos": { "preco": "Informe um preço maior que zero." } }`. Produto inexistente, já excluído ou de outro estabelecimento recebe `404 PRODUTO_NAO_ENCONTRADO`. Cada cadastro, edição e exclusão vai para o `log_auditoria` (`PRODUTO_CRIADO`, `PRODUTO_EDITADO` e `PRODUTO_EXCLUIDO`), com os valores de antes e depois em `detalhes`.
 
 As tabelas são criadas pelo **Flyway**, com migrações em SQL em `backend/src/main/resources/db/migration` (ex.: `V1__cria_tabelas.sql`). Elas rodam sozinhas na subida do backend, no banco local, nos testes e no Supabase. Nunca crie nem altere tabelas pelo painel do Supabase: toda mudança no banco é uma **nova** migração (`V2__...`, `V3__...`), sem editar as que já foram aplicadas. Na subida, o Hibernate confere se as entidades batem com as tabelas (`ddl-auto: validate`) e não sobe se houver diferença.
 
@@ -220,6 +220,8 @@ Variáveis de ambiente de produção, configuradas no painel do Render (nunca no
 | `DB_SENHA` | Sim | Senha do banco do Supabase |
 | `CORS_ORIGENS` | Sim | Endereço do frontend no Render (ex.: `https://<nome-do-site>.onrender.com`). Mais de um, separados por vírgula |
 | `JWT_CHAVE` | Sim | Chave de assinatura do token de login, em Base64 com 32 bytes ou mais (`openssl rand -base64 32`). Trocar a chave desloga todo mundo |
+| `SUPABASE_URL` | Sim | Endereço do projeto no Supabase, no formato `https://<id-do-projeto>.supabase.co` (o mesmo id do usuário `postgres.<id-do-projeto>`). Fica em **Project Settings → Data API** (Project URL) |
+| `SUPABASE_CHAVE_SECRETA` | Sim | Chave secreta do projeto, em **Project Settings → API Keys → Secret keys**. Só o backend usa, para enviar e apagar fotos |
 | `LIDIA_SENHA_HASH` | Na primeira subida | Hash BCrypt da senha da Lídia, lido só quando a V2 (dados iniciais) roda |
 | `PORT` | Não | Porta do servidor; o Render preenche sozinho |
 | `DB_POOL_MAXIMO` | Não | Máximo de conexões com o banco (padrão 5), porque o pooler gratuito do Supabase aceita poucas |
@@ -269,7 +271,7 @@ O endereço final de cada serviço aparece no painel do Render depois da criaç�
 
 **Primeiro acesso do dia:** no plano gratuito, o backend "dorme" depois de 15 minutos sem uso e leva de 1 a 2,5 minutos para acordar. O Supabase gratuito pausa o projeto depois de 1 semana sem uso. Antes de demonstrações e do treinamento, abra o sistema alguns minutos antes.
 
-**Quem administra:** as contas do Render e do Supabase são do Henrique (no plano gratuito do Render, só uma pessoa tem acesso ao painel). Os segredos do banco (`DB_URL`, `DB_USUARIO` e `DB_SENHA`) , o hash da senha da Lídia (`LIDIA_SENHA_HASH`) e a chave do token (`JWT_CHAVE`) ficam só no painel do Render, nunca no repositório.
+**Quem administra:** as contas do Render e do Supabase são do Henrique (no plano gratuito do Render, só uma pessoa tem acesso ao painel). Os segredos do banco (`DB_URL`, `DB_USUARIO` e `DB_SENHA`) , o hash da senha da Lídia (`LIDIA_SENHA_HASH`) a chave do token (`JWT_CHAVE`) e a chave secreta do Supabase (`SUPABASE_CHAVE_SECRETA`) ficam só no painel do Render, nunca no repositório.
 
 ## Requisitos não funcionais
 

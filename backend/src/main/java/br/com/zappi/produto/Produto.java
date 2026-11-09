@@ -93,6 +93,20 @@ public class Produto {
 		this.atualizadoEm = agora;
 	}
 
+	/** Foto nova, sempre com o texto alternativo (RN15, ZAP-40). */
+	public void trocarFoto(String caminho, String textoAlternativo, OffsetDateTime agora) {
+		this.fotoCaminho = caminho;
+		this.fotoTextoAlternativo = textoAlternativo;
+		this.atualizadoEm = agora;
+	}
+
+	/** Tira a foto; o texto alternativo sai junto. */
+	public void removerFoto(OffsetDateTime agora) {
+		this.fotoCaminho = null;
+		this.fotoTextoAlternativo = null;
+		this.atualizadoEm = agora;
+	}
+
 	/** Com foto, o texto alternativo é obrigatório (RN15, NBR 17225 5.9.1). */
 	public boolean temFoto() {
 		return fotoCaminho != null;
