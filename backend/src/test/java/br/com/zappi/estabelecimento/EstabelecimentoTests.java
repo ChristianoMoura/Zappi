@@ -122,7 +122,10 @@ class EstabelecimentoTests {
 			.containsEntry("nome_antes", "Casa Belt")
 			.containsEntry("nome_depois", "Casa Belt Confeitaria")
 			.containsEntry("whatsapp_antes", "5511900000000")
-			.containsEntry("whatsapp_depois", "5511988887777");
+			.containsEntry("whatsapp_depois", "5511988887777")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull();
 	}
 
 	@Test
@@ -249,6 +252,8 @@ class EstabelecimentoTests {
 			.andExpect(status().isUnauthorized());
 	}
 
+	private static final String NAVEGADOR = "Navegador de teste";
+
 	/** Todos os campos da tela, já no formato que o banco guarda. */
 	private static Map<String, Object> casaBelt() {
 		Map<String, Object> dados = new LinkedHashMap<>();
@@ -274,13 +279,14 @@ class EstabelecimentoTests {
 	private ResultActions comToken(MockHttpServletRequestBuilder requisicao, String token, Map<String, ?> corpo)
 			throws Exception {
 		return mockMvc.perform(requisicao.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(json.writeValueAsString(corpo)));
 	}
 
 	private Map<String, Object> log() {
 		return jdbc.queryForMap("""
-				select usuario_id, estabelecimento_id,
+				select usuario_id, estabelecimento_id, ip_origem, user_agent, criado_em,
 				       detalhes -> 'antes' ->> 'nome' as nome_antes,
 				       detalhes -> 'depois' ->> 'nome' as nome_depois,
 				       detalhes -> 'antes' ->> 'whatsapp' as whatsapp_antes,
