@@ -21,6 +21,7 @@ import br.com.zappi.autenticacao.CredenciaisInvalidasException;
 import br.com.zappi.autenticacao.LoginBloqueadoException;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
 import br.com.zappi.estabelecimento.LinkEmUsoException;
+import br.com.zappi.mensagem.MensagemNaoEncontradaException;
 import br.com.zappi.pedido.PedidoNaoEncontradoException;
 import br.com.zappi.pedido.TransicaoNaoPermitidaException;
 import br.com.zappi.produto.FotoInvalidaException;
@@ -85,6 +86,12 @@ public class TratadorDeErros {
 	@ResponseStatus(HttpStatus.NOT_FOUND)
 	RespostaErro pedidoNaoEncontrado(PedidoNaoEncontradoException erro) {
 		return new RespostaErro("PEDIDO_NAO_ENCONTRADO", erro.getMessage());
+	}
+
+	@ExceptionHandler(MensagemNaoEncontradaException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	RespostaErro mensagemNaoEncontrada(MensagemNaoEncontradaException erro) {
+		return new RespostaErro("MENSAGEM_NAO_ENCONTRADA", erro.getMessage());
 	}
 
 	/** Ação fora das transições do status (RN03), ex.: confirmar um pedido já confirmado. */

@@ -70,6 +70,17 @@ public class MensagemWhatsapp {
 		this.status = StatusMensagem.PENDENTE;
 	}
 
+	/**
+	 * A Lídia clicou em "Enviar no WhatsApp" (ZAP-50). Reenviar não muda nada: a data continua
+	 * a do primeiro envio (ZAP-64).
+	 */
+	public void marcarEnviada(OffsetDateTime agora) {
+		this.status = StatusMensagem.ENVIADA;
+		if (this.enviadoEm == null) {
+			this.enviadoEm = agora;
+		}
+	}
+
 	public Long getId() {
 		return id;
 	}
