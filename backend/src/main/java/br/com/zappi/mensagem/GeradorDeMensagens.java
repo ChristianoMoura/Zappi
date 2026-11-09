@@ -1,6 +1,8 @@
 package br.com.zappi.mensagem;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -20,7 +22,8 @@ import br.com.zappi.produto.UnidadeMedida;
 /**
  * Monta os textos das mensagens ao cliente aprovados na ZAP-63 ({@code docs/mensagens-whatsapp.md}):
  * linguagem simples (NBR 17225 5.12.12), sem emojis e terminando com "Mensagem gerada pelo
- * Zappi" (CDC). Por enquanto só a confirmação (ZAP-49); a recusa e o pronto chegam na ZAP-50.
+ * Zappi" (CDC). Serve aos três tipos: confirmação (ZAP-49), recusa ou cancelamento e pronto
+ * para retirada (ZAP-50), e monta o link {@code wa.me}.
  */
 @Component
 public class GeradorDeMensagens {
@@ -60,6 +63,53 @@ public class GeradorDeMensagens {
 				%s""".formatted(primeiroNome(pedido.getCliente().getNome()), pedido.getNumero(),
 				pedido.getEstabelecimento().getNome(), linhasDosItens, moeda(pedido.getValorTotal()),
 				dataDeRetirada(pedido.getDataRetirada()), ASSINATURA);
+	}
+
+	/**
+	 * Texto da recusa e do cancelamento (tipo 2), o mesmo para os dois casos (ZAP-64). O motivo
+	 * vai exatamente como a Lídia digitou (RN05).
+	 */
+	public String recusa(Pedido pedido) {
+		return """
+				Olá, %s.
+
+				Infelizmente não vamos conseguir atender o seu pedido #%d para %s.
+
+				Motivo: %s
+
+				Se quiser combinar outra data ou outro pedido, é só responder esta mensagem.
+
+				%s
+				%s""".formatted(primeiroNome(pedido.getCliente().getNome()), pedido.getNumero(),
+				dataDeRetirada(pedido.getDataRetirada()), pedido.getMotivoRecusa(), pedido.getEstabelecimento().getNome(),
+				ASSINATURA);
+	}
+
+	/** Texto do pronto para retirada (tipo 3), gerado ao concluir o pedido. */
+	public String pronto(Pedido pedido) {
+		return """
+				Olá, %s!
+
+				Seu pedido #%d está pronto para retirada.
+
+				Retirada: %s
+				Total a pagar na retirada: %s
+
+				Qualquer dúvida, é só responder esta mensagem.
+
+				%s
+				%s""".formatted(primeiroNome(pedido.getCliente().getNome()), pedido.getNumero(),
+				dataDeRetirada(pedido.getDataRetirada()), moeda(pedido.getValorTotal()),
+				pedido.getEstabelecimento().getNome(), ASSINATURA);
+	}
+
+	/**
+	 * Link que abre o WhatsApp com a conversa do cliente e o texto pronto:
+	 * {@code https://wa.me/<telefone>?text=<texto codificado>}. A Lídia só aperta enviar.
+	 */
+	public static String link(String telefone, String texto) {
+		return "https://wa.me/" + telefone + "?text="
+				+ URLEncoder.encode(texto, StandardCharsets.UTF_8).replace("+", "%20");
 	}
 
 	/** "- Bolo de brigadeiro de chocolate (2 kg)", do mesmo jeito que a tela escreve o item. */

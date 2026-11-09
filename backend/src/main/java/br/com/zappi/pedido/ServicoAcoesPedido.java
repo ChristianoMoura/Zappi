@@ -12,6 +12,7 @@ import br.com.zappi.auditoria.AcaoAuditoria;
 import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
 import br.com.zappi.mensagem.GeradorDeMensagens;
+import br.com.zappi.mensagem.MensagemNaoEncontradaException;
 import br.com.zappi.mensagem.MensagemWhatsapp;
 import br.com.zappi.mensagem.MensagemWhatsappRepositorio;
 import br.com.zappi.mensagem.TipoMensagem;
@@ -79,6 +80,19 @@ public class ServicoAcoesPedido {
 			.detalhes(Map.of("numero", pedido.getNumero(), "statusAntes", antes.name(), "statusDepois",
 					pedido.getStatus().name(), "mensagemId", mensagem.getId())));
 
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Marca a mensagem como Enviada quando a Lídia clica em "Enviar no WhatsApp" (ZAP-50). Pode
+	 * ser chamada de novo ao reenviar, sem erro, mantendo a data do primeiro envio (ZAP-64).
+	 */
+	@Transactional
+	public RespostaPedido marcarMensagemEnviada(UsuarioAutenticado usuario, Integer numero, Long idMensagem) {
+		MensagemWhatsapp mensagem = mensagens.buscarDoPedido(idMensagem, numero, usuario.estabelecimentoId())
+			.orElseThrow(MensagemNaoEncontradaException::new);
+		mensagem.marcarEnviada(OffsetDateTime.now(ZoneOffset.UTC));
+		mensagens.flush();
 		return consulta.detalhar(usuario, numero);
 	}
 

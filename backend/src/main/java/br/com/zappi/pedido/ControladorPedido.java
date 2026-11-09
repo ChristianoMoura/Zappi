@@ -48,4 +48,14 @@ public class ControladorPedido {
 		return acoes.confirmar(usuario, numero);
 	}
 
+	/**
+	 * Marca a mensagem como enviada quando a Lídia clica em "Enviar no WhatsApp" (ZAP-50).
+	 * Chamar de novo ao reenviar não dá erro e mantém a data do primeiro envio.
+	 */
+	@PostMapping("/{numero}/mensagens/{id}/enviada")
+	public RespostaPedido marcarMensagemEnviada(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Integer numero, @PathVariable Long id) {
+		return acoes.marcarMensagemEnviada(usuario, numero, id);
+	}
+
 }

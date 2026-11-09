@@ -1,8 +1,6 @@
 package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -10,6 +8,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import br.com.zappi.cliente.Cliente;
+import br.com.zappi.mensagem.GeradorDeMensagens;
 import br.com.zappi.mensagem.MensagemWhatsapp;
 
 /**
@@ -50,18 +49,18 @@ public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada,
 	 * texto pronto. Com o cliente anonimizado (RN17), o link não é montado: o telefone já não
 	 * é o dele.
 	 *
+	 * @param id usado para marcar a mensagem como enviada (ZAP-50)
 	 * @param tipo {@code CONFIRMACAO}, {@code RECUSA} ou {@code PRONTO}
 	 * @param status {@code PENDENTE}, {@code ENVIADA} ou {@code FALHA}
 	 */
-	public record MensagemDoPedido(String tipo, String status, String texto, OffsetDateTime criadoEm,
+	public record MensagemDoPedido(Long id, String tipo, String status, String texto, OffsetDateTime criadoEm,
 			OffsetDateTime enviadoEm, String link) {
 
 		static MensagemDoPedido de(MensagemWhatsapp mensagem, boolean clienteAnonimizado) {
 			String link = clienteAnonimizado ? null
-					: "https://wa.me/" + mensagem.getTelefoneDestino() + "?text="
-							+ URLEncoder.encode(mensagem.getConteudo(), StandardCharsets.UTF_8).replace("+", "%20");
-			return new MensagemDoPedido(mensagem.getTipo().name(), mensagem.getStatus().name(), mensagem.getConteudo(),
-					mensagem.getCriadoEm(), mensagem.getEnviadoEm(), link);
+					: GeradorDeMensagens.link(mensagem.getTelefoneDestino(), mensagem.getConteudo());
+			return new MensagemDoPedido(mensagem.getId(), mensagem.getTipo().name(), mensagem.getStatus().name(),
+					mensagem.getConteudo(), mensagem.getCriadoEm(), mensagem.getEnviadoEm(), link);
 		}
 
 	}
