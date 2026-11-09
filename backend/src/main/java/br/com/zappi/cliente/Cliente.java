@@ -54,6 +54,22 @@ public class Cliente {
 		// exigido pelo JPA
 	}
 
+	/** Cliente novo, sempre com o consentimento registrado (RN16, LGPD). */
+	public Cliente(Estabelecimento estabelecimento, String nome, String telefoneWhatsapp, OffsetDateTime agora) {
+		this.estabelecimento = estabelecimento;
+		this.nome = nome;
+		this.telefoneWhatsapp = telefoneWhatsapp;
+		this.consentimentoLgpd = true;
+		this.consentimentoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
+	/** Mesmo WhatsApp com outro nome: é a mesma pessoa, então só o nome muda (ZAP-90). */
+	public void renomear(String nome, OffsetDateTime agora) {
+		this.nome = nome;
+		this.atualizadoEm = agora;
+	}
+
 	public Long getId() {
 		return id;
 	}

@@ -93,12 +93,16 @@ public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada,
 
 	}
 
-	/** Item com o preço congelado no pedido (RN10) e o subtotal (RN11). */
-	public record ItemDoPedido(String produto, String sabor, String unidade, BigDecimal quantidade,
+	/**
+	 * Item com o preço congelado no pedido (RN10) e o subtotal (RN11).
+	 *
+	 * @param produtoId usado na edição (ZAP-90): o item com o mesmo produto mantém o preço
+	 */
+	public record ItemDoPedido(Long produtoId, String produto, String sabor, String unidade, BigDecimal quantidade,
 			BigDecimal precoUnitario, BigDecimal subtotal, String recheio, String cobertura, String observacao) {
 
 		static ItemDoPedido de(ItemPedido item) {
-			return new ItemDoPedido(item.getProduto().getNome(), item.getProduto().getSabor(),
+			return new ItemDoPedido(item.getProduto().getId(), item.getProduto().getNome(), item.getProduto().getSabor(),
 					item.getProduto().getUnidadeMedida().getSigla(), item.getQuantidade(),
 					item.getPrecoUnitario(), item.getSubtotal(), item.getRecheio(), item.getCobertura(),
 					item.getObservacao());

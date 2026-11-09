@@ -81,6 +81,14 @@ public class MensagemWhatsapp {
 		}
 	}
 
+	/**
+	 * O pedido mudou antes de a Lídia enviar a mensagem: o texto é trocado pelo novo, e a
+	 * mensagem continua Pendente (ZAP-90).
+	 */
+	public void atualizarConteudo(String conteudo) {
+		this.conteudo = conteudo;
+	}
+
 	public Long getId() {
 		return id;
 	}

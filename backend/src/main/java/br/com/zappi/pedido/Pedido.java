@@ -79,6 +79,53 @@ public class Pedido {
 		// exigido pelo JPA
 	}
 
+	/**
+	 * Pedido novo, no status Novo (RN03), com o número sequencial do estabelecimento (RN09). O
+	 * total começa em zero e é calculado quando os itens entram (RN11).
+	 */
+	public Pedido(Estabelecimento estabelecimento, Cliente cliente, Integer numero, LocalDate dataRetirada,
+			String observacao, OffsetDateTime agora) {
+		this.estabelecimento = estabelecimento;
+		this.cliente = cliente;
+		this.numero = numero;
+		this.status = StatusPedido.NOVO;
+		this.dataRetirada = dataRetirada;
+		this.observacao = observacao;
+		this.valorTotal = BigDecimal.ZERO;
+		this.atualizadoEm = agora;
+	}
+
+	/** Só Novo, Confirmado e Em produção podem ser editados (ZAP-90). */
+	public void exigirEditavel() {
+		if (status == StatusPedido.CONCLUIDO || status == StatusPedido.RECUSADO) {
+			throw new TransicaoNaoPermitidaException("Pedidos concluídos ou recusados não podem ser editados.");
+		}
+	}
+
+	/** O cliente só pode ser trocado enquanto o pedido está Novo (ZAP-90). */
+	public void exigirClienteTrocavel() {
+		exigir(StatusPedido.NOVO, "O cliente não pode ser trocado depois da confirmação.");
+	}
+
+	/** Troca o cliente do pedido; só enquanto o pedido está Novo (ZAP-90). */
+	public void trocarCliente(Cliente cliente, OffsetDateTime agora) {
+		exigirClienteTrocavel();
+		this.cliente = cliente;
+		this.atualizadoEm = agora;
+	}
+
+	/** Nova data de retirada e observação (ZAP-90). */
+	public void alterar(LocalDate dataRetirada, String observacao, OffsetDateTime agora) {
+		this.dataRetirada = dataRetirada;
+		this.observacao = observacao;
+		this.atualizadoEm = agora;
+	}
+
+	/** Total = soma dos subtotais (RN11). */
+	public void atualizarTotal(BigDecimal valorTotal) {
+		this.valorTotal = valorTotal;
+	}
+
 	/** Novo → Confirmado, gravando {@code confirmado_em} (RN03, RN06). Só pedidos Novos. */
 	public void confirmar(OffsetDateTime agora) {
 		if (status != StatusPedido.NOVO) {

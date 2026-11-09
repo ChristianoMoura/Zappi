@@ -1,6 +1,7 @@
 package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import br.com.zappi.produto.Produto;
 import jakarta.persistence.Column;
@@ -53,6 +54,30 @@ public class ItemPedido {
 
 	protected ItemPedido() {
 		// exigido pelo JPA
+	}
+
+	/** Item novo, com o preço congelado no momento em que entra no pedido (RN10). */
+	public ItemPedido(Pedido pedido, Produto produto, BigDecimal precoUnitario, BigDecimal quantidade, String recheio,
+			String cobertura, String observacao) {
+		this.pedido = pedido;
+		this.produto = produto;
+		this.precoUnitario = precoUnitario;
+		aplicar(quantidade, recheio, cobertura, observacao);
+	}
+
+	/** Muda a quantidade e os detalhes; o preço congelado continua o mesmo (RN10). */
+	public void atualizar(BigDecimal quantidade, String recheio, String cobertura, String observacao) {
+		aplicar(quantidade, recheio, cobertura, observacao);
+	}
+
+	private void aplicar(BigDecimal quantidade, String recheio, String cobertura, String observacao) {
+		// 3 casas, como a coluna (RN12); a validação já barrou mais casas que isso
+		this.quantidade = quantidade.setScale(3, RoundingMode.HALF_UP);
+		this.recheio = recheio;
+		this.cobertura = cobertura;
+		this.observacao = observacao;
+		// subtotal = quantidade × preço congelado, em centavos (RN11)
+		this.subtotal = this.quantidade.multiply(precoUnitario).setScale(2, RoundingMode.HALF_UP);
 	}
 
 	public Long getId() {
