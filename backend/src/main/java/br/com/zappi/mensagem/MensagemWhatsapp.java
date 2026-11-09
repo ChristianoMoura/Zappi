@@ -58,6 +58,18 @@ public class MensagemWhatsapp {
 		// exigido pelo JPA
 	}
 
+	/**
+	 * Mensagem nova, Pendente até a Lídia enviar (RN07). O telefone é copiado do cliente no
+	 * momento em que a mensagem é gerada (RN20).
+	 */
+	public MensagemWhatsapp(Pedido pedido, TipoMensagem tipo, String telefoneDestino, String conteudo) {
+		this.pedido = pedido;
+		this.tipo = tipo;
+		this.telefoneDestino = telefoneDestino;
+		this.conteudo = conteudo;
+		this.status = StatusMensagem.PENDENTE;
+	}
+
 	public Long getId() {
 		return id;
 	}

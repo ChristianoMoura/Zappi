@@ -22,6 +22,7 @@ import br.com.zappi.autenticacao.LoginBloqueadoException;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
 import br.com.zappi.estabelecimento.LinkEmUsoException;
 import br.com.zappi.pedido.PedidoNaoEncontradoException;
+import br.com.zappi.pedido.TransicaoNaoPermitidaException;
 import br.com.zappi.produto.FotoInvalidaException;
 import br.com.zappi.produto.FotoSemTextoAlternativoException;
 import br.com.zappi.produto.ProdutoNaoEncontradoException;
@@ -84,6 +85,13 @@ public class TratadorDeErros {
 	@ResponseStatus(HttpStatus.NOT_FOUND)
 	RespostaErro pedidoNaoEncontrado(PedidoNaoEncontradoException erro) {
 		return new RespostaErro("PEDIDO_NAO_ENCONTRADO", erro.getMessage());
+	}
+
+	/** Ação fora das transições do status (RN03), ex.: confirmar um pedido já confirmado. */
+	@ExceptionHandler(TransicaoNaoPermitidaException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	RespostaErro transicaoNaoPermitida(TransicaoNaoPermitidaException erro) {
+		return new RespostaErro("TRANSICAO_NAO_PERMITIDA", erro.getMessage());
 	}
 
 	@ExceptionHandler(FotoInvalidaException.class)

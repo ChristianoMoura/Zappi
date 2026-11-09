@@ -79,6 +79,16 @@ public class Pedido {
 		// exigido pelo JPA
 	}
 
+	/** Novo → Confirmado, gravando {@code confirmado_em} (RN03, RN06). Só pedidos Novos. */
+	public void confirmar(OffsetDateTime agora) {
+		if (status != StatusPedido.NOVO) {
+			throw new TransicaoNaoPermitidaException("Só pedidos novos podem ser confirmados.");
+		}
+		this.status = StatusPedido.CONFIRMADO;
+		this.confirmadoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
 	public Long getId() {
 		return id;
 	}
