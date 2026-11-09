@@ -311,6 +311,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Arquivos | **Supabase Storage** | Bucket `produtos` (fotos dos produtos) e bucket `estabelecimentos` (logo e capa da loja, ZAP-119); o banco guarda só o caminho; upload só pelo backend; leitura pública |
 | Mensagens | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
 | Mensagens (a integrar) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS, com o status informado pela Meta. Condições em validação (seção 14, item 12) |
+| Endereço pelo CEP | **ViaCEP**, com a **BrasilAPI** como alternativa | No "Meu estabelecimento", o navegador consulta o CEP digitado e preenche rua, bairro, cidade e UF, que continuam editáveis (ZAP-121). Só o CEP do estabelecimento sai do sistema, sem dado de cliente; sem as APIs, a Lídia preenche à mão |
 | Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
 | Testes (frontend) | **Vitest e React Testing Library** (jsdom, user-event e jest-dom) | Testes das telas e das regras do painel, escritos ao lado do código (`*.test.jsx`), com o backend simulado |
 | CI/CD | **GitHub Actions** + deploy automático do **Render** | Build e testes em cada pull request; o Render publica a cada merge na `main`, depois que o CI passar |
@@ -658,6 +659,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Numeração do Portal do Cliente e da anonimização | Sem US nem RF | **US9 a US12 e RF17 a RF24** (ZAP-18). Motivo: mesma rastreabilidade das demais funcionalidades |
 | Alterações fora da documentação original | Sem registro definido | **Toda alteração é registrada na `ZAP-83`** e nesta seção, com antes, agora e motivo (seção 0). Motivo: manter os documentos entregues em sala coerentes com o sistema entregue |
 | Logo e capa do estabelecimento | Sem campos no dicionário da Atividade #14; a tela "Meu estabelecimento" (ZAP-37) guardava as fotos só no navegador | **Colunas novas `logo_caminho` e `capa_caminho`** em `estabelecimento`, com as fotos no bucket `estabelecimentos` do Supabase Storage, nas mesmas regras da foto do produto (ZAP-119, ZAP-83). O texto alternativo do logo é "Logo de" + nome da loja, sem coluna própria; a capa é decorativa. Motivo: a tela e o topo do painel mostram a marca da loja, e a foto guardada só no navegador some em outro aparelho |
+| Endereço do estabelecimento | Digitado campo a campo (ZAP-37) | **Preenchido pelo CEP** (ZAP-121, ZAP-83): ao completar os 8 números, o navegador consulta a ViaCEP e, se ela falhar, a BrasilAPI, e preenche rua, bairro, cidade e UF, que continuam editáveis. CEP não encontrado ou APIs fora do ar não impedem de preencher à mão e salvar. Motivo: menos digitação e menos erro para a Lídia (diretriz de UX, seção 2.3). Só o CEP do estabelecimento vai para o serviço externo |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
