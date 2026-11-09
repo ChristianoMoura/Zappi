@@ -560,7 +560,7 @@ Trilha de auditoria (ISO 8.16).
 10. **Região dos servidores e LGPD.** O Render não tem região em São Paulo. Avaliar com a equipe uma nota na seção 9 sobre a localização dos dados.
 11. **Portal do Cliente.** **Decidido (ZAP-18):**
     - **antecedência mínima:** 7 dias corridos pelo portal (RN22), confirmado pela Lídia. Abaixo do calendário, o portal mostra "Precisa para antes de 7 dias? Fale com a Lídia pelo WhatsApp", com link para o WhatsApp dela;
-    - **limite de pedidos por data:** sem limite automático; a Lídia recusa o que não couber, pelo fluxo de recusa com motivo. **Falta confirmar com a Lídia** (`ZAP-57`);
+    - **limite de pedidos por data:** sem limite automático; a Lídia recusa o que não couber, pelo fluxo de recusa com motivo. **Confirmado** (`ZAP-57`);
     - **massa:** na observação do item, com a dica "Quer outra massa? Escreva aqui" nos produtos vendidos por KG (item 4);
     - **recheio e cobertura:** texto livre e opcional, com os campos aparecendo só em produtos vendidos por KG;
     - **validade do pedido:** aviso de que o pedido só vale depois da confirmação da Lídia (seção 9);
@@ -649,7 +649,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Consistência de tenant entre pedido e cliente | Em aberto (validação no backend ou FK composta) | **As duas** (ZAP-64): FK composta `(cliente_id, estabelecimento_id)` em `pedido` e validação no backend. Motivo: o banco é a garantia final contra dados de outro estabelecimento (RN01, ISO 27002 5.34), e o backend dá uma mensagem clara. Restrição nova, fora da lista da Atividade #14 (ZAP-83) |
 | Anonimização de clientes | Regra prevista (RN17, Atividade #9), fora da lista do MVP | **Entra no MVP** (ZAP-64). Motivo: atender ao direito de exclusão da LGPD; o banco não muda, porque `anonimizado_em` já existe. A tela, o valor do telefone anonimizado e a ação do log foram definidos na ZAP-18 (RN17, história ZAP-114) |
 | Antecedência mínima para encomendar | Em aberto | **7 dias corridos pelo Portal do Cliente; no painel, hoje ou uma data futura** (RN22, ZAP-18). Motivo: regra confirmada pela Lídia; o pedido pelo portal chega sem avaliação prévia dela. Quem precisa antes é orientado a falar com ela pelo WhatsApp |
-| Limite de pedidos por data | Em aberto | **Sem limite automático** (ZAP-18): a Lídia recusa o que não couber. Motivo: não muda o banco nem cria tela, e a capacidade varia com o tamanho do pedido. Falta confirmar com a Lídia (ZAP-57) |
+| Limite de pedidos por data | Em aberto | **Sem limite automático** (ZAP-18): a Lídia recusa o que não couber. Motivo: não muda o banco nem cria tela, e a capacidade varia com o tamanho do pedido. Confirmado (ZAP-57) |
 | Massa, recheio e cobertura no portal | Em aberto | **Massa na observação do item, com dica; recheio e cobertura opcionais e só em produtos por KG** (ZAP-18). Motivo: não muda o banco, e recheio e cobertura não fazem sentido em salgados |
 | Validade do pedido feito no portal | Não previsto | **Aviso de que o pedido só vale após a confirmação da Lídia** (ZAP-18). Motivo: informação clara ao cliente (CDC), já que não há limite por data |
 | Proteção do envio sem login | Em aberto | **5 envios por hora por IP, 3 por dia por telefone e campo invisível, sem captcha no início** (ZAP-18). Motivo: protege o quadro da Lídia sem atrito para o cliente e sem depender de serviço externo |
