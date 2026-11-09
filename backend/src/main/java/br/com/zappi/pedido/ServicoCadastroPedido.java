@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ import br.com.zappi.erro.DadosInvalidosException;
 import br.com.zappi.estabelecimento.Estabelecimento;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
 import br.com.zappi.estabelecimento.EstabelecimentoRepositorio;
+import br.com.zappi.mensagem.MensagemWhatsapp;
 import br.com.zappi.pedido.RequisicaoPedido.ItemDaRequisicao;
 import br.com.zappi.produto.Produto;
 import br.com.zappi.produto.ProdutoRepositorio;
@@ -34,7 +36,7 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 import jakarta.persistence.EntityManager;
 
 /**
- * Cadastro do pedido pela Lídia (ZAP-88). O pedido, os itens, o cliente e o
+ * Cadastro (ZAP-88) e edição (ZAP-90) do pedido pela Lídia. O pedido, os itens, o cliente e o
  * log são gravados na mesma transação (RN08): se qualquer parte falhar, nada fica gravado.
  */
 @Service
@@ -63,19 +65,22 @@ public class ServicoCadastroPedido {
 
 	private final ServicoAuditoria auditoria;
 
+	private final ServicoAcoesPedido acoes;
+
 	private final ServicoPedido consulta;
 
 	private final EntityManager entityManager;
 
 	public ServicoCadastroPedido(PedidoRepositorio pedidos, ItemPedidoRepositorio itens, ClienteRepositorio clientes,
 			ProdutoRepositorio produtos, EstabelecimentoRepositorio estabelecimentos, ServicoAuditoria auditoria,
-			ServicoPedido consulta, EntityManager entityManager) {
+			ServicoAcoesPedido acoes, ServicoPedido consulta, EntityManager entityManager) {
 		this.pedidos = pedidos;
 		this.itens = itens;
 		this.clientes = clientes;
 		this.produtos = produtos;
 		this.estabelecimentos = estabelecimentos;
 		this.auditoria = auditoria;
+		this.acoes = acoes;
 		this.consulta = consulta;
 		this.entityManager = entityManager;
 	}
@@ -122,6 +127,116 @@ public class ServicoCadastroPedido {
 		registrar(usuario, AcaoAuditoria.PEDIDO_CRIADO, pedido, Map.of("numero", numero, "clienteId",
 				cliente.getId(), "valorTotal", dinheiro(pedido.getValorTotal()), "itens", itensDoPedido.size()));
 		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Edita um pedido Novo, Confirmado ou Em produção (ZAP-90). O item que continua com o mesmo
+	 * produto mantém o preço congelado (RN10), mesmo que o produto tenha saído do cardápio; os
+	 * itens novos entram com o preço atual. O cliente só pode ser trocado enquanto o pedido está
+	 * Novo. Num pedido Confirmado, a mensagem de confirmação é atualizada.
+	 */
+	@Transactional
+	public RespostaPedido editar(UsuarioAutenticado usuario, Integer numero, RequisicaoPedido requisicao) {
+		OffsetDateTime agora = OffsetDateTime.now(ZoneOffset.UTC);
+		Pedido pedido = pedidos.buscarParaAlterar(usuario.estabelecimentoId(), numero)
+			.orElseThrow(PedidoNaoEncontradoException::new);
+		pedido.exigirEditavel();
+		List<ItemPedido> atuais = itens.buscarDosPedidos(List.of(pedido.getId()));
+		Map<String, Object> antes = retrato(pedido, atuais);
+
+		Map<String, String> erros = new LinkedHashMap<>();
+		// A data que já passou pode ficar, se não foi mudada
+		if (!requisicao.dataRetirada().equals(pedido.getDataRetirada()) && requisicao.dataRetirada().isBefore(hoje())) {
+			erros.put("dataRetirada", DATA_PASSADA);
+		}
+		List<ItemDaRequisicao> itensDaRequisicao = requisicao.itens();
+		List<ItemPedido> correspondentes = correspondentes(atuais, itensDaRequisicao);
+		List<ItemDaRequisicao> novos = new ArrayList<>();
+		for (int i = 0; i < itensDaRequisicao.size(); i++) {
+			if (correspondentes.get(i) == null) {
+				novos.add(itensDaRequisicao.get(i));
+			}
+		}
+		Map<Long, Produto> doCardapio = produtosDoCardapio(usuario, novos);
+		for (int i = 0; i < itensDaRequisicao.size(); i++) {
+			ItemPedido existente = correspondentes.get(i);
+			Produto produto = existente != null ? existente.getProduto()
+					: doCardapio.get(itensDaRequisicao.get(i).produtoId());
+			conferirItem(erros, i, itensDaRequisicao.get(i), produto);
+		}
+		if (!erros.isEmpty()) {
+			throw new DadosInvalidosException(erros);
+		}
+
+		atualizarCliente(usuario, pedido, requisicao, agora);
+
+		List<ItemPedido> itensDoPedido = new ArrayList<>();
+		for (int i = 0; i < itensDaRequisicao.size(); i++) {
+			ItemDaRequisicao itemDaRequisicao = itensDaRequisicao.get(i);
+			ItemPedido existente = correspondentes.get(i);
+			if (existente != null) {
+				existente.atualizar(itemDaRequisicao.quantidade(), itemDaRequisicao.recheio(), itemDaRequisicao.cobertura(),
+						itemDaRequisicao.observacao());
+				itensDoPedido.add(existente);
+			}
+			else {
+				itensDoPedido.add(itens.save(novoItem(pedido, doCardapio.get(itemDaRequisicao.produtoId()), itemDaRequisicao)));
+			}
+		}
+		List<ItemPedido> retirados = atuais.stream().filter(item -> !itensDoPedido.contains(item)).toList();
+		itens.deleteAll(retirados);
+		pedido.alterar(requisicao.dataRetirada(), requisicao.observacao(), agora);
+		pedido.atualizarTotal(total(itensDoPedido));
+		pedidos.flush();
+
+		Optional<MensagemWhatsapp> confirmacao = pedido.getStatus() == StatusPedido.CONFIRMADO
+				? acoes.atualizarConfirmacao(pedido, itens.buscarDosPedidos(List.of(pedido.getId())))
+				: Optional.empty();
+
+		Map<String, Object> detalhes = new LinkedHashMap<>();
+		detalhes.put("numero", numero);
+		detalhes.put("status", pedido.getStatus().name());
+		detalhes.put("antes", antes);
+		detalhes.put("depois", retrato(pedido, itensDoPedido));
+		confirmacao.ifPresent(mensagem -> detalhes.put("mensagemId", mensagem.getId()));
+		registrar(usuario, AcaoAuditoria.PEDIDO_EDITADO, pedido, detalhes);
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Mesmo WhatsApp: é o mesmo cliente, e no pedido Novo o nome pode ser corrigido. Outro
+	 * WhatsApp: troca o cliente, só no pedido Novo. Depois da confirmação, o nome que vier é
+	 * ignorado, porque a mensagem já foi gerada para aquele cliente.
+	 */
+	private void atualizarCliente(UsuarioAutenticado usuario, Pedido pedido, RequisicaoPedido requisicao,
+			OffsetDateTime agora) {
+		Cliente atual = pedido.getCliente();
+		if (requisicao.cliente().telefone().equals(atual.getTelefoneWhatsapp())) {
+			if (pedido.getStatus() == StatusPedido.NOVO && !requisicao.cliente().nome().equals(atual.getNome())) {
+				atual.renomear(requisicao.cliente().nome(), agora);
+			}
+			return;
+		}
+		pedido.exigirClienteTrocavel();
+		pedido.trocarCliente(clienteDoWhatsapp(bloquearEstabelecimento(usuario), requisicao, agora), agora);
+	}
+
+	/**
+	 * Para cada item pedido, o item atual com o mesmo produto, na ordem; {@code null} quando é
+	 * um item novo. Dois itens com o mesmo produto casam com dois itens atuais, um cada.
+	 */
+	private static List<ItemPedido> correspondentes(List<ItemPedido> atuais, List<ItemDaRequisicao> itensDaRequisicao) {
+		List<ItemPedido> livres = new ArrayList<>(atuais);
+		List<ItemPedido> correspondentes = new ArrayList<>();
+		for (ItemDaRequisicao itemDaRequisicao : itensDaRequisicao) {
+			ItemPedido achado = livres.stream()
+				.filter(item -> item.getProduto().getId().equals(itemDaRequisicao.produtoId()))
+				.findFirst()
+				.orElse(null);
+			livres.remove(achado);
+			correspondentes.add(achado);
+		}
+		return correspondentes;
 	}
 
 	private Map<Long, Produto> produtosDoCardapio(UsuarioAutenticado usuario, List<ItemDaRequisicao> itensDaRequisicao) {
@@ -178,6 +293,22 @@ public class ServicoCadastroPedido {
 
 	private static LocalDate hoje() {
 		return LocalDate.now(FUSO);
+	}
+
+	/**
+	 * O que mudou na edição, para o log. Sem nome nem telefone do cliente (LGPD): só o id.
+	 */
+	private static Map<String, Object> retrato(Pedido pedido, List<ItemPedido> itensDoPedido) {
+		Map<String, Object> retrato = new LinkedHashMap<>();
+		retrato.put("clienteId", pedido.getCliente().getId());
+		retrato.put("dataRetirada", pedido.getDataRetirada().toString());
+		retrato.put("valorTotal", dinheiro(pedido.getValorTotal()));
+		retrato.put("itens", itensDoPedido.stream()
+			.map(item -> Map.of("produtoId", item.getProduto().getId(), "quantidade",
+					item.getQuantidade().stripTrailingZeros().toPlainString(), "precoUnitario",
+					dinheiro(item.getPrecoUnitario())))
+			.toList());
+		return retrato;
 	}
 
 	/** Valor em texto com 2 casas, ex.: {@code "292.50"}, como nos outros logs. */

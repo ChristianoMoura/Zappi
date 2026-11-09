@@ -95,6 +95,32 @@ public class Pedido {
 		this.atualizadoEm = agora;
 	}
 
+	/** Só Novo, Confirmado e Em produção podem ser editados (ZAP-90). */
+	public void exigirEditavel() {
+		if (status == StatusPedido.CONCLUIDO || status == StatusPedido.RECUSADO) {
+			throw new TransicaoNaoPermitidaException("Pedidos concluídos ou recusados não podem ser editados.");
+		}
+	}
+
+	/** O cliente só pode ser trocado enquanto o pedido está Novo (ZAP-90). */
+	public void exigirClienteTrocavel() {
+		exigir(StatusPedido.NOVO, "O cliente não pode ser trocado depois da confirmação.");
+	}
+
+	/** Troca o cliente do pedido; só enquanto o pedido está Novo (ZAP-90). */
+	public void trocarCliente(Cliente cliente, OffsetDateTime agora) {
+		exigirClienteTrocavel();
+		this.cliente = cliente;
+		this.atualizadoEm = agora;
+	}
+
+	/** Nova data de retirada e observação (ZAP-90). */
+	public void alterar(LocalDate dataRetirada, String observacao, OffsetDateTime agora) {
+		this.dataRetirada = dataRetirada;
+		this.observacao = observacao;
+		this.atualizadoEm = agora;
+	}
+
 	/** Total = soma dos subtotais (RN11). */
 	public void atualizarTotal(BigDecimal valorTotal) {
 		this.valorTotal = valorTotal;

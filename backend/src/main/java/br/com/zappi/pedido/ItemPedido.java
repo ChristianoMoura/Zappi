@@ -65,6 +65,11 @@ public class ItemPedido {
 		aplicar(quantidade, recheio, cobertura, observacao);
 	}
 
+	/** Muda a quantidade e os detalhes; o preço congelado continua o mesmo (RN10). */
+	public void atualizar(BigDecimal quantidade, String recheio, String cobertura, String observacao) {
+		aplicar(quantidade, recheio, cobertura, observacao);
+	}
+
 	private void aplicar(BigDecimal quantidade, String recheio, String cobertura, String observacao) {
 		// 3 casas, como a coluna (RN12); a validação já barrou mais casas que isso
 		this.quantidade = quantidade.setScale(3, RoundingMode.HALF_UP);

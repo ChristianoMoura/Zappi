@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -55,6 +56,13 @@ public class ControladorPedido {
 			@Valid @RequestBody RequisicaoPedido requisicao) {
 		RespostaPedido pedido = cadastro.cadastrar(usuario, requisicao);
 		return ResponseEntity.created(URI.create("/api/pedidos/" + pedido.numero())).body(pedido);
+	}
+
+	/** Edita um pedido Novo, Confirmado ou Em produção (ZAP-90), com o mesmo corpo do cadastro. */
+	@PutMapping("/{numero}")
+	public RespostaPedido editar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable Integer numero,
+			@Valid @RequestBody RequisicaoPedido requisicao) {
+		return cadastro.editar(usuario, numero, requisicao);
 	}
 
 	/**

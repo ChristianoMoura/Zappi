@@ -64,6 +64,12 @@ public class Cliente {
 		this.atualizadoEm = agora;
 	}
 
+	/** Mesmo WhatsApp com outro nome: é a mesma pessoa, então só o nome muda (ZAP-90). */
+	public void renomear(String nome, OffsetDateTime agora) {
+		this.nome = nome;
+		this.atualizadoEm = agora;
+	}
+
 	public Long getId() {
 		return id;
 	}

@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.springframework.stereotype.Service;
@@ -106,11 +107,45 @@ public class ServicoAcoesPedido {
 		return consulta.detalhar(usuario, numero);
 	}
 
-	/** Volta de Em produção para Confirmado, apagando {@code producao_em} (ZAP-75). */
+	/**
+	 * Volta de Em produção para Confirmado, apagando {@code producao_em} (ZAP-75). Se o pedido
+	 * foi editado em produção, a mensagem de confirmação é atualizada (ZAP-90).
+	 */
 	@Transactional
 	public RespostaPedido voltarParaConfirmado(UsuarioAutenticado usuario, Integer numero) {
-		mudarStatus(usuario, numero, pedido -> pedido.voltarParaConfirmado(OffsetDateTime.now(ZoneOffset.UTC)));
+		Pedido pedido = mudarStatus(usuario, numero,
+				alvo -> alvo.voltarParaConfirmado(OffsetDateTime.now(ZoneOffset.UTC)));
+		atualizarConfirmacao(pedido, itens.buscarDosPedidos(List.of(pedido.getId())));
 		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Deixa a confirmação de acordo com o pedido Confirmado depois de uma mudança (ZAP-90). Se
+	 * o texto mudou: com a última confirmação ainda não enviada, o texto dela é trocado; já
+	 * enviada, uma confirmação nova, Pendente, é gerada para a Lídia mandar de novo. Sem
+	 * confirmação anterior, ou com o mesmo texto, nada muda.
+	 *
+	 * @return a mensagem atualizada ou gerada, ou vazio quando nada mudou
+	 */
+	Optional<MensagemWhatsapp> atualizarConfirmacao(Pedido pedido, List<ItemPedido> itensDoPedido) {
+		Optional<MensagemWhatsapp> ultima = mensagens.findByPedidoIdOrderByCriadoEmAscIdAsc(pedido.getId())
+			.stream()
+			.filter(m -> m.getTipo() == TipoMensagem.CONFIRMACAO)
+			.reduce((anterior, seguinte) -> seguinte);
+		if (ultima.isEmpty()) {
+			return Optional.empty();
+		}
+		String texto = gerador.confirmacao(pedido, itensDoPedido);
+		MensagemWhatsapp mensagem = ultima.get();
+		if (texto.equals(mensagem.getConteudo())) {
+			return Optional.empty();
+		}
+		if (mensagem.getStatus() != StatusMensagem.ENVIADA) {
+			mensagem.atualizarConteudo(texto);
+			mensagens.flush();
+			return Optional.of(mensagem);
+		}
+		return Optional.of(gerarMensagem(pedido, TipoMensagem.CONFIRMACAO, texto));
 	}
 
 	/**
