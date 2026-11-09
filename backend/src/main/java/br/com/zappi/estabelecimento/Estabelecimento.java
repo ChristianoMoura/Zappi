@@ -75,6 +75,26 @@ public class Estabelecimento {
 		// exigido pelo JPA
 	}
 
+	/**
+	 * Troca os dados que a Lídia edita na tela "Meu estabelecimento" (RF04). {@code ativo} e
+	 * {@code criado_em} não mudam por aqui.
+	 */
+	void atualizar(RequisicaoEstabelecimento dados, OffsetDateTime agora) {
+		this.nome = dados.nome();
+		this.slug = dados.slug();
+		this.descricao = dados.descricao();
+		this.telefoneWhatsapp = dados.whatsapp();
+		this.emailContato = dados.emailContato();
+		this.cep = dados.cep();
+		this.logradouro = dados.logradouro();
+		this.numero = dados.numero();
+		this.complemento = dados.complemento();
+		this.bairro = dados.bairro();
+		this.cidade = dados.cidade();
+		this.uf = dados.uf();
+		this.atualizadoEm = agora;
+	}
+
 	public Long getId() {
 		return id;
 	}
