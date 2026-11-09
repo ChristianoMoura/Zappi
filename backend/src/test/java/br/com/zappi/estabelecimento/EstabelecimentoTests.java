@@ -148,7 +148,7 @@ class EstabelecimentoTests {
 
 	@Test
 	void recusaCamposObrigatoriosVaziosComAMensagemDeCadaCampo() throws Exception {
-		comToken(put(ROTA), tokenDaLidia, Map.of("nome", " ", "slug", "", "descricao", "x"))
+		comToken(put(ROTA), tokenDaLidia, Map.of("nome", " ", "slug", "", "whatsapp", " ", "descricao", "x"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.codigo").value("DADOS_INVALIDOS"))
 			.andExpect(jsonPath("$.campos.nome").value("Digite o nome do estabelecimento."))

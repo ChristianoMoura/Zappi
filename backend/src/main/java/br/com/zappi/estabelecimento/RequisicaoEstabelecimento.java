@@ -11,17 +11,21 @@ import jakarta.validation.constraints.Size;
  * ({@code frontend/src/estabelecimento/servicoEstabelecimento.js}): {@code whatsapp} é a
  * coluna {@code telefone_whatsapp} e {@code emailContato} é {@code email_contato}. A edição
  * troca todos os campos: um campo opcional que não vier fica vazio.
+ * <p>
+ * Os formatos aceitam o vazio de propósito: o vazio é recusado só pelo {@code @NotBlank}, para
+ * a tela receber sempre "Digite..." e não uma mensagem de formato, que dependeria da ordem
+ * (aleatória) em que o validador confere as regras.
  */
 public record RequisicaoEstabelecimento(
 		@NotBlank(message = "Digite o nome do estabelecimento.")
 		@Size(max = 100, message = "Use no máximo 100 caracteres.") String nome,
 		@NotBlank(message = "Digite o link do cardápio.")
 		@Size(max = 60, message = "Use no máximo 60 caracteres.")
-		@Pattern(regexp = "[a-z0-9]+(-[a-z0-9]+)*",
+		@Pattern(regexp = "([a-z0-9]+(-[a-z0-9]+)*)?",
 				message = "Use só letras minúsculas, números e hífen, sem espaços. Ex.: casa-belt") String slug,
 		@Size(max = 500, message = "Use no máximo 500 caracteres.") String descricao,
 		@NotBlank(message = "Digite o WhatsApp com DDD.")
-		@Pattern(regexp = "\\d{13}",
+		@Pattern(regexp = "(\\d{13})?",
 				message = "O WhatsApp precisa ter 13 números: 55, o DDD e o número. Ex.: 5511900000000") String whatsapp,
 		@Size(max = 150, message = "Use no máximo 150 caracteres.")
 		@Pattern(regexp = "[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
