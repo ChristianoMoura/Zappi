@@ -112,6 +112,7 @@ class ProdutoTests {
 		assertThat(log("PRODUTO_CRIADO", id)).containsEntry("usuario_id", lidia)
 			.containsEntry("estabelecimento_id", casaBelt)
 			.containsEntry("sabor_depois", "Cenoura com chocolate");
+		confereOrigemDoLog("PRODUTO_CRIADO", id);
 	}
 
 	@Test
@@ -131,6 +132,10 @@ class ProdutoTests {
 
 		assertThat(log("PRODUTO_EDITADO", id)).containsEntry("preco_antes", "100.00")
 			.containsEntry("preco_depois", "105.00");
+		confereOrigemDoLog("PRODUTO_EDITADO", id);
+		// O pedido #1 da V2 continua com o preço da época (RN10)
+		assertThat(jdbc.queryForObject("select preco_unitario from item_pedido where produto_id = ?", BigDecimal.class,
+				id)).isEqualByComparingTo("100.00");
 	}
 
 	@Test
@@ -146,6 +151,7 @@ class ProdutoTests {
 		comToken(get(ROTA), tokenDaLidia).andExpect(jsonPath("$.length()").value(3));
 		comToken(get(ROTA + "/" + id), tokenDaLidia).andExpect(status().isNotFound());
 		assertThat(log("PRODUTO_EXCLUIDO", id)).containsEntry("usuario_id", lidia);
+		confereOrigemDoLog("PRODUTO_EXCLUIDO", id);
 	}
 
 	@Test
@@ -224,6 +230,8 @@ class ProdutoTests {
 			.andExpect(status().isUnauthorized());
 	}
 
+	private static final String NAVEGADOR = "Navegador de teste";
+
 	private static Map<String, Object> produto(String nome, String sabor, String unidade, String preco) {
 		Map<String, Object> dados = new LinkedHashMap<>();
 		dados.put("nome", nome);
@@ -235,12 +243,14 @@ class ProdutoTests {
 	}
 
 	private ResultActions comToken(MockHttpServletRequestBuilder requisicao, String token) throws Exception {
-		return mockMvc.perform(requisicao.header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+		return mockMvc.perform(requisicao.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR));
 	}
 
 	private ResultActions comToken(MockHttpServletRequestBuilder requisicao, String token, Map<String, ?> corpo)
 			throws Exception {
 		return mockMvc.perform(requisicao.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(json.writeValueAsString(corpo)));
 	}
@@ -250,9 +260,15 @@ class ProdutoTests {
 				casaBelt, sabor);
 	}
 
+	private void confereOrigemDoLog(String acao, long produtoId) {
+		assertThat(log(acao, produtoId)).containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull();
+	}
+
 	private Map<String, Object> log(String acao, long produtoId) {
 		return jdbc.queryForMap("""
-				select usuario_id, estabelecimento_id,
+				select usuario_id, estabelecimento_id, ip_origem, user_agent, criado_em,
 				       detalhes -> 'depois' ->> 'sabor' as sabor_depois,
 				       detalhes -> 'antes' ->> 'preco' as preco_antes,
 				       detalhes -> 'depois' ->> 'preco' as preco_depois
