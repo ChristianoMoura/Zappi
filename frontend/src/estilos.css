@@ -11,6 +11,13 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
+/* O Mantine usa a cor principal no foco do seletor, igual ao fundo da opção escolhida:
+   a borda sumia. O input é invisível, então o foco aparece no rótulo. */
+.mantine-SegmentedControl-input:focus-visible + .mantine-SegmentedControl-label {
+  outline: 3px solid var(--zappi-cor-foco);
+  outline-offset: 3px;
+}
+
 /* Interatividade aprovada na ZAP-37. Tudo fica parado para quem pediu "reduzir movimento". */
 .mantine-Button-root,
 .mantine-NavLink-root,

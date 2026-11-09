@@ -46,6 +46,26 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     expect(campo(/^Preço por kg/)).toBeInTheDocument()
   })
 
+  test('o Tab segue a ordem nome, sabor, unidade, preço, descrição, foto e salvar (NBR 17225 5.1.4)', async () => {
+    const usuario = userEvent.setup()
+    await abrir('/produtos/novo')
+
+    const ordem = [
+      campo(/^Nome/),
+      campo(/^Sabor/),
+      screen.getByRole('radio', { name: 'Quilo (kg)' }),
+      campo(/^Preço por kg/),
+      campo(/^Descrição/),
+      screen.getByRole('button', { name: 'Escolher foto' }),
+      screen.getByRole('button', { name: 'Cancelar' }),
+      screen.getByRole('button', { name: 'Salvar produto' }),
+    ]
+    for (const elemento of ordem) {
+      await usuario.tab()
+      expect(elemento).toHaveFocus()
+    }
+  })
+
   test('não salva sem os campos obrigatórios e leva o foco ao primeiro erro', async () => {
     const usuario = userEvent.setup()
     await abrir('/produtos/novo')
