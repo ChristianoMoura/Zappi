@@ -116,6 +116,14 @@ public class Pedido {
 		this.atualizadoEm = agora;
 	}
 
+	/** Em produção → Concluído, gravando {@code concluido_em} (RN06, ZAP-76). */
+	public void concluir(OffsetDateTime agora) {
+		exigir(StatusPedido.EM_PRODUCAO, "Só pedidos em produção podem ser concluídos.");
+		this.status = StatusPedido.CONCLUIDO;
+		this.concluidoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
 	private void exigir(StatusPedido origem, String mensagem) {
 		if (status != origem) {
 			throw new TransicaoNaoPermitidaException(mensagem);

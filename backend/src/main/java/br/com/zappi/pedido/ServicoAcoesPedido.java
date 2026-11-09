@@ -128,6 +128,25 @@ public class ServicoAcoesPedido {
 	}
 
 	/**
+	 * Conclui um pedido Em produção (ZAP-76): Concluído com {@code concluido_em}, mensagem de
+	 * Pronto para retirada Pendente para o telefone atual do cliente (RN07, RN20) e o log
+	 * {@code PEDIDO_STATUS_ALTERADO}. Concluir de novo depois de uma volta gera outra mensagem.
+	 */
+	@Transactional
+	public RespostaPedido concluir(UsuarioAutenticado usuario, Integer numero) {
+		Pedido pedido = pedidos.buscarParaAlterar(usuario.estabelecimentoId(), numero)
+			.orElseThrow(PedidoNaoEncontradoException::new);
+		StatusPedido antes = pedido.getStatus();
+		pedido.concluir(OffsetDateTime.now(ZoneOffset.UTC));
+
+		MensagemWhatsapp mensagem = gerarMensagem(pedido, TipoMensagem.PRONTO, gerador.pronto(pedido));
+
+		registrar(usuario, AcaoAuditoria.PEDIDO_STATUS_ALTERADO, pedido, Map.of("numero", pedido.getNumero(),
+				"statusAntes", antes.name(), "statusDepois", pedido.getStatus().name(), "mensagemId", mensagem.getId()));
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
 	 * Mudança de status sem mensagem: bloqueia o pedido, aplica a transição e registra
 	 * {@code PEDIDO_STATUS_ALTERADO} com o status anterior e o novo (RN08, ISO 27002 8.16).
 	 */

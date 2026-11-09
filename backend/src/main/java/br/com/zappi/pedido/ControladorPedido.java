@@ -67,6 +67,15 @@ public class ControladorPedido {
 		return acoes.iniciarProducao(usuario, numero);
 	}
 
+	/**
+	 * Em produção → Concluído (ZAP-76) e devolve o pedido com a mensagem de pronto para
+	 * retirada pronta para enviar.
+	 */
+	@PostMapping("/{numero}/concluir")
+	public RespostaPedido concluir(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable Integer numero) {
+		return acoes.concluir(usuario, numero);
+	}
+
 	/** Volta de Em produção para Confirmado (ZAP-75). */
 	@PostMapping("/{numero}/voltar-para-confirmado")
 	public RespostaPedido voltarParaConfirmado(@AuthenticationPrincipal UsuarioAutenticado usuario,
