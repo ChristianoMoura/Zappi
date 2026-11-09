@@ -94,4 +94,20 @@ class ArmazenamentoSupabaseTests {
 			.isInstanceOf(ArmazenamentoIndisponivelException.class);
 	}
 
+	@Test
+	void oLogoEACapaUsamOBucketDoEstabelecimento() {
+		servidor.expect(requestTo(PROJETO + "/storage/v1/object/estabelecimentos/1/logo-abcd1234.webp"))
+			.andExpect(method(HttpMethod.POST))
+			.andExpect(header("Authorization", "Bearer " + CHAVE))
+			.andRespond(withSuccess());
+		ArmazenamentoSupabase armazenamento = new ArmazenamentoSupabase(CONFIGURADO.comBucket("estabelecimentos"),
+				construtor);
+
+		armazenamento.enviar("1/logo-abcd1234.webp", new byte[] { 1 }, "image/webp");
+
+		servidor.verify();
+		assertThat(armazenamento.enderecoPublico("1/logo-abcd1234.webp"))
+			.isEqualTo(PROJETO + "/storage/v1/object/public/estabelecimentos/1/logo-abcd1234.webp");
+	}
+
 }
