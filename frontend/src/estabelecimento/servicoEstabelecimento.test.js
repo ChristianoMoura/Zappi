@@ -3,12 +3,16 @@ import {
   buscarEstabelecimento,
   buscarMarcaLoja,
   DadosInvalidosError,
+  FotoNaoEnviadaError,
   LinkEmUsoError,
   ouvirEstabelecimento,
   salvarEstabelecimento,
   ServicoIndisponivelError,
   SessaoExpiradaError,
 } from './servicoEstabelecimento'
+
+const LOGO = 'https://storage.teste/estabelecimentos/1/logo-abcd1234.webp'
+const CAPA = 'https://storage.teste/estabelecimentos/1/capa-abcd1234.jpg'
 
 const doBackend = {
   nome: 'Casa Belt',
@@ -23,96 +27,138 @@ const doBackend = {
   bairro: null,
   cidade: null,
   uf: null,
+  logo: null,
+  capa: null,
 }
 
-const naTela = { ...doBackend, emailContato: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' }
+const naTela = {
+  ...doBackend,
+  emailContato: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', logo: '', capa: '',
+}
 
-const LOGO = 'data:image/webp;base64,AAAA'
+// Só os campos de texto, como vão no PUT
+const { logo: _logo, capa: _capa, ...textoNaTela } = naTela
 
 const json = (status, corpo) => new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
 
-// fetch simulado: responde em ordem e guarda cada chamada
+// fetch simulado: responde em ordem e guarda cada chamada. A foto escolhida na tela (blob:) é
+// lida como arquivo, sem passar pela fila de respostas.
 function simularBackend(...respostas) {
-  const buscar = vi.fn(async () => respostas.shift() ?? json(500, {}))
+  const buscar = vi.fn(async (endereco) => {
+    if (String(endereco).startsWith('blob:')) return { blob: async () => new Blob(['imagem'], { type: 'image/png' }) }
+    return respostas.shift() ?? json(500, {})
+  })
   vi.stubGlobal('fetch', buscar)
-  return buscar
+  return () => buscar.mock.calls.filter(([endereco]) => !String(endereco).startsWith('blob:'))
 }
 
-describe('servicoEstabelecimento (ZAP-118)', () => {
+describe('servicoEstabelecimento (ZAP-118 e ZAP-120)', () => {
   beforeEach(() => {
     sessionStorage.setItem('zappi.sessao', JSON.stringify({ token: 'jwt-de-teste', nome: 'Lídia' }))
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
-    localStorage.clear()
   })
 
-  it('lê o estabelecimento com o token e troca os nulos por texto vazio', async () => {
-    const buscar = simularBackend(json(200, doBackend))
+  it('lê o estabelecimento com o token, com o logo e a capa da API, e troca os nulos por texto vazio', async () => {
+    const chamadas = simularBackend(json(200, { ...doBackend, logo: LOGO }))
 
-    await expect(buscarEstabelecimento()).resolves.toEqual({ ...naTela, logo: '', capa: '' })
-    const [[endereco, opcoes]] = buscar.mock.calls
+    await expect(buscarEstabelecimento()).resolves.toEqual({ ...naTela, logo: LOGO })
+    const [[endereco, opcoes]] = chamadas()
     expect(endereco).toBe('/api/estabelecimento')
     expect(opcoes.method).toBe('GET')
     expect(opcoes.headers.Authorization).toBe('Bearer jwt-de-teste')
   })
 
-  it('salva com um PUT só com os campos do banco, sem logo e capa', async () => {
-    const buscar = simularBackend(json(200, { ...doBackend, nome: 'Casa Belt Doces' }))
+  it('sem foto nova, salva só com um PUT dos campos de texto', async () => {
+    const chamadas = simularBackend(json(200, { ...doBackend, nome: 'Casa Belt Doces', logo: LOGO }))
 
-    const salvo = await salvarEstabelecimento({ ...naTela, nome: 'Casa Belt Doces', logo: LOGO, capa: '' })
+    const salvo = await salvarEstabelecimento({ ...naTela, nome: 'Casa Belt Doces', logo: LOGO })
 
-    expect(salvo).toMatchObject({ nome: 'Casa Belt Doces', cep: '', logo: LOGO, capa: '' })
-    const [[endereco, opcoes]] = buscar.mock.calls
+    expect(salvo).toMatchObject({ nome: 'Casa Belt Doces', cep: '', logo: LOGO })
+    expect(chamadas()).toHaveLength(1)
+    const [[endereco, opcoes]] = chamadas()
     expect(endereco).toBe('/api/estabelecimento')
     expect(opcoes.method).toBe('PUT')
     expect(opcoes.headers['Content-Type']).toBe('application/json')
-    const corpo = JSON.parse(opcoes.body)
-    expect(corpo).toEqual({ ...naTela, nome: 'Casa Belt Doces' })
-    expect(corpo).not.toHaveProperty('logo')
+    expect(JSON.parse(opcoes.body)).toEqual({ ...textoNaTela, nome: 'Casa Belt Doces' })
   })
 
-  it('guarda logo e capa neste navegador e os devolve ao ler de novo', async () => {
-    simularBackend(json(200, doBackend), json(200, doBackend))
+  it('com logo e capa novos, salva os dados e depois envia cada foto', async () => {
+    const chamadas = simularBackend(
+      json(200, doBackend),
+      json(200, { ...doBackend, logo: LOGO }),
+      json(200, { ...doBackend, logo: LOGO, capa: CAPA }),
+    )
 
-    await salvarEstabelecimento({ ...naTela, logo: LOGO, capa: '' })
+    const salvo = await salvarEstabelecimento({ ...naTela, logo: 'blob:logo-novo', capa: 'blob:capa-nova' })
 
-    await expect(buscarEstabelecimento()).resolves.toMatchObject({ nome: 'Casa Belt', logo: LOGO, capa: '' })
+    expect(salvo).toMatchObject({ logo: LOGO, capa: CAPA })
+    const [, [enderecoLogo, opcoesLogo], [enderecoCapa, opcoesCapa]] = chamadas()
+    expect(enderecoLogo).toBe('/api/estabelecimento/logo')
+    expect(opcoesLogo.method).toBe('POST')
+    expect(opcoesLogo.headers.Authorization).toBe('Bearer jwt-de-teste')
+    expect(opcoesLogo.headers['Content-Type']).toBeUndefined()
+    expect(opcoesLogo.body.get('arquivo')).toBeInstanceOf(Blob)
+    expect(enderecoCapa).toBe('/api/estabelecimento/capa')
+    expect(opcoesCapa.body.get('arquivo')).toBeInstanceOf(Blob)
   })
 
-  it('leva as fotos junto quando o link do cardápio muda', async () => {
-    simularBackend(json(200, doBackend), json(200, { ...doBackend, slug: 'casa-belt-doces' }))
-    await buscarEstabelecimento()
+  it('tira a foto que a tela apagou', async () => {
+    const chamadas = simularBackend(json(200, { ...doBackend, capa: CAPA }), json(200, doBackend))
 
-    await salvarEstabelecimento({ ...naTela, slug: 'casa-belt-doces', logo: LOGO, capa: '' })
+    const salvo = await salvarEstabelecimento({ ...naTela, capa: '' })
 
-    expect(JSON.parse(localStorage.getItem('zappi.fotos-estabelecimento.casa-belt-doces')).logo).toBe(LOGO)
-    expect(localStorage.getItem('zappi.fotos-estabelecimento.casa-belt')).toBeNull()
+    expect(salvo.capa).toBe('')
+    const [, [endereco, opcoes]] = chamadas()
+    expect(endereco).toBe('/api/estabelecimento/capa')
+    expect(opcoes.method).toBe('DELETE')
   })
 
-  it('ignora uma cópia das fotos com defeito', async () => {
-    localStorage.setItem('zappi.fotos-estabelecimento.casa-belt', '{isto não é json')
-    simularBackend(json(200, doBackend))
+  it('foto recusada pelo backend: os dados ficam salvos e a mensagem explica o motivo', async () => {
+    simularBackend(
+      json(200, { ...doBackend, nome: 'Casa Belt Doces' }),
+      json(400, { codigo: 'DADOS_INVALIDOS', campos: { arquivo: 'A foto pode ter até 5 MB.' } }),
+    )
 
-    await expect(buscarEstabelecimento()).resolves.toMatchObject({ logo: '', capa: '' })
+    const erro = await salvarEstabelecimento({ ...naTela, nome: 'Casa Belt Doces', logo: 'blob:logo-grande' }).catch((e) => e)
+
+    expect(erro).toBeInstanceOf(FotoNaoEnviadaError)
+    expect(erro.message).toBe('Os dados foram salvos, mas o logo não foi enviado. A foto pode ter até 5 MB.')
+    expect(erro.salvo).toMatchObject({ nome: 'Casa Belt Doces', logo: '' })
   })
 
-  it('avisa quem mostra a marca da loja quando o estabelecimento é salvo', async () => {
-    simularBackend(json(200, { ...doBackend, nome: 'Casa Belt Doces' }))
+  it('Storage fora do ar: avisa que a capa não foi enviada e mantém o logo já enviado', async () => {
+    simularBackend(
+      json(200, doBackend),
+      json(200, { ...doBackend, logo: LOGO }),
+      json(503, { codigo: 'FOTO_INDISPONIVEL' }),
+    )
+
+    const erro = await salvarEstabelecimento({ ...naTela, logo: 'blob:logo', capa: 'blob:capa' }).catch((e) => e)
+
+    expect(erro).toBeInstanceOf(FotoNaoEnviadaError)
+    expect(erro.message).toBe('Os dados foram salvos, mas a foto de capa não foi enviada. Tente de novo em alguns minutos.')
+    expect(erro.salvo).toMatchObject({ logo: LOGO, capa: '' })
+  })
+
+  it('avisa quem mostra a marca da loja com o logo que ficou no servidor', async () => {
+    simularBackend(json(200, { ...doBackend, nome: 'Casa Belt Doces' }), json(200, { ...doBackend, nome: 'Casa Belt Doces', logo: LOGO }))
     const aoMudar = vi.fn()
     const parar = ouvirEstabelecimento(aoMudar)
 
-    await salvarEstabelecimento({ ...naTela, nome: 'Casa Belt Doces', logo: LOGO, capa: '' })
+    await salvarEstabelecimento({ ...naTela, nome: 'Casa Belt Doces', logo: 'blob:logo-novo' })
     parar()
 
     expect(aoMudar).toHaveBeenCalledWith({ nome: 'Casa Belt Doces', logo: LOGO })
   })
 
-  it('link de outro estabelecimento (409) vira LinkEmUsoError', async () => {
-    simularBackend(json(409, { codigo: 'LINK_EM_USO', campos: { slug: 'Esse link já é usado por outro estabelecimento. Escolha outro.' } }))
+  it('link de outro estabelecimento (409) vira LinkEmUsoError e não envia as fotos', async () => {
+    const chamadas = simularBackend(json(409, { codigo: 'LINK_EM_USO' }))
 
-    await expect(salvarEstabelecimento(naTela)).rejects.toBeInstanceOf(LinkEmUsoError)
+    await expect(salvarEstabelecimento({ ...naTela, logo: 'blob:logo' })).rejects.toBeInstanceOf(LinkEmUsoError)
+    expect(chamadas()).toHaveLength(1)
   })
 
   it('dados recusados pelo backend (400) trazem a mensagem de cada campo', async () => {
@@ -142,20 +188,31 @@ describe('servicoEstabelecimento (ZAP-118)', () => {
     await expect(buscarEstabelecimento()).rejects.toBeInstanceOf(ServicoIndisponivelError)
   })
 
+  it('apaga a cópia antiga das fotos que ficava no navegador (ZAP-118)', async () => {
+    localStorage.setItem('zappi.fotos-estabelecimento.casa-belt', JSON.stringify({ logo: 'data:image/webp;base64,AAAA' }))
+    localStorage.setItem('outra-chave', 'fica')
+    vi.resetModules()
+
+    await import('./servicoEstabelecimento')
+
+    expect(localStorage.getItem('zappi.fotos-estabelecimento.casa-belt')).toBeNull()
+    expect(localStorage.getItem('outra-chave')).toBe('fica')
+    localStorage.clear()
+  })
+
   describe('marca da loja', () => {
     it('usa o nome e o logo do Meu estabelecimento', async () => {
-      localStorage.setItem('zappi.fotos-estabelecimento.casa-belt', JSON.stringify({ logo: LOGO, capa: '' }))
-      simularBackend(json(200, doBackend))
+      simularBackend(json(200, { ...doBackend, logo: LOGO }))
 
       await expect(buscarMarcaLoja()).resolves.toEqual({ nome: 'Casa Belt', logo: LOGO })
     })
 
     it('sem login, não chama a API e devolve nulo', async () => {
       sessionStorage.clear()
-      const buscar = simularBackend()
+      const chamadas = simularBackend()
 
       await expect(buscarMarcaLoja()).resolves.toBeNull()
-      expect(buscar).not.toHaveBeenCalled()
+      expect(chamadas()).toHaveLength(0)
     })
   })
 })

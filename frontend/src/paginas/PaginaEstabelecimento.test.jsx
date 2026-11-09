@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   buscarEstabelecimento,
   DadosInvalidosError,
+  FotoNaoEnviadaError,
   LinkEmUsoError,
   salvarEstabelecimento,
 } from '../estabelecimento/servicoEstabelecimento'
@@ -111,6 +112,25 @@ describe('PaginaEstabelecimento (US2, RF03, RF04)', () => {
     expect(await screen.findByText('O CEP tem 8 números. Ex.: 01000-000')).toBeVisible()
     expect(campo(/CEP/)).toHaveFocus()
     expect(campo(/CEP/)).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  test('se a foto não for enviada, explica o motivo e deixa tentar de novo com a foto escolhida', async () => {
+    const usuario = userEvent.setup({ applyAccept: false })
+    salvarEstabelecimento.mockRejectedValueOnce(
+      new FotoNaoEnviadaError('Os dados foram salvos, mas o logo não foi enviado. Tente de novo em alguns minutos.', casaBelt),
+    )
+    await abrirTela()
+    const [, arquivoLogo] = document.querySelectorAll('input[type="file"]')
+
+    await usuario.upload(arquivoLogo, new File(['png'], 'logo.png', { type: 'image/png' }))
+    await usuario.click(salvarBotao())
+
+    expect(await screen.findByText('Os dados foram salvos, mas o logo não foi enviado. Tente de novo em alguns minutos.')).toBeVisible()
+    expect(screen.getByRole('img', { name: 'Logo de Casa Belt' })).toHaveAttribute('src', 'blob:foto-nova')
+
+    await usuario.click(salvarBotao())
+    await waitFor(() => expect(salvarEstabelecimento).toHaveBeenCalledTimes(2))
+    expect(salvarEstabelecimento.mock.calls[1][0]).toMatchObject({ logo: 'blob:foto-nova' })
   })
 
   test('"Sem número" bloqueia o campo com S/N e devolve o número ao desmarcar', async () => {

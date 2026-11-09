@@ -18,6 +18,7 @@ import {
 import {
   buscarEstabelecimento,
   DadosInvalidosError,
+  FotoNaoEnviadaError,
   LinkEmUsoError,
   salvarEstabelecimento,
   SessaoExpiradaError,
@@ -153,6 +154,10 @@ export function PaginaEstabelecimento() {
         setErros(erro.campos)
         refs.current[ORDEM.find((campo) => erro.campos[campo])]?.focus()
         setAviso({ tipo: 'erro', texto: 'Confira os campos marcados em vermelho.' })
+      } else if (erro instanceof FotoNaoEnviadaError) {
+        // Os dados já estão no servidor; a foto escolhida continua na tela, e "Salvar" tenta de novo
+        setSalvo(paraTela(erro.salvo))
+        setAviso({ tipo: 'erro', texto: erro.message })
       } else if (erro instanceof SessaoExpiradaError) {
         // O serviço já leva para o login
       } else {

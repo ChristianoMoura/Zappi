@@ -1,14 +1,21 @@
 // Leitura e gravação dos dados do estabelecimento da usuária logada, pela rota
-// /api/estabelecimento (ZAP-36). Em produção, o Render repassa /api ao backend; em
-// desenvolvimento, o proxy do Vite faz o mesmo (vite.config.js). A tela continua usando as
-// mesmas funções e erros de antes (ZAP-118).
-//
-// PENDENTE (ZAP-119 e ZAP-120): o DER ainda não tem logo nem capa. Até lá, as duas fotos ficam
-// guardadas só neste navegador (localStorage), separadas pelo link do cardápio da loja.
+// /api/estabelecimento (ZAP-36), e do logo e da capa, pelas rotas /api/estabelecimento/logo e
+// /api/estabelecimento/capa, que guardam as fotos no Supabase Storage (ZAP-119). Em produção, o
+// Render repassa /api ao backend; em desenvolvimento, o proxy do Vite faz o mesmo
+// (vite.config.js). A tela continua usando as mesmas funções e erros (ZAP-118, ZAP-120). O token,
+// o 401 e a falta de conexão ficam no clienteApi, o mesmo dos produtos.
 
-export class ServicoIndisponivelError extends Error {}
+import {
+  chamarApi,
+  lerArquivoTemporario,
+  lerJson,
+  lerToken,
+  ServicoIndisponivelError,
+  SessaoExpiradaError,
+} from '../autenticacao/clienteApi'
+
+export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
 export class LinkEmUsoError extends Error {}
-export class SessaoExpiradaError extends Error {}
 
 // 400 do backend: `campos` traz a mensagem de cada campo, com os nomes da tela
 export class DadosInvalidosError extends Error {
@@ -18,55 +25,36 @@ export class DadosInvalidosError extends Error {
   }
 }
 
-// Campos que o backend guarda, com os nomes da tela; logo e capa ficam de fora
+// Os dados foram salvos, mas uma foto não foi enviada. `salvo` é o estabelecimento como ficou
+// no servidor, para a tela mostrar o que já está guardado e deixar tentar a foto de novo.
+export class FotoNaoEnviadaError extends Error {
+  constructor(mensagem, salvo) {
+    super(mensagem)
+    this.salvo = salvo
+  }
+}
+
+// Campos de texto que o backend guarda, com os nomes da tela
 const CAMPOS = ['nome', 'slug', 'descricao', 'whatsapp', 'emailContato', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf']
 
-// A mesma chave do AutenticacaoContexto, onde fica o token do login (ZAP-62)
-const CHAVE_SESSAO = 'zappi.sessao'
+// Fotos da loja, na ordem em que são enviadas; o nome é o da rota e o do campo
+const FOTOS = ['logo', 'capa']
 
-function lerToken() {
+// Até a ZAP-120, o logo e a capa ficavam só no navegador (ZAP-118). Agora vêm da API: a cópia
+// antiga é apagada, para não ocupar espaço nem ficar para trás em um computador compartilhado.
+function apagarFotosAntigasDoNavegador() {
   try {
-    return JSON.parse(sessionStorage.getItem(CHAVE_SESSAO))?.token ?? null
+    Object.keys(localStorage)
+      .filter((chave) => chave.startsWith('zappi.fotos-estabelecimento.'))
+      .forEach((chave) => localStorage.removeItem(chave))
   } catch {
-    return null
+    // Sem armazenamento: não há cópia para apagar
   }
 }
+apagarFotosAntigasDoNavegador()
 
-// Token vencido ou inválido: encerra a sessão e volta para o login, como o useApi faz
-function encerrarSessao() {
-  try {
-    sessionStorage.removeItem(CHAVE_SESSAO)
-  } catch {
-    // Sem armazenamento: não há sessão guardada para apagar
-  }
-  window.location.assign('/login')
-}
-
-async function lerJson(resposta) {
-  try {
-    return await resposta.json()
-  } catch {
-    return null
-  }
-}
-
-async function chamar({ metodo = 'GET', json } = {}) {
-  const headers = {}
-  const token = lerToken()
-  if (token) headers.Authorization = `Bearer ${token}`
-  if (json !== undefined) headers['Content-Type'] = 'application/json'
-
-  let resposta
-  try {
-    resposta = await fetch('/api/estabelecimento', { method: metodo, headers, body: json === undefined ? undefined : JSON.stringify(json) })
-  } catch {
-    // Sem conexão ou servidor fora do ar
-    throw new ServicoIndisponivelError()
-  }
-  if (resposta.status === 401) {
-    encerrarSessao()
-    throw new SessaoExpiradaError()
-  }
+async function chamar(caminho = '', opcoes) {
+  const resposta = await chamarApi(`/estabelecimento${caminho}`, opcoes)
   // Link do cardápio já usado por outro estabelecimento
   if (resposta.status === 409) throw new LinkEmUsoError()
   if (resposta.status === 400) throw new DadosInvalidosError((await lerJson(resposta))?.campos)
@@ -74,66 +62,33 @@ async function chamar({ metodo = 'GET', json } = {}) {
   return resposta.json()
 }
 
-// O backend manda nulo nos campos vazios; a tela trabalha com texto vazio
+// O backend manda nulo nos campos vazios; a tela trabalha com texto vazio. `logo` e `capa` são
+// os endereços públicos das fotos no Storage.
 function paraTela(estabelecimento) {
-  return Object.fromEntries(CAMPOS.map((campo) => [campo, estabelecimento?.[campo] ?? '']))
+  return Object.fromEntries([...CAMPOS, ...FOTOS].map((campo) => [campo, estabelecimento?.[campo] ?? '']))
 }
 
-// --- Logo e capa, guardados só neste navegador até a ZAP-119 e a ZAP-120 ---
-
-const SEM_FOTOS = { logo: '', capa: '' }
-const chaveFotos = (slug) => `zappi.fotos-estabelecimento.${slug}`
-
-// Só imagens embutidas (data:) são guardadas: um endereço temporário (blob:) some ao recarregar
-const fotoValida = (foto) => typeof foto === 'string' && (foto === '' || foto.startsWith('data:'))
-
-function lerFotos(slug) {
-  try {
-    const guardado = JSON.parse(localStorage.getItem(chaveFotos(slug)) || 'null')
-    if (!guardado || typeof guardado !== 'object') return { ...SEM_FOTOS }
-    return {
-      logo: fotoValida(guardado.logo) ? guardado.logo : '',
-      capa: fotoValida(guardado.capa) ? guardado.capa : '',
-    }
-  } catch {
-    return { ...SEM_FOTOS }
-  }
+// A foto escolhida na tela é um endereço temporário (blob:); o arquivo vai para o backend, que
+// confere o tipo e o tamanho e envia para o Storage (ZAP-119)
+async function enviarFoto(foto, enderecoTemporario) {
+  const formulario = new FormData()
+  formulario.append('arquivo', await lerArquivoTemporario(enderecoTemporario), foto)
+  return chamar(`/${foto}`, { metodo: 'POST', formulario })
 }
 
-function guardarFotos(slug, fotos, slugAnterior) {
-  try {
-    if (slugAnterior && slugAnterior !== slug) localStorage.removeItem(chaveFotos(slugAnterior))
-    localStorage.setItem(chaveFotos(slug), JSON.stringify({ logo: fotos.logo || '', capa: fotos.capa || '' }))
-  } catch {
-    // Sem espaço ou sem armazenamento: as fotos continuam valendo até recarregar a página
-  }
+const MENSAGEM_FOTO = {
+  logo: 'Os dados foram salvos, mas o logo não foi enviado.',
+  capa: 'Os dados foram salvos, mas a foto de capa não foi enviada.',
 }
 
-// A foto escolhida na tela é um endereço temporário (blob:), que some ao recarregar. Para
-// guardar, ela vira uma imagem embutida, reduzida para caber no espaço do navegador
-// (logo com até 320 px e capa com até 1600 px de largura).
-async function fotoParaGuardar(url, larguraMaxima) {
-  if (!url || !String(url).startsWith('blob:')) return url || ''
-  try {
-    const imagem = await new Promise((resolver, rejeitar) => {
-      const img = new Image()
-      img.onload = () => resolver(img)
-      img.onerror = rejeitar
-      img.src = url
-    })
-    const escala = Math.min(1, larguraMaxima / imagem.naturalWidth)
-    const tela = document.createElement('canvas')
-    tela.width = Math.round(imagem.naturalWidth * escala)
-    tela.height = Math.round(imagem.naturalHeight * escala)
-    tela.getContext('2d').drawImage(imagem, 0, 0, tela.width, tela.height)
-    return tela.toDataURL('image/webp', 0.85)
-  } catch {
-    return url
-  }
+// Explica o que houve com a foto, em linguagem simples; a sessão vencida segue para o login
+function erroDaFoto(foto, erro, salvo) {
+  if (erro instanceof SessaoExpiradaError) return erro
+  const motivo = erro instanceof DadosInvalidosError && erro.campos.arquivo
+    ? erro.campos.arquivo
+    : 'Tente de novo em alguns minutos.'
+  return new FotoNaoEnviadaError(`${MENSAGEM_FOTO[foto]} ${motivo}`, salvo)
 }
-
-// Link do cardápio lido por último, para mudar as fotos de lugar quando a Lídia trocar o link
-let slugAtual = null
 
 // Quem mostra a marca da loja (topo do painel) é avisado quando o Meu estabelecimento é
 // salvo, para o nome e o logo mudarem na hora em todas as telas.
@@ -142,6 +97,8 @@ export function ouvirEstabelecimento(aoMudar) {
   ouvintes.add(aoMudar)
   return () => ouvintes.delete(aoMudar)
 }
+
+const avisar = (estabelecimento) => ouvintes.forEach((aoMudar) => aoMudar({ nome: estabelecimento.nome, logo: estabelecimento.logo }))
 
 // Nome e logo da loja, os mesmos do Meu estabelecimento. Sem login não há token, e a API não
 // sabe qual é a loja: devolve nulo e a tela mostra só a marca do Zappi.
@@ -153,20 +110,26 @@ export async function buscarMarcaLoja() {
 }
 
 export async function buscarEstabelecimento() {
-  const dados = paraTela(await chamar())
-  slugAtual = dados.slug
-  return { ...dados, ...lerFotos(dados.slug) }
+  return paraTela(await chamar())
 }
 
+// Salva os dados e depois envia as fotos novas (blob:) ou tira as que a tela apagou. Os dados
+// vão primeiro: se uma foto falhar, eles já estão guardados (FotoNaoEnviadaError).
 export async function salvarEstabelecimento(dados) {
   const corpo = Object.fromEntries(CAMPOS.map((campo) => [campo, dados[campo] ?? '']))
-  const salvo = paraTela(await chamar({ metodo: 'PUT', json: corpo }))
+  let salvo = paraTela(await chamar('', { metodo: 'PUT', json: corpo }))
 
-  const fotos = { logo: await fotoParaGuardar(dados.logo, 320), capa: await fotoParaGuardar(dados.capa, 1600) }
-  guardarFotos(salvo.slug, fotos, slugAtual)
-  slugAtual = salvo.slug
+  for (const foto of FOTOS) {
+    const escolhida = String(dados[foto] ?? '')
+    try {
+      if (escolhida.startsWith('blob:')) salvo = paraTela(await enviarFoto(foto, escolhida))
+      else if (!escolhida && salvo[foto]) salvo = paraTela(await chamar(`/${foto}`, { metodo: 'DELETE' }))
+    } catch (erro) {
+      avisar(salvo)
+      throw erroDaFoto(foto, erro, salvo)
+    }
+  }
 
-  const resposta = { ...salvo, ...fotos }
-  ouvintes.forEach((aoMudar) => aoMudar({ nome: resposta.nome, logo: resposta.logo }))
-  return resposta
+  avisar(salvo)
+  return salvo
 }
