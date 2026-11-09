@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import br.com.zappi.mensagem.GeradorDeMensagens;
 import br.com.zappi.mensagem.MensagemNaoEncontradaException;
 import br.com.zappi.mensagem.MensagemWhatsapp;
 import br.com.zappi.mensagem.MensagemWhatsappRepositorio;
+import br.com.zappi.mensagem.StatusMensagem;
 import br.com.zappi.mensagem.TipoMensagem;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 import jakarta.persistence.EntityManager;
@@ -95,6 +97,49 @@ public class ServicoAcoesPedido {
 						pedido.getStatus().name(), "cancelamento", antes != StatusPedido.NOVO, "motivo", motivo,
 						"mensagemId", mensagem.getId()));
 		return consulta.detalhar(usuario, numero);
+	}
+
+	/** Confirmado → Em produção, gravando {@code producao_em} (ZAP-75). Não gera mensagem. */
+	@Transactional
+	public RespostaPedido iniciarProducao(UsuarioAutenticado usuario, Integer numero) {
+		mudarStatus(usuario, numero, pedido -> pedido.iniciarProducao(OffsetDateTime.now(ZoneOffset.UTC)));
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/** Volta de Em produção para Confirmado, apagando {@code producao_em} (ZAP-75). */
+	@Transactional
+	public RespostaPedido voltarParaConfirmado(UsuarioAutenticado usuario, Integer numero) {
+		mudarStatus(usuario, numero, pedido -> pedido.voltarParaConfirmado(OffsetDateTime.now(ZoneOffset.UTC)));
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Volta de Concluído para Em produção, apagando {@code concluido_em} (ZAP-75). Informa se a
+	 * mensagem de pronto já tinha sido enviada, para a tela avisar a Lídia (ZAP-64).
+	 */
+	@Transactional
+	public RespostaPedido voltarParaProducao(UsuarioAutenticado usuario, Integer numero) {
+		Pedido pedido = mudarStatus(usuario, numero,
+				alvo -> alvo.voltarParaProducao(OffsetDateTime.now(ZoneOffset.UTC)));
+		boolean prontoEnviado = mensagens.findByPedidoIdOrderByCriadoEmAscIdAsc(pedido.getId())
+			.stream()
+			.anyMatch(m -> m.getTipo() == TipoMensagem.PRONTO && m.getStatus() == StatusMensagem.ENVIADA);
+		return consulta.detalhar(usuario, numero).comAvisoDeProntoEnviado(prontoEnviado);
+	}
+
+	/**
+	 * Mudança de status sem mensagem: bloqueia o pedido, aplica a transição e registra
+	 * {@code PEDIDO_STATUS_ALTERADO} com o status anterior e o novo (RN08, ISO 27002 8.16).
+	 */
+	private Pedido mudarStatus(UsuarioAutenticado usuario, Integer numero, Consumer<Pedido> transicao) {
+		Pedido pedido = pedidos.buscarParaAlterar(usuario.estabelecimentoId(), numero)
+			.orElseThrow(PedidoNaoEncontradoException::new);
+		StatusPedido antes = pedido.getStatus();
+		transicao.accept(pedido);
+		pedidos.flush();
+		registrar(usuario, AcaoAuditoria.PEDIDO_STATUS_ALTERADO, pedido, Map.of("numero", pedido.getNumero(),
+				"statusAntes", antes.name(), "statusDepois", pedido.getStatus().name()));
+		return pedido;
 	}
 
 	/** Mensagem nova, Pendente, para o telefone atual do cliente (RN07, RN20). */

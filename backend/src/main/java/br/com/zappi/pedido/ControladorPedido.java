@@ -60,6 +60,30 @@ public class ControladorPedido {
 		return acoes.recusar(usuario, numero, requisicao.motivo());
 	}
 
+	/** Confirmado → Em produção (ZAP-75). */
+	@PostMapping("/{numero}/iniciar-producao")
+	public RespostaPedido iniciarProducao(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Integer numero) {
+		return acoes.iniciarProducao(usuario, numero);
+	}
+
+	/** Volta de Em produção para Confirmado (ZAP-75). */
+	@PostMapping("/{numero}/voltar-para-confirmado")
+	public RespostaPedido voltarParaConfirmado(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Integer numero) {
+		return acoes.voltarParaConfirmado(usuario, numero);
+	}
+
+	/**
+	 * Volta de Concluído para Em produção (ZAP-75). A resposta traz {@code avisoDeProntoEnviado}
+	 * para a tela avisar a Lídia.
+	 */
+	@PostMapping("/{numero}/voltar-para-producao")
+	public RespostaPedido voltarParaProducao(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Integer numero) {
+		return acoes.voltarParaProducao(usuario, numero);
+	}
+
 	/**
 	 * Marca a mensagem como enviada quando a Lídia clica em "Enviar no WhatsApp" (ZAP-50).
 	 * Chamar de novo ao reenviar não dá erro e mantém a data do primeiro envio.
