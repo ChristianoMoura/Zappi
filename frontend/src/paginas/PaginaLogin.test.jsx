@@ -10,10 +10,18 @@ import {
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaLogin } from './PaginaLogin'
 
+import { buscarMarcaLoja } from '../estabelecimento/servicoEstabelecimento'
+
 // O backend é simulado aqui para os testes não dependerem da ZAP-31
 vi.mock('../autenticacao/servicoAutenticacao', async (importarOriginal) => ({
   ...(await importarOriginal()),
   entrarNoServidor: vi.fn(),
+}))
+
+// A marca da loja no login ainda não vem da API (sem token, a loja não é conhecida; ZAP-118)
+vi.mock('../estabelecimento/servicoEstabelecimento', async (importarOriginal) => ({
+  ...(await importarOriginal()),
+  buscarMarcaLoja: vi.fn(),
 }))
 
 function abrirLogin() {
@@ -35,6 +43,7 @@ async function preencherEEntrar(usuario, email = 'lidia@casabelt.com', senha = '
 describe('PaginaLogin (US1, RF01, RF02)', () => {
   beforeEach(() => {
     entrarNoServidor.mockReset()
+    buscarMarcaLoja.mockReset().mockResolvedValue({ nome: 'Casa Belt', logo: 'logo.webp' })
   })
 
   test('mostra os campos com rótulo visível (NBR 17225 5.3.1)', () => {
@@ -49,6 +58,15 @@ describe('PaginaLogin (US1, RF01, RF02)', () => {
 
     expect(await screen.findByRole('img', { name: 'Logo de Casa Belt' })).toBeVisible()
     expect(screen.getByRole('img', { name: 'Zappi' })).toBeVisible()
+  })
+
+  test('sem a marca da loja, mostra só o Zappi', async () => {
+    buscarMarcaLoja.mockResolvedValue(null)
+    abrirLogin()
+
+    await waitFor(() => expect(buscarMarcaLoja).toHaveBeenCalled())
+    expect(screen.getByRole('img', { name: 'Zappi' })).toBeVisible()
+    expect(screen.queryByRole('img', { name: /Logo de/ })).not.toBeInTheDocument()
   })
 
   test('pede o e-mail e a senha sem chamar o servidor', async () => {

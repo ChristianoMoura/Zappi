@@ -1,11 +1,16 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { buscarEstabelecimento, LinkEmUsoError, salvarEstabelecimento } from '../estabelecimento/servicoEstabelecimento'
+import {
+  buscarEstabelecimento,
+  DadosInvalidosError,
+  LinkEmUsoError,
+  salvarEstabelecimento,
+} from '../estabelecimento/servicoEstabelecimento'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaEstabelecimento } from './PaginaEstabelecimento'
 
-// O backend é simulado aqui para os testes não dependerem da ZAP-36
+// O serviço é simulado aqui; as chamadas à API (ZAP-36) são testadas no servicoEstabelecimento.test.js
 vi.mock('../estabelecimento/servicoEstabelecimento', async (importarOriginal) => ({
   ...(await importarOriginal()),
   buscarEstabelecimento: vi.fn(),
@@ -94,6 +99,18 @@ describe('PaginaEstabelecimento (US2, RF03, RF04)', () => {
 
     expect(await screen.findByText('Esse link já é usado por outro estabelecimento. Escolha outro.')).toBeVisible()
     expect(campo(/Link do cardápio/)).toHaveFocus()
+  })
+
+  test('mostra ao lado do campo a mensagem do servidor e leva o foco até ele', async () => {
+    const usuario = userEvent.setup()
+    salvarEstabelecimento.mockRejectedValue(new DadosInvalidosError({ cep: 'O CEP tem 8 números. Ex.: 01000-000' }))
+    await abrirTela()
+
+    await usuario.click(salvarBotao())
+
+    expect(await screen.findByText('O CEP tem 8 números. Ex.: 01000-000')).toBeVisible()
+    expect(campo(/CEP/)).toHaveFocus()
+    expect(campo(/CEP/)).toHaveAttribute('aria-invalid', 'true')
   })
 
   test('"Sem número" bloqueia o campo com S/N e devolve o número ao desmarcar', async () => {
