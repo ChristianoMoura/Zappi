@@ -1,0 +1,85 @@
+package br.com.zappi.pedido;
+
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import br.com.zappi.auditoria.AcaoAuditoria;
+import br.com.zappi.auditoria.RegistroAuditoria;
+import br.com.zappi.auditoria.ServicoAuditoria;
+import br.com.zappi.mensagem.GeradorDeMensagens;
+import br.com.zappi.mensagem.MensagemWhatsapp;
+import br.com.zappi.mensagem.MensagemWhatsappRepositorio;
+import br.com.zappi.mensagem.TipoMensagem;
+import br.com.zappi.seguranca.UsuarioAutenticado;
+import jakarta.persistence.EntityManager;
+
+/**
+ * Ações da Lídia sobre os pedidos. Mudar o status, gerar a mensagem e gravar o log acontecem
+ * na mesma transação (RN08): se qualquer parte falhar, nada é gravado. O pedido fica
+ * bloqueado durante a ação, para duas ações ao mesmo tempo não passarem juntas.
+ */
+@Service
+public class ServicoAcoesPedido {
+
+	private static final String ENTIDADE = "pedido";
+
+	private final PedidoRepositorio pedidos;
+
+	private final ItemPedidoRepositorio itens;
+
+	private final MensagemWhatsappRepositorio mensagens;
+
+	private final GeradorDeMensagens gerador;
+
+	private final ServicoAuditoria auditoria;
+
+	private final ServicoPedido consulta;
+
+	private final EntityManager entityManager;
+
+	public ServicoAcoesPedido(PedidoRepositorio pedidos, ItemPedidoRepositorio itens,
+			MensagemWhatsappRepositorio mensagens, GeradorDeMensagens gerador, ServicoAuditoria auditoria,
+			ServicoPedido consulta, EntityManager entityManager) {
+		this.pedidos = pedidos;
+		this.itens = itens;
+		this.mensagens = mensagens;
+		this.gerador = gerador;
+		this.auditoria = auditoria;
+		this.consulta = consulta;
+		this.entityManager = entityManager;
+	}
+
+	/**
+	 * Confirma um pedido Novo (ZAP-49, RF09): Confirmado com {@code confirmado_em}, mensagem de
+	 * Confirmação Pendente para o telefone atual do cliente (RN07, RN20) e o log
+	 * {@code PEDIDO_CONFIRMADO}. Devolve o pedido completo, já com a mensagem e o link.
+	 */
+	@Transactional
+	public RespostaPedido confirmar(UsuarioAutenticado usuario, Integer numero) {
+		Pedido pedido = pedidos.buscarParaAlterar(usuario.estabelecimentoId(), numero)
+			.orElseThrow(PedidoNaoEncontradoException::new);
+		StatusPedido antes = pedido.getStatus();
+		pedido.confirmar(OffsetDateTime.now(ZoneOffset.UTC));
+
+		List<ItemPedido> itensDoPedido = itens.buscarDosPedidos(List.of(pedido.getId()));
+		MensagemWhatsapp mensagem = mensagens.saveAndFlush(new MensagemWhatsapp(pedido, TipoMensagem.CONFIRMACAO,
+				pedido.getCliente().getTelefoneWhatsapp(), gerador.confirmacao(pedido, itensDoPedido)));
+		// Traz o criado_em, que o banco preenche
+		entityManager.refresh(mensagem);
+
+		auditoria.registrar(RegistroAuditoria.de(AcaoAuditoria.PEDIDO_CONFIRMADO)
+			.estabelecimento(usuario.estabelecimentoId())
+			.usuario(usuario.usuarioId())
+			.entidade(ENTIDADE, pedido.getId())
+			.detalhes(Map.of("numero", pedido.getNumero(), "statusAntes", antes.name(), "statusDepois",
+					pedido.getStatus().name(), "mensagemId", mensagem.getId())));
+
+		return consulta.detalhar(usuario, numero);
+	}
+
+}
