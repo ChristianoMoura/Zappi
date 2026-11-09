@@ -62,6 +62,32 @@ describe('PaginaEstabelecimento (US2, RF03, RF04)', () => {
     expect(screen.getByRole('img', { name: 'Logo de Casa Belt' })).toBeVisible()
   })
 
+  test('o Tab segue a ordem visual do formulário, do nome até salvar (NBR 17225 5.1.4)', async () => {
+    const usuario = userEvent.setup()
+    const nome = await abrirTela()
+    await usuario.click(nome)
+
+    const ordem = [
+      campo(/^Descrição/),
+      campo(/^Link do cardápio/),
+      campo(/^WhatsApp/),
+      campo(/^E-mail/),
+      campo(/^CEP/),
+      campo(/^Rua/),
+      campo(/^Número/),
+      screen.getByRole('checkbox', { name: 'Sem número' }),
+      campo(/^Complemento/),
+      campo(/^Bairro/),
+      campo(/^Cidade/),
+      screen.getByRole('combobox', { name: /^Estado/ }),
+      salvarBotao(),
+    ]
+    for (const elemento of ordem) {
+      await usuario.tab()
+      expect(elemento).toHaveFocus()
+    }
+  })
+
   test('avisa os erros, leva o foco ao primeiro e não chama o servidor (NBR 17225 5.1.4)', async () => {
     const usuario = userEvent.setup()
     const nome = await abrirTela()
