@@ -186,6 +186,18 @@ A resposta de erro é a mesma nos três casos do `401`, e leva o mesmo tempo, pa
 
 **Política de senha (ZAP-33, ISO 27002 5.17):** pelo menos 8 caracteres, com letra, número e caractere especial (espaço não conta), e no máximo 72 bytes, o limite do BCrypt. A regra fica em `PoliticaDeSenha`; toda requisição que define uma senha nova usa a anotação `@SenhaForte` no campo.
 
+**Produtos (ZAP-39, RF05, RF06):** todas as rotas exigem o token e valem só para o estabelecimento dele (RN01).
+
+| Rota | Resposta |
+|---|---|
+| `GET /api/produtos` | `200` com os produtos ativos, por nome e sabor |
+| `GET /api/produtos/{id}` | `200` com o produto |
+| `POST /api/produtos` | `201` com o produto criado e o header `Location` |
+| `PUT /api/produtos/{id}` | `200` com o produto editado |
+| `DELETE /api/produtos/{id}` | `204`. A exclusão é lógica (`ativo = false`, RN14): o produto some do cardápio, mas continua nos pedidos antigos com o preço congelado |
+
+O corpo do `POST` e do `PUT` (e a resposta) usa os nomes da tela: `{ "nome", "sabor", "unidade": "KG" ou "UN", "preco", "descricao", "textoAlternativo" }`, e a resposta traz também `id`, `ativo` e `foto` (o endereço da imagem, que chega com a ZAP-40; até lá, nulo). Nome, sabor, unidade e preço são obrigatórios; o preço é maior que zero, com até 2 casas (RN13); produto com foto exige o texto alternativo (RN15). Dados inválidos recebem `400 DADOS_INVALIDOS` com a mensagem de cada campo em `campos`, ex.: `{ "campos": { "preco": "Informe um preço maior que zero." } }`. Produto inexistente, já excluído ou de outro estabelecimento recebe `404 PRODUTO_NAO_ENCONTRADO`. Cada cadastro, edição e exclusão vai para o `log_auditoria` (`PRODUTO_CRIADO`, `PRODUTO_EDITADO` e `PRODUTO_EXCLUIDO`), com os valores de antes e depois em `detalhes`.
+
 As tabelas são criadas pelo **Flyway**, com migrações em SQL em `backend/src/main/resources/db/migration` (ex.: `V1__cria_tabelas.sql`). Elas rodam sozinhas na subida do backend, no banco local, nos testes e no Supabase. Nunca crie nem altere tabelas pelo painel do Supabase: toda mudança no banco é uma **nova** migração (`V2__...`, `V3__...`), sem editar as que já foram aplicadas. Na subida, o Hibernate confere se as entidades batem com as tabelas (`ddl-auto: validate`) e não sobe se houver diferença.
 
 A migração `V2__dados_iniciais.sql` cria os dados iniciais em todos os ambientes, inclusive na produção, para a demonstração e o treinamento: o estabelecimento **Casa Belt**, a usuária **Lídia** (`lidia@casabelt.com`), produtos de exemplo e 2 pedidos Novos com clientes fictícios. A senha da Lídia é a mesma em todos os ambientes e **não fica no repositório**, nem em hash: a V2 lê o hash BCrypt da variável de ambiente `LIDIA_SENHA_HASH` e para com erro se ela estiver vazia. Peça a senha e o hash para a equipe. Localmente, coloque o hash no `infra/.env` (entre aspas simples, porque ele tem cifrões) ou, rodando direto na máquina, no terminal (`$env:LIDIA_SENHA_HASH = '<hash>'` no PowerShell). No Render, ele fica nas variáveis do serviço do backend. Nos testes, a V2 recebe o hash de uma senha aleatória. A variável só é lida na primeira subida, quando a V2 roda. Para começar do zero localmente, apague o banco com `docker compose -f infra/docker-compose.yml down -v`.

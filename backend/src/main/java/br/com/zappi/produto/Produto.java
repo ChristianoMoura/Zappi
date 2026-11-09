@@ -64,6 +64,40 @@ public class Produto {
 		// exigido pelo JPA
 	}
 
+	/** Produto novo, já ativo no cardápio (ZAP-39). */
+	public Produto(Estabelecimento estabelecimento, UnidadeMedida unidadeMedida, String nome, String sabor,
+			String descricao, BigDecimal preco, String fotoTextoAlternativo, OffsetDateTime agora) {
+		this.estabelecimento = estabelecimento;
+		this.ativo = true;
+		atualizar(unidadeMedida, nome, sabor, descricao, preco, fotoTextoAlternativo, agora);
+	}
+
+	/**
+	 * Troca os dados do produto. Os pedidos antigos não mudam: o item do pedido guarda o
+	 * preço congelado (RN10).
+	 */
+	public void atualizar(UnidadeMedida unidadeMedida, String nome, String sabor, String descricao,
+			BigDecimal preco, String fotoTextoAlternativo, OffsetDateTime agora) {
+		this.unidadeMedida = unidadeMedida;
+		this.nome = nome;
+		this.sabor = sabor;
+		this.descricao = descricao;
+		this.preco = preco;
+		this.fotoTextoAlternativo = fotoTextoAlternativo;
+		this.atualizadoEm = agora;
+	}
+
+	/** Exclusão lógica (RN14): some do cardápio, mas continua nos pedidos antigos. */
+	public void excluir(OffsetDateTime agora) {
+		this.ativo = false;
+		this.atualizadoEm = agora;
+	}
+
+	/** Com foto, o texto alternativo é obrigatório (RN15, NBR 17225 5.9.1). */
+	public boolean temFoto() {
+		return fotoCaminho != null;
+	}
+
 	public Long getId() {
 		return id;
 	}
