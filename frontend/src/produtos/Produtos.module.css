@@ -383,6 +383,8 @@
   border: 2px solid #d9cbbe;
   background: #fff;
   padding: 4px;
+  /* Sem isto, a borda de foco afastada da opção seria cortada */
+  overflow: visible;
 
   & :global(.mantine-SegmentedControl-label) {
     font-weight: 600;

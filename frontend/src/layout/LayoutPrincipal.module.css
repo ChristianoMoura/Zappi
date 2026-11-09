@@ -75,7 +75,8 @@
   object-fit: cover;
   border: 2px solid #fff;
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
-  background: var(--mantine-color-zappi-6);
+  /* Ciano profundo: branco sobre ele dá 6,16:1; sobre o DarkCyan, só 4,15:1 (NBR 17225 5.11.2) */
+  background: var(--mantine-color-zappi-7);
   color: #fff;
   display: grid;
   place-items: center;
