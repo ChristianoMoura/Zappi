@@ -2,6 +2,7 @@ package br.com.zappi.erro;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,13 @@ public class TratadorDeErros {
 			campos.putIfAbsent(campo.getField(), campo.getDefaultMessage());
 		}
 		return new RespostaErro(DADOS_INVALIDOS, CONFIRA_OS_DADOS, campos.isEmpty() ? null : campos);
+	}
+
+	/** Campos que só o serviço confere, ex.: produto fora do cardápio, no mesmo formato. */
+	@ExceptionHandler(DadosInvalidosException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	RespostaErro dadosInvalidos(DadosInvalidosException erro) {
+		return new RespostaErro(DADOS_INVALIDOS, CONFIRA_OS_DADOS, new TreeMap<>(erro.getCampos()));
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)

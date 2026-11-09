@@ -1,7 +1,9 @@
 package br.com.zappi.pedido;
 
+import java.net.URI;
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,9 +25,12 @@ public class ControladorPedido {
 
 	private final ServicoAcoesPedido acoes;
 
-	public ControladorPedido(ServicoPedido servico, ServicoAcoesPedido acoes) {
+	private final ServicoCadastroPedido cadastro;
+
+	public ControladorPedido(ServicoPedido servico, ServicoAcoesPedido acoes, ServicoCadastroPedido cadastro) {
 		this.servico = servico;
 		this.acoes = acoes;
+		this.cadastro = cadastro;
 	}
 
 	/** Lista para o quadro (ZAP-44). {@code ?recusados=true} inclui os recusados (RN04). */
@@ -39,6 +44,17 @@ public class ControladorPedido {
 	@GetMapping("/{numero}")
 	public RespostaPedido detalhar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable Integer numero) {
 		return servico.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Cadastra o pedido como Novo (ZAP-88). Responde 201 com o pedido completo e o endereço
+	 * dele em {@code Location}.
+	 */
+	@PostMapping
+	public ResponseEntity<RespostaPedido> cadastrar(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@Valid @RequestBody RequisicaoPedido requisicao) {
+		RespostaPedido pedido = cadastro.cadastrar(usuario, requisicao);
+		return ResponseEntity.created(URI.create("/api/pedidos/" + pedido.numero())).body(pedido);
 	}
 
 	/**

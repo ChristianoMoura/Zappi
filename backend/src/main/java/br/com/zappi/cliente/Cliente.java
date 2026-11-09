@@ -54,6 +54,16 @@ public class Cliente {
 		// exigido pelo JPA
 	}
 
+	/** Cliente novo, sempre com o consentimento registrado (RN16, LGPD). */
+	public Cliente(Estabelecimento estabelecimento, String nome, String telefoneWhatsapp, OffsetDateTime agora) {
+		this.estabelecimento = estabelecimento;
+		this.nome = nome;
+		this.telefoneWhatsapp = telefoneWhatsapp;
+		this.consentimentoLgpd = true;
+		this.consentimentoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
 	public Long getId() {
 		return id;
 	}

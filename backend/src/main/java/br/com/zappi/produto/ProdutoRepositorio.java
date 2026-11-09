@@ -1,5 +1,6 @@
 package br.com.zappi.produto;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,5 +18,9 @@ public interface ProdutoRepositorio extends JpaRepository<Produto, Long> {
 
 	@EntityGraph(attributePaths = "unidadeMedida")
 	Optional<Produto> findByIdAndEstabelecimentoIdAndAtivoTrue(Long id, Long estabelecimentoId);
+
+	/** Produtos que podem entrar num pedido (ZAP-88): ativos e do estabelecimento. */
+	@EntityGraph(attributePaths = "unidadeMedida")
+	List<Produto> findByIdInAndEstabelecimentoIdAndAtivoTrue(Collection<Long> ids, Long estabelecimentoId);
 
 }
