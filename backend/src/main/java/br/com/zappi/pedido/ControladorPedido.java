@@ -6,11 +6,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.zappi.seguranca.UsuarioAutenticado;
+import jakarta.validation.Valid;
 
 /** Pedidos do estabelecimento da usuária logada. Todas as rotas exigem o token. */
 @RestController
@@ -46,6 +48,16 @@ public class ControladorPedido {
 	@PostMapping("/{numero}/confirmar")
 	public RespostaPedido confirmar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable Integer numero) {
 		return acoes.confirmar(usuario, numero);
+	}
+
+	/**
+	 * Recusa um pedido Novo ou cancela um Confirmado ou Em produção (ZAP-53), com o motivo
+	 * obrigatório, e devolve o pedido com a mensagem de recusa pronta para enviar.
+	 */
+	@PostMapping("/{numero}/recusar")
+	public RespostaPedido recusar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable Integer numero,
+			@Valid @RequestBody RequisicaoRecusa requisicao) {
+		return acoes.recusar(usuario, numero, requisicao.motivo());
 	}
 
 	/**

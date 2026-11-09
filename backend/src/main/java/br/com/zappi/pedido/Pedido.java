@@ -89,6 +89,21 @@ public class Pedido {
 		this.atualizadoEm = agora;
 	}
 
+	/**
+	 * Recusa (Novo) ou cancela (Confirmado ou Em produção) o pedido, com o motivo obrigatório,
+	 * gravando {@code recusado_em} (RN03, RN05, RN06, ZAP-64). Concluído e Recusado não mudam.
+	 */
+	public void recusar(String motivo, OffsetDateTime agora) {
+		if (status == StatusPedido.CONCLUIDO || status == StatusPedido.RECUSADO) {
+			throw new TransicaoNaoPermitidaException(
+					"Pedidos concluídos ou já recusados não podem ser recusados nem cancelados.");
+		}
+		this.status = StatusPedido.RECUSADO;
+		this.motivoRecusa = motivo;
+		this.recusadoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
 	public Long getId() {
 		return id;
 	}

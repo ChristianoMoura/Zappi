@@ -68,19 +68,51 @@ public class ServicoAcoesPedido {
 		pedido.confirmar(OffsetDateTime.now(ZoneOffset.UTC));
 
 		List<ItemPedido> itensDoPedido = itens.buscarDosPedidos(List.of(pedido.getId()));
-		MensagemWhatsapp mensagem = mensagens.saveAndFlush(new MensagemWhatsapp(pedido, TipoMensagem.CONFIRMACAO,
-				pedido.getCliente().getTelefoneWhatsapp(), gerador.confirmacao(pedido, itensDoPedido)));
+		MensagemWhatsapp mensagem = gerarMensagem(pedido, TipoMensagem.CONFIRMACAO,
+				gerador.confirmacao(pedido, itensDoPedido));
+
+		registrar(usuario, AcaoAuditoria.PEDIDO_CONFIRMADO, pedido, Map.of("numero", pedido.getNumero(), "statusAntes",
+				antes.name(), "statusDepois", pedido.getStatus().name(), "mensagemId", mensagem.getId()));
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Recusa um pedido Novo ou cancela um Confirmado ou Em produção (ZAP-53, RF11, ZAP-64): vai
+	 * para Recusado com o motivo e {@code recusado_em}, gera a mensagem de Recusa com o motivo
+	 * no texto (RN07, RN20) e registra {@code PEDIDO_RECUSADO} com o motivo e o status anterior.
+	 */
+	@Transactional
+	public RespostaPedido recusar(UsuarioAutenticado usuario, Integer numero, String motivo) {
+		Pedido pedido = pedidos.buscarParaAlterar(usuario.estabelecimentoId(), numero)
+			.orElseThrow(PedidoNaoEncontradoException::new);
+		StatusPedido antes = pedido.getStatus();
+		pedido.recusar(motivo, OffsetDateTime.now(ZoneOffset.UTC));
+
+		MensagemWhatsapp mensagem = gerarMensagem(pedido, TipoMensagem.RECUSA, gerador.recusa(pedido));
+
+		registrar(usuario, AcaoAuditoria.PEDIDO_RECUSADO, pedido,
+				Map.of("numero", pedido.getNumero(), "statusAntes", antes.name(), "statusDepois",
+						pedido.getStatus().name(), "cancelamento", antes != StatusPedido.NOVO, "motivo", motivo,
+						"mensagemId", mensagem.getId()));
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/** Mensagem nova, Pendente, para o telefone atual do cliente (RN07, RN20). */
+	private MensagemWhatsapp gerarMensagem(Pedido pedido, TipoMensagem tipo, String texto) {
+		MensagemWhatsapp mensagem = mensagens
+			.saveAndFlush(new MensagemWhatsapp(pedido, tipo, pedido.getCliente().getTelefoneWhatsapp(), texto));
 		// Traz o criado_em, que o banco preenche
 		entityManager.refresh(mensagem);
+		return mensagem;
+	}
 
-		auditoria.registrar(RegistroAuditoria.de(AcaoAuditoria.PEDIDO_CONFIRMADO)
+	/** Log na mesma transação da ação (RN08, ISO 27002 8.16). */
+	private void registrar(UsuarioAutenticado usuario, AcaoAuditoria acao, Pedido pedido, Map<String, ?> detalhes) {
+		auditoria.registrar(RegistroAuditoria.de(acao)
 			.estabelecimento(usuario.estabelecimentoId())
 			.usuario(usuario.usuarioId())
 			.entidade(ENTIDADE, pedido.getId())
-			.detalhes(Map.of("numero", pedido.getNumero(), "statusAntes", antes.name(), "statusDepois",
-					pedido.getStatus().name(), "mensagemId", mensagem.getId())));
-
-		return consulta.detalhar(usuario, numero);
+			.detalhes(detalhes));
 	}
 
 	/**
