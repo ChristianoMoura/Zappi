@@ -112,7 +112,8 @@ export function PaginaEstabelecimento() {
     mudar('cep', cep)
     cepAtual.current = cep
     if (cep.length < 8) setBuscandoCep(false)
-    else if (mudou) preencherPeloCep(cep)
+    // Busca em segundo plano, sem travar a digitação; o preencherPeloCep trata todos os erros
+    else if (mudou) void preencherPeloCep(cep)
   }
 
   async function preencherPeloCep(cep) {
