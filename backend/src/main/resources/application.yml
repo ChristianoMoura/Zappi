@@ -12,6 +12,11 @@ spring:
       # Hash BCrypt da senha da Lídia, usado só pela V2 (dados iniciais). Fica numa
       # variável de ambiente, nunca no repositório. A V2 para com erro se ele faltar.
       "[lidia_senha_hash]": ${LIDIA_SENHA_HASH:}
+  servlet:
+    multipart:
+      # Fotos dos produtos até 5 MB, o mesmo limite do bucket (ZAP-40).
+      max-file-size: 5MB
+      max-request-size: 6MB
   jpa:
     open-in-view: false
     hibernate:
@@ -41,6 +46,12 @@ zappi:
     chave: ${JWT_CHAVE:}
     # O token vale 8 horas, sem refresh token (decisão da ZAP-62).
     validade: 8h
+  armazenamento:
+    # Supabase Storage das fotos (ZAP-40). Vazio fora da produção: o envio de fotos
+    # responde 503 e o resto funciona.
+    url: ${SUPABASE_URL:}
+    chave-secreta: ${SUPABASE_CHAVE_SECRETA:}
+    bucket: produtos
 
 management:
   endpoints:

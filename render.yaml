@@ -32,6 +32,11 @@ services:
       # Chave de assinatura do token de login (ZAP-32), em Base64 com 32 bytes ou mais.
       - key: JWT_CHAVE
         sync: false
+      # Supabase Storage das fotos dos produtos (ZAP-40).
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_CHAVE_SECRETA
+        sync: false
       # Endereço do frontend: o rewrite de /api repassa a origem do navegador.
       - key: CORS_ORIGENS
         value: https://zappi-casabelt.onrender.com

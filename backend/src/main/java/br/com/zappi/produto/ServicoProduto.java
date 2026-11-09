@@ -7,10 +7,15 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import br.com.zappi.armazenamento.ArmazenamentoDeFotos;
+import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.auditoria.AcaoAuditoria;
 import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
@@ -36,12 +41,15 @@ public class ServicoProduto {
 
 	private final EntityManager entityManager;
 
+	private final ArmazenamentoDeFotos armazenamento;
+
 	public ServicoProduto(ProdutoRepositorio produtos, UnidadeMedidaRepositorio unidades, ServicoAuditoria auditoria,
-			EntityManager entityManager) {
+			EntityManager entityManager, ArmazenamentoDeFotos armazenamento) {
 		this.produtos = produtos;
 		this.unidades = unidades;
 		this.auditoria = auditoria;
 		this.entityManager = entityManager;
+		this.armazenamento = armazenamento;
 	}
 
 	/** Só os ativos (RN14), por nome e sabor. */
@@ -49,13 +57,13 @@ public class ServicoProduto {
 	public List<RespostaProduto> listar(UsuarioAutenticado usuario) {
 		return produtos.findByEstabelecimentoIdAndAtivoTrueOrderByNomeAscSaborAscIdAsc(usuario.estabelecimentoId())
 			.stream()
-			.map(RespostaProduto::de)
+			.map(this::resposta)
 			.toList();
 	}
 
 	@Transactional(readOnly = true)
 	public RespostaProduto buscar(UsuarioAutenticado usuario, Long id) {
-		return RespostaProduto.de(encontrar(usuario, id));
+		return resposta(encontrar(usuario, id));
 	}
 
 	@Transactional
@@ -66,7 +74,7 @@ public class ServicoProduto {
 		produtos.saveAndFlush(produto);
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_CRIADO, produto, Map.of("depois", retrato(produto)));
-		return RespostaProduto.de(produto);
+		return resposta(produto);
 	}
 
 	@Transactional
@@ -82,7 +90,7 @@ public class ServicoProduto {
 		produtos.flush();
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
-		return RespostaProduto.de(produto);
+		return resposta(produto);
 	}
 
 	/** Exclusão lógica (RN14): o produto continua nos pedidos antigos, com o preço congelado. */
@@ -93,6 +101,70 @@ public class ServicoProduto {
 		produtos.flush();
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_EXCLUIDO, produto, Map.of("antes", retrato(produto)));
+	}
+
+	/**
+	 * Envia a foto para o Storage e troca a do produto (ZAP-40, RN15). O nome do arquivo é
+	 * novo a cada envio, para o navegador não mostrar a foto antiga guardada. A antiga só é
+	 * apagada depois que o banco confirmar a troca; se a troca falhar, a nova é apagada.
+	 */
+	@Transactional
+	public RespostaProduto enviarFoto(UsuarioAutenticado usuario, Long id, FotoRecebida foto) {
+		if (!armazenamento.disponivel()) {
+			throw new ArmazenamentoIndisponivelException("Storage não configurado", null);
+		}
+		Produto produto = encontrar(usuario, id);
+		Map<String, Object> antes = retrato(produto);
+		String fotoAntiga = produto.getFotoCaminho();
+
+		String caminho = usuario.estabelecimentoId() + "/" + produto.getId() + "-"
+				+ UUID.randomUUID().toString().substring(0, 8) + "." + foto.tipo().extensao();
+		armazenamento.enviar(caminho, foto.conteudo(), foto.tipo().mime());
+		depoisDaTransacao(caminho, fotoAntiga);
+
+		produto.trocarFoto(caminho, foto.textoAlternativo(), agora());
+		produtos.flush();
+		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
+		return resposta(produto);
+	}
+
+	/** Tira a foto do produto e apaga o arquivo do Storage depois da confirmação. */
+	@Transactional
+	public RespostaProduto removerFoto(UsuarioAutenticado usuario, Long id) {
+		Produto produto = encontrar(usuario, id);
+		String fotoAntiga = produto.getFotoCaminho();
+		if (fotoAntiga == null) {
+			return resposta(produto);
+		}
+		Map<String, Object> antes = retrato(produto);
+
+		produto.removerFoto(agora());
+		produtos.flush();
+		depoisDaTransacao(null, fotoAntiga);
+		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
+		return resposta(produto);
+	}
+
+	/**
+	 * Confirmada a transação, apaga a foto que saiu; desfeita, apaga a que acabou de ser
+	 * enviada, para não sobrar arquivo sem produto.
+	 */
+	private void depoisDaTransacao(String fotoNova, String fotoQueSai) {
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCompletion(int status) {
+				if (status == STATUS_COMMITTED) {
+					armazenamento.apagar(fotoQueSai);
+				}
+				else {
+					armazenamento.apagar(fotoNova);
+				}
+			}
+		});
+	}
+
+	private RespostaProduto resposta(Produto produto) {
+		return RespostaProduto.de(produto, armazenamento);
 	}
 
 	private Produto encontrar(UsuarioAutenticado usuario, Long id) {
@@ -128,6 +200,7 @@ public class ServicoProduto {
 		// Texto com 2 casas, para o log mostrar sempre o mesmo formato (ex.: "100.00")
 		campos.put("preco", produto.getPreco().setScale(2, RoundingMode.UNNECESSARY).toPlainString());
 		campos.put("descricao", produto.getDescricao());
+		campos.put("foto", produto.getFotoCaminho());
 		campos.put("textoAlternativo", produto.getFotoTextoAlternativo());
 		campos.put("ativo", produto.isAtivo());
 		return campos;
