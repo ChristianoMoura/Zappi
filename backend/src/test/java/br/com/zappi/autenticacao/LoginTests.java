@@ -126,7 +126,10 @@ class LoginTests {
 			.containsEntry("usuario_id", lidia.get("id"))
 			.containsEntry("estabelecimento_id", lidia.get("estabelecimento_id"))
 			.containsEntry("email_informado", EMAIL_DA_LIDIA)
-			.containsEntry("motivo", "SENHA_INCORRETA"));
+			.containsEntry("motivo", "SENHA_INCORRETA")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull());
 	}
 
 	@Test
@@ -140,7 +143,10 @@ class LoginTests {
 			.containsEntry("usuario_id", null)
 			.containsEntry("estabelecimento_id", null)
 			.containsEntry("email_informado", "ninguem@casabelt.com")
-			.containsEntry("motivo", "EMAIL_INEXISTENTE"));
+			.containsEntry("motivo", "EMAIL_INEXISTENTE")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull());
 	}
 
 	@Test
