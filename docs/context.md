@@ -308,7 +308,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Segurança | **Spring Security** | Login, BCrypt, JWT, política de senha |
 | Auditoria | Backend + `log_auditoria` | Logins e ações administrativas |
 | Banco | **PostgreSQL (Supabase)** | Banco relacional gerenciado; TLS; criptografia em repouso; RLS em todas as tabelas; o backend e o Flyway conectam pelo session pooler (IPv4, porta 5432) |
-| Arquivos | **Supabase Storage** | Bucket `produtos`; o banco guarda só o caminho; upload só pelo backend; leitura pública |
+| Arquivos | **Supabase Storage** | Bucket `produtos` (fotos dos produtos) e bucket `estabelecimentos` (logo e capa da loja, ZAP-119); o banco guarda só o caminho; upload só pelo backend; leitura pública |
 | Mensagens | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
 | Mensagens (a integrar) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS, com o status informado pela Meta. Condições em validação (seção 14, item 12) |
 | Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
@@ -389,6 +389,8 @@ Confeitaria cadastrada (tenant). Exemplo: Casa Belt.
 | bairro | VARCHAR(80) | Não | | |
 | cidade | VARCHAR(80) | Não | | |
 | uf | CHAR(2) | Não | | Ex.: SP |
+| logo_caminho | VARCHAR(255) | Não | | Caminho do logo no bucket `estabelecimentos`. Ex.: 1/logo-a1b2c3d4.webp. O texto alternativo vem do nome ("Logo de Casa Belt"). **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-119, ZAP-83) |
+| capa_caminho | VARCHAR(255) | Não | | Caminho da foto de capa no bucket `estabelecimentos`. Decorativa (texto alternativo vazio). **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-119, ZAP-83) |
 | ativo | BOOLEAN | Sim | | Padrão TRUE |
 | criado_em | TIMESTAMPTZ | Sim | | Padrão now() |
 | atualizado_em | TIMESTAMPTZ | Sim | | |
@@ -655,6 +657,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Proteção do envio sem login | Em aberto | **5 envios por hora por IP, 3 por dia por telefone e campo invisível, sem captcha no início** (ZAP-18). Motivo: protege o quadro da Lídia sem atrito para o cliente e sem depender de serviço externo |
 | Numeração do Portal do Cliente e da anonimização | Sem US nem RF | **US9 a US12 e RF17 a RF24** (ZAP-18). Motivo: mesma rastreabilidade das demais funcionalidades |
 | Alterações fora da documentação original | Sem registro definido | **Toda alteração é registrada na `ZAP-83`** e nesta seção, com antes, agora e motivo (seção 0). Motivo: manter os documentos entregues em sala coerentes com o sistema entregue |
+| Logo e capa do estabelecimento | Sem campos no dicionário da Atividade #14; a tela "Meu estabelecimento" (ZAP-37) guardava as fotos só no navegador | **Colunas novas `logo_caminho` e `capa_caminho`** em `estabelecimento`, com as fotos no bucket `estabelecimentos` do Supabase Storage, nas mesmas regras da foto do produto (ZAP-119, ZAP-83). O texto alternativo do logo é "Logo de" + nome da loja, sem coluna própria; a capa é decorativa. Motivo: a tela e o topo do painel mostram a marca da loja, e a foto guardada só no navegador some em outro aparelho |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
