@@ -25,4 +25,9 @@ public record PropriedadesArmazenamento(String url, String chaveSecreta, String 
 		return url != null && chaveSecreta != null;
 	}
 
+	/** O mesmo projeto do Supabase, com outro bucket (ex.: o do estabelecimento, ZAP-119). */
+	PropriedadesArmazenamento comBucket(String outroBucket) {
+		return new PropriedadesArmazenamento(url, chaveSecreta, outroBucket, obrigatorio);
+	}
+
 }

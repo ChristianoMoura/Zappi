@@ -4,12 +4,17 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import br.com.zappi.armazenamento.ArmazenamentoDoEstabelecimento;
+import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.auditoria.AcaoAuditoria;
 import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
@@ -31,14 +36,18 @@ public class ServicoEstabelecimento {
 
 	private final ServicoAuditoria auditoria;
 
-	public ServicoEstabelecimento(EstabelecimentoRepositorio estabelecimentos, ServicoAuditoria auditoria) {
+	private final ArmazenamentoDoEstabelecimento armazenamento;
+
+	public ServicoEstabelecimento(EstabelecimentoRepositorio estabelecimentos, ServicoAuditoria auditoria,
+			ArmazenamentoDoEstabelecimento armazenamento) {
 		this.estabelecimentos = estabelecimentos;
 		this.auditoria = auditoria;
+		this.armazenamento = armazenamento;
 	}
 
 	@Transactional(readOnly = true)
 	public RespostaEstabelecimento buscar(UsuarioAutenticado usuario) {
-		return RespostaEstabelecimento.de(encontrar(usuario));
+		return resposta(encontrar(usuario));
 	}
 
 	@Transactional
@@ -52,12 +61,82 @@ public class ServicoEstabelecimento {
 		estabelecimento.atualizar(dados, agora());
 		gravar();
 
+		registrar(usuario, estabelecimento, antes);
+		return resposta(estabelecimento);
+	}
+
+	/**
+	 * Envia o logo ou a capa para o Storage e troca a da loja (ZAP-119), como a foto do produto
+	 * (ZAP-40). O nome do arquivo é novo a cada envio, para o navegador não mostrar a foto
+	 * antiga guardada. A antiga só é apagada depois que o banco confirmar a troca; se a troca
+	 * falhar, a nova é apagada.
+	 */
+	@Transactional
+	public RespostaEstabelecimento enviarFoto(UsuarioAutenticado usuario, FotoDoEstabelecimento foto,
+			ArquivoDeFoto arquivo) {
+		if (!armazenamento.disponivel()) {
+			throw new ArmazenamentoIndisponivelException("Storage não configurado", null);
+		}
+		Estabelecimento estabelecimento = encontrar(usuario);
+		Map<String, Object> antes = retrato(estabelecimento);
+		String fotoAntiga = foto.caminho(estabelecimento);
+
+		String caminho = estabelecimento.getId() + "/" + foto.nome() + "-"
+				+ UUID.randomUUID().toString().substring(0, 8) + "." + arquivo.tipo().extensao();
+		armazenamento.enviar(caminho, arquivo.conteudo(), arquivo.tipo().mime());
+		depoisDaTransacao(caminho, fotoAntiga);
+
+		foto.trocar(estabelecimento, caminho, agora());
+		estabelecimentos.flush();
+		registrar(usuario, estabelecimento, antes);
+		return resposta(estabelecimento);
+	}
+
+	/** Tira o logo ou a capa da loja e apaga o arquivo do Storage depois da confirmação. */
+	@Transactional
+	public RespostaEstabelecimento removerFoto(UsuarioAutenticado usuario, FotoDoEstabelecimento foto) {
+		Estabelecimento estabelecimento = encontrar(usuario);
+		String fotoAntiga = foto.caminho(estabelecimento);
+		if (fotoAntiga == null) {
+			return resposta(estabelecimento);
+		}
+		Map<String, Object> antes = retrato(estabelecimento);
+
+		foto.trocar(estabelecimento, null, agora());
+		estabelecimentos.flush();
+		depoisDaTransacao(null, fotoAntiga);
+		registrar(usuario, estabelecimento, antes);
+		return resposta(estabelecimento);
+	}
+
+	/**
+	 * Confirmada a transação, apaga a foto que saiu; desfeita, apaga a que acabou de ser
+	 * enviada, para não sobrar arquivo sem loja.
+	 */
+	private void depoisDaTransacao(String fotoNova, String fotoQueSai) {
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCompletion(int status) {
+				if (status == STATUS_COMMITTED) {
+					armazenamento.apagar(fotoQueSai);
+				}
+				else {
+					armazenamento.apagar(fotoNova);
+				}
+			}
+		});
+	}
+
+	private void registrar(UsuarioAutenticado usuario, Estabelecimento estabelecimento, Map<String, Object> antes) {
 		auditoria.registrar(RegistroAuditoria.de(AcaoAuditoria.ESTABELECIMENTO_EDITADO)
 			.estabelecimento(usuario.estabelecimentoId())
 			.usuario(usuario.usuarioId())
 			.entidade(ENTIDADE, estabelecimento.getId())
 			.detalhes(Map.of("antes", antes, "depois", retrato(estabelecimento))));
-		return RespostaEstabelecimento.de(estabelecimento);
+	}
+
+	private RespostaEstabelecimento resposta(Estabelecimento estabelecimento) {
+		return RespostaEstabelecimento.de(estabelecimento, armazenamento);
 	}
 
 	private Estabelecimento encontrar(UsuarioAutenticado usuario) {
@@ -106,6 +185,9 @@ public class ServicoEstabelecimento {
 		campos.put("bairro", estabelecimento.getBairro());
 		campos.put("cidade", estabelecimento.getCidade());
 		campos.put("uf", estabelecimento.getUf());
+		// Só o caminho no bucket, como na foto do produto (ZAP-119)
+		campos.put("logo", estabelecimento.getLogoCaminho());
+		campos.put("capa", estabelecimento.getCapaCaminho());
 		return campos;
 	}
 
