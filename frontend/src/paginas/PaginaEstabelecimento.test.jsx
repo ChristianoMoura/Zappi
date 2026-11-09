@@ -8,8 +8,15 @@ import {
   LinkEmUsoError,
   salvarEstabelecimento,
 } from '../estabelecimento/servicoEstabelecimento'
+import { BuscaCepIndisponivelError, buscarEnderecoPorCep, CepNaoEncontradoError } from '../estabelecimento/buscarEndereco'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaEstabelecimento } from './PaginaEstabelecimento'
+
+// A busca do endereço pelo CEP é simulada; as APIs são testadas no buscarEndereco.test.js (ZAP-121)
+vi.mock('../estabelecimento/buscarEndereco', async (importarOriginal) => ({
+  ...(await importarOriginal()),
+  buscarEnderecoPorCep: vi.fn(),
+}))
 
 // O serviço é simulado aqui; as chamadas à API (ZAP-36) são testadas no servicoEstabelecimento.test.js
 vi.mock('../estabelecimento/servicoEstabelecimento', async (importarOriginal) => ({
@@ -47,7 +54,82 @@ describe('PaginaEstabelecimento (US2, RF03, RF04)', () => {
   beforeEach(() => {
     buscarEstabelecimento.mockReset().mockResolvedValue(casaBelt)
     salvarEstabelecimento.mockReset().mockImplementation(async (dados) => dados)
+    buscarEnderecoPorCep.mockReset().mockResolvedValue({ logradouro: 'Praça da Sé', bairro: 'Sé', cidade: 'São Paulo', uf: 'SP' })
     URL.createObjectURL = vi.fn(() => 'blob:foto-nova')
+  })
+
+  describe('endereço pelo CEP (ZAP-121)', () => {
+    async function digitarCep(usuario, cep) {
+      await usuario.clear(campo(/CEP/))
+      await usuario.type(campo(/CEP/), cep)
+    }
+
+    test('com um CEP novo, preenche rua, bairro, cidade e estado e leva o foco ao número', async () => {
+      const usuario = userEvent.setup()
+      await abrirTela()
+
+      await digitarCep(usuario, '01001-000')
+
+      expect(await screen.findByText('Endereço preenchido pelo CEP. Confira e complete o número.')).toBeVisible()
+      expect(buscarEnderecoPorCep).toHaveBeenCalledTimes(1)
+      expect(buscarEnderecoPorCep).toHaveBeenCalledWith('01001000')
+      expect(campo('Rua')).toHaveValue('Praça da Sé')
+      expect(campo('Bairro')).toHaveValue('Sé')
+      expect(campo('Cidade')).toHaveValue('São Paulo')
+      expect(screen.getByRole('combobox', { name: /Estado/ })).toHaveValue('SP')
+      await waitFor(() => expect(campo('Número')).toHaveFocus())
+    })
+
+    test('o endereço preenchido pode ser corrigido e é salvo como ficou', async () => {
+      const usuario = userEvent.setup()
+      await abrirTela()
+      await digitarCep(usuario, '01001000')
+      await screen.findByText('Endereço preenchido pelo CEP. Confira e complete o número.')
+
+      await usuario.clear(campo('Rua'))
+      await usuario.type(campo('Rua'), 'Praça da Sé, lado ímpar')
+      await usuario.click(salvarBotao())
+
+      await waitFor(() => expect(salvarEstabelecimento).toHaveBeenCalledTimes(1))
+      expect(salvarEstabelecimento.mock.calls[0][0]).toMatchObject({ cep: '01001000', logradouro: 'Praça da Sé, lado ímpar', bairro: 'Sé' })
+      // Corrigir a rua não busca o CEP de novo
+      expect(buscarEnderecoPorCep).toHaveBeenCalledTimes(1)
+    })
+
+    test('CEP não encontrado: avisa e não apaga o que já estava digitado', async () => {
+      const usuario = userEvent.setup()
+      buscarEnderecoPorCep.mockRejectedValue(new CepNaoEncontradoError())
+      await abrirTela()
+
+      await digitarCep(usuario, '99999999')
+
+      expect(await screen.findByText('Não encontramos esse CEP. Confira os números ou preencha o endereço.')).toBeVisible()
+      expect(campo('Rua')).toHaveValue('Rua das Flores')
+      expect(campo('Cidade')).toHaveValue('São Paulo')
+    })
+
+    test('sem as APIs, avisa e deixa preencher à mão e salvar', async () => {
+      const usuario = userEvent.setup()
+      buscarEnderecoPorCep.mockRejectedValue(new BuscaCepIndisponivelError())
+      await abrirTela()
+
+      await digitarCep(usuario, '02002000')
+      expect(await screen.findByText('Não foi possível buscar o endereço agora. Preencha os campos do endereço.')).toBeVisible()
+
+      await usuario.clear(campo('Rua'))
+      await usuario.type(campo('Rua'), 'Rua Nova')
+      await usuario.click(salvarBotao())
+
+      await waitFor(() => expect(salvarEstabelecimento).toHaveBeenCalledTimes(1))
+      expect(salvarEstabelecimento.mock.calls[0][0]).toMatchObject({ cep: '02002000', logradouro: 'Rua Nova' })
+    })
+
+    test('ao abrir a tela com o CEP já salvo, não busca nada', async () => {
+      await abrirTela()
+
+      expect(campo(/CEP/)).toHaveValue('01000-000')
+      expect(buscarEnderecoPorCep).not.toHaveBeenCalled()
+    })
   })
 
   test('mostra os dados em cartões com rótulos visíveis (NBR 17225 5.3.1)', async () => {
