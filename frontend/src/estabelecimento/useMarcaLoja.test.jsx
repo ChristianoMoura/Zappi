@@ -18,15 +18,16 @@ describe('marca da loja no topo do painel (collab Casa Belt × Zappi)', () => {
     localStorage.clear()
   })
 
-  test('usa o nome do Meu estabelecimento e muda assim que ele é salvo', async () => {
-    const respostas = [json(doBackend), json({ ...doBackend, nome: 'Casa Belt Doces' })]
+  test('usa o nome e o logo do Meu estabelecimento e muda assim que ele é salvo', async () => {
+    const logo = 'https://storage.teste/estabelecimentos/1/logo-abcd1234.webp'
+    const respostas = [json(doBackend), json({ ...doBackend, nome: 'Casa Belt Doces', logo })]
     vi.stubGlobal('fetch', vi.fn(async () => respostas.shift()))
     const { result } = renderHook(() => useMarcaLoja())
 
     await waitFor(() => expect(result.current).toEqual({ nome: 'Casa Belt', logo: '' }))
 
-    await act(() => salvarEstabelecimento({ ...doBackend, nome: 'Casa Belt Doces', logo: 'data:image/webp;base64,AAAA', capa: '' }))
-    expect(result.current).toEqual({ nome: 'Casa Belt Doces', logo: 'data:image/webp;base64,AAAA' })
+    await act(() => salvarEstabelecimento({ ...doBackend, nome: 'Casa Belt Doces', logo, capa: '' }))
+    expect(result.current).toEqual({ nome: 'Casa Belt Doces', logo })
   })
 
   test('sem login, fica sem marca e não chama a API', async () => {
