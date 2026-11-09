@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.autenticacao.CredenciaisInvalidasException;
 import br.com.zappi.autenticacao.LoginBloqueadoException;
+import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
+import br.com.zappi.estabelecimento.LinkEmUsoException;
 import br.com.zappi.produto.FotoInvalidaException;
 import br.com.zappi.produto.FotoSemTextoAlternativoException;
 import br.com.zappi.produto.ProdutoNaoEncontradoException;
@@ -96,6 +98,19 @@ public class TratadorDeErros {
 		log.warn("Envio de foto indisponível: {}", erro.getMessage(), erro.getCause());
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
 			.body(new RespostaErro("FOTO_INDISPONIVEL", "Não foi possível enviar a foto agora. Tente de novo em alguns minutos."));
+	}
+
+	/** 409 com a mensagem também em {@code campos.slug}, para o formulário mostrar ao lado do campo. */
+	@ExceptionHandler(LinkEmUsoException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	RespostaErro linkEmUso(LinkEmUsoException erro) {
+		return new RespostaErro("LINK_EM_USO", erro.getMessage(), Map.of("slug", erro.getMessage()));
+	}
+
+	@ExceptionHandler(EstabelecimentoNaoEncontradoException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	RespostaErro estabelecimentoNaoEncontrado(EstabelecimentoNaoEncontradoException erro) {
+		return new RespostaErro("ESTABELECIMENTO_NAO_ENCONTRADO", erro.getMessage());
 	}
 
 }
