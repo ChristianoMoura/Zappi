@@ -122,6 +122,27 @@ class ListagemPedidosTests {
 	}
 
 	@Test
+	void trazAsMensagensDeCadaPedido() throws Exception {
+		// Pedido #3 (Confirmado): a confirmação enviada e uma refeita depois da edição, ainda pendente
+		long confirmado = jdbc.queryForObject("select id from pedido where estabelecimento_id = ? and numero = 3",
+				Long.class, casaBelt);
+		jdbc.update("""
+				insert into mensagem_whatsapp (pedido_id, tipo, telefone_destino, conteudo, status, enviado_em, criado_em)
+				values (?, 1, '5511900000001', 'Confirmação antiga', 2, now(), now() - interval '1 hour'),
+				       (?, 1, '5511900000001', 'Confirmação nova', 1, null, now())
+				""", confirmado, confirmado);
+
+		listar("")
+			.andExpect(jsonPath("$[0].mensagens.length()").value(0))
+			.andExpect(jsonPath("$[2].numero").value(3))
+			.andExpect(jsonPath("$[2].mensagens[*].texto", contains("Confirmação antiga", "Confirmação nova")))
+			.andExpect(jsonPath("$[2].mensagens[*].status", contains("ENVIADA", "PENDENTE")))
+			.andExpect(jsonPath("$[2].mensagens[1].id").isNumber())
+			.andExpect(jsonPath("$[2].mensagens[1].link").isString())
+			.andExpect(jsonPath("$[3].mensagens.length()").value(0));
+	}
+
+	@Test
 	void naoExpoeOsDadosDoClienteAnonimizado() throws Exception {
 		listar("")
 			.andExpect(jsonPath("$[4].numero").value(5))
