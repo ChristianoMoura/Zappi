@@ -15,7 +15,13 @@ import {
   whatsappParaGuardar,
   whatsappParaTela,
 } from '../estabelecimento/regrasEstabelecimento'
-import { buscarEstabelecimento, LinkEmUsoError, salvarEstabelecimento } from '../estabelecimento/servicoEstabelecimento'
+import {
+  buscarEstabelecimento,
+  DadosInvalidosError,
+  LinkEmUsoError,
+  salvarEstabelecimento,
+  SessaoExpiradaError,
+} from '../estabelecimento/servicoEstabelecimento'
 import classes from './PaginaEstabelecimento.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
@@ -51,8 +57,9 @@ export function PaginaEstabelecimento() {
         setSalvo(paraTela(resposta))
         setDados(paraTela(resposta))
       })
-      .catch(() => {
-        if (ativo) setErroCarregar(true)
+      .catch((erro) => {
+        // Sessão vencida: o serviço já leva para o login
+        if (ativo && !(erro instanceof SessaoExpiradaError)) setErroCarregar(true)
       })
       .finally(() => {
         if (ativo) setCarregando(false)
@@ -141,6 +148,13 @@ export function PaginaEstabelecimento() {
         setErros({ slug: 'Esse link já é usado por outro estabelecimento. Escolha outro.' })
         refs.current.slug?.focus()
         setAviso({ tipo: 'erro', texto: 'Confira o link do cardápio.' })
+      } else if (erro instanceof DadosInvalidosError && Object.keys(erro.campos).length > 0) {
+        // O backend confere de novo (ZAP-36); a mensagem dele vai ao lado de cada campo
+        setErros(erro.campos)
+        refs.current[ORDEM.find((campo) => erro.campos[campo])]?.focus()
+        setAviso({ tipo: 'erro', texto: 'Confira os campos marcados em vermelho.' })
+      } else if (erro instanceof SessaoExpiradaError) {
+        // O serviço já leva para o login
       } else {
         setAviso({ tipo: 'erro', texto: 'Não foi possível salvar agora. Tente novamente em alguns minutos.' })
       }

@@ -1,21 +1,42 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { act } from 'react'
-import { describe, expect, test } from 'vitest'
-import { buscarEstabelecimento, salvarEstabelecimento } from './servicoEstabelecimento'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { salvarEstabelecimento } from './servicoEstabelecimento'
 import { iniciaisDaLoja, useMarcaLoja } from './useMarcaLoja'
 
-describe('marca da loja no topo e no login (collab Casa Belt × Zappi)', () => {
-  test('usa o nome e o logo do Meu estabelecimento e muda assim que ele é salvo', async () => {
-    const original = await buscarEstabelecimento()
+const doBackend = { nome: 'Casa Belt', slug: 'casa-belt', whatsapp: '5511900000000' }
+
+const json = (corpo) => new Response(JSON.stringify(corpo), { status: 200, headers: { 'Content-Type': 'application/json' } })
+
+describe('marca da loja no topo do painel (collab Casa Belt × Zappi)', () => {
+  beforeEach(() => {
+    sessionStorage.setItem('zappi.sessao', JSON.stringify({ token: 'jwt-de-teste', nome: 'Lídia' }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  test('usa o nome do Meu estabelecimento e muda assim que ele é salvo', async () => {
+    const respostas = [json(doBackend), json({ ...doBackend, nome: 'Casa Belt Doces' })]
+    vi.stubGlobal('fetch', vi.fn(async () => respostas.shift()))
     const { result } = renderHook(() => useMarcaLoja())
 
-    await waitFor(() => expect(result.current).toEqual({ nome: original.nome, logo: original.logo }))
+    await waitFor(() => expect(result.current).toEqual({ nome: 'Casa Belt', logo: '' }))
 
-    await act(() => salvarEstabelecimento({ ...original, nome: 'Casa Belt Doces', logo: 'logo-novo.png' }))
-    expect(result.current).toEqual({ nome: 'Casa Belt Doces', logo: 'logo-novo.png' })
+    await act(() => salvarEstabelecimento({ ...doBackend, nome: 'Casa Belt Doces', logo: 'data:image/webp;base64,AAAA', capa: '' }))
+    expect(result.current).toEqual({ nome: 'Casa Belt Doces', logo: 'data:image/webp;base64,AAAA' })
+  })
 
-    // Devolve os dados de teste como estavam, para os outros testes
-    await act(() => salvarEstabelecimento(original))
+  test('sem login, fica sem marca e não chama a API', async () => {
+    sessionStorage.clear()
+    const buscar = vi.fn()
+    vi.stubGlobal('fetch', buscar)
+    const { result } = renderHook(() => useMarcaLoja())
+
+    await waitFor(() => expect(result.current).toBeNull())
+    expect(buscar).not.toHaveBeenCalled()
   })
 
   test('sem logo, usa as iniciais do nome', () => {
