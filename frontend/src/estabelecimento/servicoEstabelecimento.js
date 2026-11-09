@@ -2,11 +2,20 @@
 // /api/estabelecimento (ZAP-36), e do logo e da capa, pelas rotas /api/estabelecimento/logo e
 // /api/estabelecimento/capa, que guardam as fotos no Supabase Storage (ZAP-119). Em produção, o
 // Render repassa /api ao backend; em desenvolvimento, o proxy do Vite faz o mesmo
-// (vite.config.js). A tela continua usando as mesmas funções e erros (ZAP-118, ZAP-120).
+// (vite.config.js). A tela continua usando as mesmas funções e erros (ZAP-118, ZAP-120). O token,
+// o 401 e a falta de conexão ficam no clienteApi, o mesmo dos produtos.
 
-export class ServicoIndisponivelError extends Error {}
+import {
+  chamarApi,
+  lerArquivoTemporario,
+  lerJson,
+  lerToken,
+  ServicoIndisponivelError,
+  SessaoExpiradaError,
+} from '../autenticacao/clienteApi'
+
+export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
 export class LinkEmUsoError extends Error {}
-export class SessaoExpiradaError extends Error {}
 
 // 400 do backend: `campos` traz a mensagem de cada campo, com os nomes da tela
 export class DadosInvalidosError extends Error {
@@ -31,27 +40,6 @@ const CAMPOS = ['nome', 'slug', 'descricao', 'whatsapp', 'emailContato', 'cep', 
 // Fotos da loja, na ordem em que são enviadas; o nome é o da rota e o do campo
 const FOTOS = ['logo', 'capa']
 
-// A mesma chave do AutenticacaoContexto, onde fica o token do login (ZAP-62)
-const CHAVE_SESSAO = 'zappi.sessao'
-
-function lerToken() {
-  try {
-    return JSON.parse(sessionStorage.getItem(CHAVE_SESSAO))?.token ?? null
-  } catch {
-    return null
-  }
-}
-
-// Token vencido ou inválido: encerra a sessão e volta para o login, como o useApi faz
-function encerrarSessao() {
-  try {
-    sessionStorage.removeItem(CHAVE_SESSAO)
-  } catch {
-    // Sem armazenamento: não há sessão guardada para apagar
-  }
-  window.location.assign('/login')
-}
-
 // Até a ZAP-120, o logo e a capa ficavam só no navegador (ZAP-118). Agora vêm da API: a cópia
 // antiga é apagada, para não ocupar espaço nem ficar para trás em um computador compartilhado.
 function apagarFotosAntigasDoNavegador() {
@@ -65,37 +53,8 @@ function apagarFotosAntigasDoNavegador() {
 }
 apagarFotosAntigasDoNavegador()
 
-async function lerJson(resposta) {
-  try {
-    return await resposta.json()
-  } catch {
-    return null
-  }
-}
-
-async function chamar(caminho = '', { metodo = 'GET', json, formulario } = {}) {
-  const headers = {}
-  const token = lerToken()
-  if (token) headers.Authorization = `Bearer ${token}`
-  let body
-  if (json !== undefined) {
-    headers['Content-Type'] = 'application/json'
-    body = JSON.stringify(json)
-  } else if (formulario) {
-    body = formulario
-  }
-
-  let resposta
-  try {
-    resposta = await fetch(`/api/estabelecimento${caminho}`, { method: metodo, headers, body })
-  } catch {
-    // Sem conexão ou servidor fora do ar
-    throw new ServicoIndisponivelError()
-  }
-  if (resposta.status === 401) {
-    encerrarSessao()
-    throw new SessaoExpiradaError()
-  }
+async function chamar(caminho = '', opcoes) {
+  const resposta = await chamarApi(`/estabelecimento${caminho}`, opcoes)
   // Link do cardápio já usado por outro estabelecimento
   if (resposta.status === 409) throw new LinkEmUsoError()
   if (resposta.status === 400) throw new DadosInvalidosError((await lerJson(resposta))?.campos)
@@ -112,14 +71,8 @@ function paraTela(estabelecimento) {
 // A foto escolhida na tela é um endereço temporário (blob:); o arquivo vai para o backend, que
 // confere o tipo e o tamanho e envia para o Storage (ZAP-119)
 async function enviarFoto(foto, enderecoTemporario) {
-  let arquivo
-  try {
-    arquivo = await (await fetch(enderecoTemporario)).blob()
-  } catch {
-    throw new ServicoIndisponivelError()
-  }
   const formulario = new FormData()
-  formulario.append('arquivo', arquivo, foto)
+  formulario.append('arquivo', await lerArquivoTemporario(enderecoTemporario), foto)
   return chamar(`/${foto}`, { metodo: 'POST', formulario })
 }
 

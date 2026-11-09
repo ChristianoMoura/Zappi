@@ -1,56 +1,16 @@
 // Leitura e gravação dos produtos do cardápio do estabelecimento da usuária logada, pelas
 // rotas /api/produtos (ZAP-39) e /api/produtos/{id}/foto (ZAP-40). Em produção, o Render
 // repassa /api ao backend; em desenvolvimento, o proxy do Vite faz o mesmo (vite.config.js).
-// As páginas continuam usando as mesmas funções e erros de antes.
+// As páginas continuam usando as mesmas funções e erros de antes. O token, o 401 e a falta de
+// conexão ficam no clienteApi, o mesmo do Meu estabelecimento.
 
-export class ServicoIndisponivelError extends Error {}
+import { chamarApi, lerArquivoTemporario, ServicoIndisponivelError } from '../autenticacao/clienteApi'
+
+export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
 export class ProdutoNaoEncontradoError extends Error {}
-export class SessaoExpiradaError extends Error {}
 
-// A mesma chave do AutenticacaoContexto, onde fica o token do login (ZAP-62)
-const CHAVE_SESSAO = 'zappi.sessao'
-
-function lerToken() {
-  try {
-    return JSON.parse(sessionStorage.getItem(CHAVE_SESSAO))?.token ?? null
-  } catch {
-    return null
-  }
-}
-
-// Token vencido ou inválido: encerra a sessão e volta para o login, como o useApi faz
-function encerrarSessao() {
-  try {
-    sessionStorage.removeItem(CHAVE_SESSAO)
-  } catch {
-    // Sem armazenamento: não há sessão guardada para apagar
-  }
-  window.location.assign('/login')
-}
-
-async function chamar(caminho, { metodo = 'GET', json, formulario } = {}) {
-  const headers = {}
-  const token = lerToken()
-  if (token) headers.Authorization = `Bearer ${token}`
-  let body
-  if (json !== undefined) {
-    headers['Content-Type'] = 'application/json'
-    body = JSON.stringify(json)
-  } else if (formulario) {
-    body = formulario
-  }
-
-  let resposta
-  try {
-    resposta = await fetch(`/api/produtos${caminho}`, { method: metodo, headers, body })
-  } catch {
-    // Sem conexão ou servidor fora do ar
-    throw new ServicoIndisponivelError()
-  }
-  if (resposta.status === 401) {
-    encerrarSessao()
-    throw new SessaoExpiradaError()
-  }
+async function chamar(caminho, opcoes) {
+  const resposta = await chamarApi(`/produtos${caminho}`, opcoes)
   // Inexistente, já excluído ou de outro estabelecimento (RN01)
   if (resposta.status === 404) throw new ProdutoNaoEncontradoError()
   if (!resposta.ok) throw new ServicoIndisponivelError()
@@ -70,14 +30,8 @@ function paraTela(produto) {
 // A foto escolhida na tela é um endereço temporário (blob:); o arquivo vai para o backend,
 // que confere o tipo e o tamanho e envia para o Storage (ZAP-40)
 async function enviarFoto(id, enderecoTemporario, textoAlternativo) {
-  let arquivo
-  try {
-    arquivo = await (await fetch(enderecoTemporario)).blob()
-  } catch {
-    throw new ServicoIndisponivelError()
-  }
   const formulario = new FormData()
-  formulario.append('arquivo', arquivo, 'foto')
+  formulario.append('arquivo', await lerArquivoTemporario(enderecoTemporario), 'foto')
   formulario.append('textoAlternativo', textoAlternativo)
   return chamar(`/${id}/foto`, { metodo: 'POST', formulario })
 }
