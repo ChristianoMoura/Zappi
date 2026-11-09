@@ -1,140 +1,206 @@
-import { describe, expect, test } from 'vitest'
-import { STATUS } from './regrasPedidos'
-import { AcaoNaoPermitidaError, avancarPedido, buscarPedidos, cadastrarPedido, confirmarPedido, editarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from './servicoPedidos'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { dataLocal, STATUS } from './regrasPedidos'
+import {
+  AcaoNaoPermitidaError,
+  avancarPedido,
+  buscarPedido,
+  buscarPedidos,
+  cadastrarPedido,
+  confirmarPedido,
+  editarPedido,
+  marcarMensagemEnviada,
+  recusarPedido,
+  ServicoIndisponivelError,
+  SessaoExpiradaError,
+  voltarPedido,
+} from './servicoPedidos'
 
-// Simulação usada em desenvolvimento até as APIs da ZAP-44, ZAP-49 e ZAP-50
-describe('serviço simulado de pedidos', () => {
-  test('confirma um pedido Novo com a mensagem do modelo aprovado e não confirma duas vezes', async () => {
-    const novo = (await buscarPedidos()).find((p) => p.status === STATUS.NOVO)
+// Pedido como o backend devolve (ZAP-44, ZAP-45): status em número, tipos e status das
+// mensagens em maiúsculas, datas em UTC e nulos nos campos vazios
+const confirmacao = {
+  id: 31,
+  tipo: 'CONFIRMACAO',
+  status: 'ENVIADA',
+  texto: 'Olá, Ana!',
+  criadoEm: '2026-11-09T13:00:00Z',
+  enviadoEm: '2026-11-09T13:05:00Z',
+  link: 'https://wa.me/5511900000001?text=Ol%C3%A1',
+}
+const doBackend = {
+  numero: 1,
+  status: STATUS.CONFIRMADO,
+  dataRetirada: '2026-11-14',
+  observacao: null,
+  valorTotal: 200,
+  cliente: { nome: 'Ana Exemplo', telefone: '5511900000001', anonimizado: false },
+  itens: [{ produtoId: 7, produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, subtotal: 200, recheio: 'Brigadeiro', cobertura: null, observacao: null }],
+  criadoEm: '2026-11-09T12:30:00Z',
+  confirmadoEm: '2026-11-09T13:00:00Z',
+  producaoEm: null,
+  concluidoEm: null,
+  recusadoEm: null,
+  motivoRecusa: null,
+  cancelado: false,
+  mensagens: [confirmacao, { ...confirmacao, id: 32, status: 'PENDENTE', enviadoEm: null, texto: 'Olá, Ana! (nova)' }],
+}
 
-    const confirmado = await confirmarPedido(novo.numero)
+const json = (status, corpo) => new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
 
-    expect(confirmado.status).toBe(STATUS.CONFIRMADO)
-    expect(confirmado.confirmadoEm).toBeTruthy()
-    const [mensagem] = confirmado.mensagens
-    expect(mensagem).toMatchObject({ tipo: 'Confirmação', status: 'Pendente' })
-    expect(mensagem.texto).toMatch(new RegExp(`^Olá, ${novo.cliente.nome.split(' ')[0]}!`))
-    expect(mensagem.texto).toMatch(/Mensagem gerada pelo Zappi$/)
-    expect(mensagem.link).toBe(`https://wa.me/?text=${encodeURIComponent(mensagem.texto)}`)
-    await expect(confirmarPedido(novo.numero)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+// fetch simulado: responde em ordem e guarda cada chamada
+function simularBackend(...respostas) {
+  const buscar = vi.fn(async () => respostas.shift() ?? json(500, {}))
+  vi.stubGlobal('fetch', buscar)
+  return () => buscar.mock.calls
+}
+
+// A hora local esperada para uma data em UTC, no fuso de quem roda o teste
+const local = (iso) => {
+  const data = new Date(iso)
+  return `${dataLocal(data)}T${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`
+}
+
+describe('servicoPedidos (ZAP-122)', () => {
+  beforeEach(() => {
+    sessionStorage.setItem('zappi.sessao', JSON.stringify({ token: 'jwt-de-teste', nome: 'Lídia' }))
   })
 
-  test('recusa um pedido Novo com o motivo e a mensagem de recusa pendente', async () => {
-    const novo = (await buscarPedidos()).find((p) => p.status === STATUS.NOVO)
-
-    await expect(recusarPedido(novo.numero, '   ')).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-    await expect(recusarPedido(novo.numero, 'x'.repeat(501))).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-    const recusado = await recusarPedido(novo.numero, '  Agenda cheia nesse dia.  ')
-
-    expect(recusado).toMatchObject({ status: STATUS.RECUSADO, cancelado: false, motivoRecusa: 'Agenda cheia nesse dia.' })
-    expect(recusado.recusadoEm).toBeTruthy()
-    const recusa = recusado.mensagens.at(-1)
-    expect(recusa).toMatchObject({ tipo: 'Recusa', status: 'Pendente' })
-    expect(recusa.texto).toContain('Motivo: Agenda cheia nesse dia.')
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    sessionStorage.clear()
   })
 
-  test('cancela um pedido Em produção, mas não um Concluído nem um já recusado', async () => {
-    const lista = await buscarPedidos()
-    const emProducao = lista.find((p) => p.status === STATUS.EM_PRODUCAO)
+  it('lista todos os pedidos, com os recusados, no formato da tela', async () => {
+    const chamadas = simularBackend(json(200, [doBackend]))
 
-    const cancelado = await recusarPedido(emProducao.numero, 'Faltou ingrediente.')
+    const [pedido] = await buscarPedidos()
 
-    expect(cancelado).toMatchObject({ status: STATUS.RECUSADO, cancelado: true })
-    await expect(recusarPedido(emProducao.numero, 'De novo')).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-    const concluido = lista.find((p) => p.status === STATUS.CONCLUIDO)
-    await expect(recusarPedido(concluido.numero, 'Motivo')).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-  })
-
-  test('avança Confirmado até Concluído, gerando o aviso de pronto, e volta só uma coluna', async () => {
-    const confirmado = (await buscarPedidos()).find((p) => p.status === STATUS.CONFIRMADO)
-
-    const emProducao = await avancarPedido(confirmado.numero)
-    expect(emProducao).toMatchObject({ status: STATUS.EM_PRODUCAO })
-    expect(emProducao.producaoEm).toBeTruthy()
-
-    const pronto = await avancarPedido(confirmado.numero)
-    expect(pronto.status).toBe(STATUS.CONCLUIDO)
-    expect(pronto.mensagens.at(-1)).toMatchObject({ tipo: 'Pronto para retirada', status: 'Pendente' })
-    await expect(avancarPedido(confirmado.numero)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-
-    const voltou = await voltarPedido(confirmado.numero)
-    expect(voltou.status).toBe(STATUS.EM_PRODUCAO)
-    expect(voltou.concluidoEm).toBeUndefined()
-    expect((await voltarPedido(confirmado.numero)).status).toBe(STATUS.CONFIRMADO)
-    await expect(voltarPedido(confirmado.numero)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-  })
-
-  test('cadastra o pedido como Novo com o próximo número, e não grava sem consentimento (RN03, RN09, RN16)', async () => {
-    const maior = Math.max(...(await buscarPedidos()).map((p) => p.numero))
-    const dados = {
-      cliente: { nome: 'Fernanda Costa', telefone: '5511987650099' },
-      consentimentoLgpd: true,
-      dataRetirada: '2030-01-15',
-      observacao: '',
-      itens: [{ produtoId: 1, produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100 }],
-    }
-
-    const pedido = await cadastrarPedido(dados)
-
-    expect(pedido).toMatchObject({ numero: maior + 1, status: STATUS.NOVO, mensagens: [] })
+    const [[endereco, opcoes]] = chamadas()
+    expect(endereco).toBe('/api/pedidos?recusados=true')
+    expect(opcoes.headers.Authorization).toBe('Bearer jwt-de-teste')
+    expect(pedido).toMatchObject({ numero: 1, status: STATUS.CONFIRMADO, dataRetirada: '2026-11-14', cancelado: false })
     expect(pedido.observacao).toBeUndefined()
-    expect((await buscarPedidos()).some((p) => p.numero === pedido.numero)).toBe(true)
-    await expect(cadastrarPedido({ ...dados, consentimentoLgpd: false })).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+    expect(pedido.criadoEm).toBe(local('2026-11-09T12:30:00Z'))
+    expect(pedido.confirmadoEm).toBe(local('2026-11-09T13:00:00Z'))
+    expect(pedido.producaoEm).toBeUndefined()
+    expect(pedido.itens[0]).toEqual({ produtoId: 7, produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, recheio: 'Brigadeiro' })
+    expect(pedido.mensagens[0]).toEqual({ id: 31, tipo: 'Confirmação', status: 'Enviada', texto: 'Olá, Ana!', link: confirmacao.link, enviadoEm: local('2026-11-09T13:05:00Z') })
+    expect(pedido.mensagens[1]).toMatchObject({ id: 32, status: 'Pendente' })
+    expect(pedido.mensagens[1].enviadoEm).toBeUndefined()
   })
 
-  describe('edição (ZAP-91, RN21)', () => {
-    const itemNovo = { produto: 'Bolo', sabor: 'Ninho com morango', unidade: 'KG', quantidade: 3, precoUnitario: 115 }
-    const novoPedido = (nome) =>
-      cadastrarPedido({ cliente: { nome, telefone: '5511987650098' }, consentimentoLgpd: true, dataRetirada: '2030-01-15', observacao: 'Festa', itens: [{ ...itemNovo, quantidade: 1 }] })
+  it('traduz os tipos de mensagem de recusa e de pronto', async () => {
+    simularBackend(json(200, { ...doBackend, mensagens: [{ ...confirmacao, tipo: 'RECUSA' }, { ...confirmacao, tipo: 'PRONTO' }] }))
 
-    test('no Novo muda o cliente e os itens, e não mexe nas mensagens', async () => {
-      const { numero, cliente } = await novoPedido('Maria Lima')
+    const pedido = await buscarPedido(1)
 
-      const editado = await editarPedido(numero, { cliente: { nome: 'Maria Souza', telefone: cliente.telefone }, dataRetirada: '2030-01-20', observacao: '', itens: [itemNovo] })
-
-      expect(editado).toMatchObject({ cliente: { nome: 'Maria Souza' }, dataRetirada: '2030-01-20', itens: [{ quantidade: 3 }], mensagens: [] })
-      expect(editado.observacao).toBeUndefined()
-    })
-
-    test('depois de confirmado, recusa trocar de cliente e refaz a confirmação que ainda não foi enviada', async () => {
-      const { numero, cliente } = await novoPedido('Paula Dias')
-      await confirmarPedido(numero)
-
-      await expect(editarPedido(numero, { cliente: { nome: 'Outra', telefone: '5511900000000' }, dataRetirada: '2030-01-15', observacao: '', itens: [itemNovo] })).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-      const editado = await editarPedido(numero, { cliente, dataRetirada: '2030-01-15', observacao: '', itens: [itemNovo] })
-
-      expect(editado.mensagens).toHaveLength(1)
-      expect(editado.mensagens[0].status).toBe('Pendente')
-      expect(editado.mensagens[0].texto).toContain('(3 kg)')
-    })
-
-    test('se a confirmação já foi enviada, guarda ela e cria uma nova só quando algo mudou', async () => {
-      const { numero, cliente } = await novoPedido('Rosa Melo')
-      await confirmarPedido(numero)
-      await marcarMensagemEnviada(numero, 0)
-      const igual = { cliente, dataRetirada: '2030-01-15', observacao: 'Festa', itens: [{ ...itemNovo, quantidade: 1 }] }
-
-      expect((await editarPedido(numero, igual)).mensagens).toHaveLength(1)
-      const editado = await editarPedido(numero, { ...igual, itens: [itemNovo] })
-
-      expect(editado.mensagens.map((m) => m.status)).toEqual(['Enviada', 'Pendente'])
-    })
-
-    test('não edita pedido Concluído nem Recusado', async () => {
-      const lista = await buscarPedidos()
-      const concluido = lista.find((p) => p.status === STATUS.CONCLUIDO)
-      await expect(editarPedido(concluido.numero, { cliente: concluido.cliente, dataRetirada: '2030-01-15', observacao: '', itens: [itemNovo] })).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
-    })
+    expect(pedido.mensagens.map((m) => m.tipo)).toEqual(['Recusa', 'Pronto para retirada'])
   })
 
-  test('marcar como enviada guarda a data do primeiro envio', async () => {
-    const pedido = (await buscarPedidos()).find((p) => p.mensagens.some((m) => m.status === 'Pendente'))
-    const indice = pedido.mensagens.findIndex((m) => m.status === 'Pendente')
+  it('cliente anonimizado vem com o telefone vazio', async () => {
+    simularBackend(json(200, { ...doBackend, cliente: { nome: 'Cliente anonimizado', telefone: null, anonimizado: true } }))
 
-    const primeiro = await marcarMensagemEnviada(pedido.numero, indice)
-    const segundo = await marcarMensagemEnviada(pedido.numero, indice)
+    await expect(buscarPedido(1)).resolves.toMatchObject({ cliente: { nome: 'Cliente anonimizado', telefone: '', anonimizado: true } })
+  })
 
-    expect(primeiro.mensagens[indice].status).toBe('Enviada')
-    expect(segundo.mensagens[indice].enviadoEm).toBe(primeiro.mensagens[indice].enviadoEm)
+  it('cadastra com um POST do pedido montado pela tela', async () => {
+    const chamadas = simularBackend(json(201, { ...doBackend, numero: 3, status: STATUS.NOVO, mensagens: [] }))
+    const dados = { cliente: { nome: 'Carla', telefone: '5511988887777' }, consentimentoLgpd: true, dataRetirada: '2026-11-14', observacao: '', itens: [{ produtoId: 7, quantidade: 1 }] }
+
+    const salvo = await cadastrarPedido(dados)
+
+    expect(salvo).toMatchObject({ numero: 3, status: STATUS.NOVO, mensagens: [] })
+    const [[endereco, opcoes]] = chamadas()
+    expect(endereco).toBe('/api/pedidos')
+    expect(opcoes.method).toBe('POST')
+    expect(JSON.parse(opcoes.body)).toEqual(dados)
+  })
+
+  it('edita com um PUT no número do pedido', async () => {
+    const chamadas = simularBackend(json(200, doBackend))
+
+    await editarPedido(1, { itens: [] })
+
+    const [[endereco, opcoes]] = chamadas()
+    expect(endereco).toBe('/api/pedidos/1')
+    expect(opcoes.method).toBe('PUT')
+  })
+
+  it('confirma e recusa pelas rotas do pedido, com o motivo sem espaços nas pontas', async () => {
+    const chamadas = simularBackend(json(200, doBackend), json(200, { ...doBackend, status: STATUS.RECUSADO }))
+
+    await confirmarPedido(1)
+    await recusarPedido(1, '  Agenda cheia.  ')
+
+    const [[confirmar, opcoesConfirmar], [recusar, opcoesRecusar]] = chamadas()
+    expect(confirmar).toBe('/api/pedidos/1/confirmar')
+    expect(opcoesConfirmar.method).toBe('POST')
+    expect(recusar).toBe('/api/pedidos/1/recusar')
+    expect(JSON.parse(opcoesRecusar.body)).toEqual({ motivo: 'Agenda cheia.' })
+  })
+
+  it.each([
+    [STATUS.CONFIRMADO, avancarPedido, 'iniciar-producao'],
+    [STATUS.EM_PRODUCAO, avancarPedido, 'concluir'],
+    [STATUS.EM_PRODUCAO, voltarPedido, 'voltar-para-confirmado'],
+    [STATUS.CONCLUIDO, voltarPedido, 'voltar-para-producao'],
+  ])('com o pedido no status %i, escolhe a rota pelo status atual', async (status, acao, rota) => {
+    const chamadas = simularBackend(json(200, { ...doBackend, status }), json(200, doBackend))
+
+    await acao(1)
+
+    const [[leitura], [endereco, opcoes]] = chamadas()
+    expect(leitura).toBe('/api/pedidos/1')
+    expect(endereco).toBe(`/api/pedidos/1/${rota}`)
+    expect(opcoes.method).toBe('POST')
+  })
+
+  it('não avança um pedido Novo nem volta um Confirmado', async () => {
+    simularBackend(json(200, { ...doBackend, status: STATUS.NOVO }), json(200, doBackend))
+
+    await expect(avancarPedido(1)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+    await expect(voltarPedido(1)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+  })
+
+  it('marca como enviada a mensagem pela posição dela no pedido', async () => {
+    const chamadas = simularBackend(json(200, doBackend), json(200, doBackend))
+
+    await marcarMensagemEnviada(1, 1)
+
+    const [, [endereco, opcoes]] = chamadas()
+    expect(endereco).toBe('/api/pedidos/1/mensagens/32/enviada')
+    expect(opcoes.method).toBe('POST')
+  })
+
+  it('mensagem que não existe no pedido não é marcada', async () => {
+    const chamadas = simularBackend(json(200, doBackend))
+
+    await expect(marcarMensagemEnviada(1, 5)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+    expect(chamadas()).toHaveLength(1)
+  })
+
+  it.each([400, 404, 409])('a resposta %i vira AcaoNaoPermitidaError', async (status) => {
+    simularBackend(json(status, { codigo: 'ERRO' }))
+
+    await expect(confirmarPedido(1)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+  })
+
+  it('erro do servidor ou sem conexão vira ServicoIndisponivelError', async () => {
+    simularBackend(json(500, {}))
+    await expect(buscarPedidos()).rejects.toBeInstanceOf(ServicoIndisponivelError)
+
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    }))
+    await expect(buscarPedidos()).rejects.toBeInstanceOf(ServicoIndisponivelError)
+  })
+
+  it('token vencido encerra a sessão', async () => {
+    const irPara = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign: irPara })
+    simularBackend(json(401, {}))
+
+    await expect(buscarPedidos()).rejects.toBeInstanceOf(SessaoExpiradaError)
+    expect(sessionStorage.getItem('zappi.sessao')).toBeNull()
+    expect(irPara).toHaveBeenCalledWith('/login')
   })
 })

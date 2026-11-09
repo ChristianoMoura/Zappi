@@ -1,252 +1,129 @@
-// Leitura dos pedidos do estabelecimento da usuária logada e as ações sobre eles.
-// PENDENTE: as APIs são a ZAP-44 (listar), a ZAP-49 (confirmar), a ZAP-53 (recusar e cancelar),
-// a ZAP-75 e a ZAP-76 (andamento e voltar coluna), a ZAP-88 e a ZAP-90 (cadastrar e editar) e a ZAP-50 (texto da mensagem, link wa.me e marcar
-// como enviada), que ainda não existem. Enquanto isso, no modo de
-// desenvolvimento os pedidos são simulados com clientes fictícios (nenhum dado real), guardados
-// só na memória; fora dele, a tela avisa que o serviço não está disponível.
-// Quando as APIs ficarem prontas, só este arquivo muda.
+// Leitura dos pedidos do estabelecimento da usuária logada e as ações sobre eles, pelas rotas
+// /api/pedidos (ZAP-44, ZAP-45, ZAP-49, ZAP-50, ZAP-53, ZAP-75, ZAP-76, ZAP-88 e ZAP-90). Em
+// produção, o Render repassa /api ao backend; em desenvolvimento, o proxy do Vite faz o mesmo
+// (vite.config.js). As telas continuam usando as mesmas funções, campos e erros de antes: aqui
+// os tipos, status e datas da API viram os da tela (ZAP-122). O token, o 401 e a falta de conexão
+// ficam no clienteApi, o mesmo dos produtos.
 
-import { AVANCO, dataLocal, dataRetiradaMensagem, moeda, MOTIVO_MAXIMO, nomeItem, podeEditar, podeRecusarOuCancelar, podeTrocarCliente, quantidadeTexto, STATUS, totalPedido, VOLTA } from './regrasPedidos'
+import { chamarApi, ServicoIndisponivelError } from '../autenticacao/clienteApi'
+import { dataLocal, STATUS } from './regrasPedidos'
 
-export class ServicoIndisponivelError extends Error {}
+export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
 export class AcaoNaoPermitidaError extends Error {}
 
-const esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms))
+// Nomes da tela para o tipo e o status da mensagem (RN07)
+const TIPOS = { CONFIRMACAO: 'Confirmação', RECUSA: 'Recusa', PRONTO: 'Pronto para retirada' }
+const STATUS_MENSAGEM = { PENDENTE: 'Pendente', ENVIADA: 'Enviada', FALHA: 'Falha' }
 
-// Datas relativas a hoje, para o quadro sempre ter pedidos de hoje e dos próximos dias
-function dia(deslocamento, hora) {
-  const data = new Date()
-  data.setDate(data.getDate() + deslocamento)
-  return hora ? `${dataLocal(data)}T${hora}` : dataLocal(data)
+// Rotas de avançar e voltar uma coluna, pelo status atual (RN03, ZAP-64)
+const ROTA_AVANCO = { [STATUS.CONFIRMADO]: 'iniciar-producao', [STATUS.EM_PRODUCAO]: 'concluir' }
+const ROTA_VOLTA = { [STATUS.EM_PRODUCAO]: 'voltar-para-confirmado', [STATUS.CONCLUIDO]: 'voltar-para-producao' }
+
+async function chamar(caminho, opcoes) {
+  const resposta = await chamarApi(`/pedidos${caminho}`, opcoes)
+  // Inexistente ou de outro estabelecimento (404), fora da etapa certa (409) ou dados que o
+  // backend recusou (400): a tela mostra que não deu para fazer a ação
+  if ([400, 404, 409].includes(resposta.status)) throw new AcaoNaoPermitidaError()
+  if (!resposta.ok) throw new ServicoIndisponivelError()
+  return resposta.json()
 }
 
-function agora() {
-  const data = new Date()
+// Data e hora da API (UTC) no formato da tela, no fuso de quem usa o painel: AAAA-MM-DDTHH:MM
+function dataHoraLocal(iso) {
+  if (!iso) return undefined
+  const data = new Date(iso)
   return `${dataLocal(data)}T${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`
 }
 
-// Textos aprovados na ZAP-63 (docs/mensagens-whatsapp.md). No sistema real, quem monta é o backend (ZAP-50).
-function textoMensagem(pedido, tipo) {
-  const nome = pedido.cliente.nome.split(' ')[0]
-  if (tipo === 'Confirmação') {
-    const itens = pedido.itens.map((item) => `- ${nomeItem(item)} (${quantidadeTexto(item)})`).join('\n')
-    return `Olá, ${nome}!\n\nSeu pedido #${pedido.numero} na Casa Belt está confirmado.\n\n${itens}\nTotal: ${moeda(totalPedido(pedido))}\nRetirada: ${dataRetiradaMensagem(pedido.dataRetirada)}\n\nO pagamento é feito na retirada. Qualquer dúvida, é só responder esta mensagem.\n\nMensagem gerada pelo Zappi`
+// A tela trata campo ausente como vazio; a API manda nulo
+const opcional = (valor) => valor ?? undefined
+
+function itemParaTela(item) {
+  return {
+    produtoId: item.produtoId,
+    produto: item.produto,
+    sabor: item.sabor,
+    unidade: item.unidade,
+    quantidade: item.quantidade,
+    precoUnitario: item.precoUnitario,
+    recheio: opcional(item.recheio),
+    cobertura: opcional(item.cobertura),
+    observacao: opcional(item.observacao),
   }
-  if (tipo === 'Recusa') {
-    return `Olá, ${nome}.\n\nInfelizmente não vamos conseguir atender o seu pedido #${pedido.numero} para ${dataRetiradaMensagem(pedido.dataRetirada)}.\n\nMotivo: ${pedido.motivoRecusa}\n\nSe quiser combinar outra data ou outro pedido, é só responder esta mensagem.\n\nCasa Belt\nMensagem gerada pelo Zappi`
+}
+
+function mensagemParaTela(mensagem) {
+  return {
+    id: mensagem.id,
+    tipo: TIPOS[mensagem.tipo] ?? mensagem.tipo,
+    status: STATUS_MENSAGEM[mensagem.status] ?? mensagem.status,
+    texto: mensagem.texto,
+    link: opcional(mensagem.link),
+    enviadoEm: dataHoraLocal(mensagem.enviadoEm),
   }
-  return `Olá, ${nome}!\n\nSeu pedido #${pedido.numero} está pronto para retirada.\n\nRetirada: ${dataRetiradaMensagem(pedido.dataRetirada)}\nTotal a pagar na retirada: ${moeda(totalPedido(pedido))}\n\nQualquer dúvida, é só responder esta mensagem.\n\nCasa Belt\nMensagem gerada pelo Zappi`
 }
 
-// No sistema real o link leva o telefone do cliente (wa.me/<telefone>?text=...). Na simulação ele vai
-// sem telefone, para o WhatsApp pedir o contato: os números fictícios podem ser de alguém de verdade.
-const linkSimulado = (texto) => `https://wa.me/?text=${encodeURIComponent(texto)}`
-
-function mensagem(pedido, tipo, enviadoEm) {
-  const texto = textoMensagem(pedido, tipo)
-  return { tipo, status: enviadoEm ? 'Enviada' : 'Pendente', enviadoEm, texto, link: linkSimulado(texto) }
+function paraTela(pedido) {
+  return {
+    numero: pedido.numero,
+    status: pedido.status,
+    dataRetirada: pedido.dataRetirada,
+    observacao: opcional(pedido.observacao),
+    // Cliente anonimizado (RN17) vem sem telefone
+    cliente: { nome: pedido.cliente.nome, telefone: pedido.cliente.telefone ?? '', anonimizado: pedido.cliente.anonimizado },
+    itens: pedido.itens.map(itemParaTela),
+    criadoEm: dataHoraLocal(pedido.criadoEm),
+    confirmadoEm: dataHoraLocal(pedido.confirmadoEm),
+    producaoEm: dataHoraLocal(pedido.producaoEm),
+    concluidoEm: dataHoraLocal(pedido.concluidoEm),
+    recusadoEm: dataHoraLocal(pedido.recusadoEm),
+    motivoRecusa: opcional(pedido.motivoRecusa),
+    cancelado: pedido.cancelado,
+    mensagens: (pedido.mensagens ?? []).map(mensagemParaTela),
+  }
 }
 
-// Campos com os nomes da tela; a ZAP-44 converte das colunas de `pedido`, `item_pedido`,
-// `cliente` e `mensagem_whatsapp`. Preços do cardápio da Casa Belt (seção 2.2 do context.md).
-const bolo = (sabor, quantidade, precoUnitario, extras = {}) => ({ produto: 'Bolo', sabor, unidade: 'KG', quantidade, precoUnitario, ...extras })
-const salgado = (sabor, quantidade, precoUnitario) => ({ produto: 'Salgado', sabor, unidade: 'UN', quantidade, precoUnitario })
+const pedidoDaApi = async (caminho, opcoes) => paraTela(await chamar(caminho, opcoes))
 
-function pedidosSimulados() {
-  const pedidos = [
-    {
-      numero: 13, status: STATUS.NOVO, dataRetirada: dia(8), criadoEm: dia(-1, '19:12'),
-      cliente: { nome: 'Marcos Lima', telefone: '5511987650013' }, observacao: 'Aniversário de 40 anos',
-      itens: [bolo('Ninho com morango', 1.5, 115, { recheio: 'Ninho com morango', cobertura: 'Chantilly' })],
-      mensagens: [],
-    },
-    {
-      numero: 12, status: STATUS.NOVO, dataRetirada: dia(7), criadoEm: dia(-1, '10:40'),
-      cliente: { nome: 'Ana Souza', telefone: '5511987650012' }, observacao: 'Festa infantil, tema fundo do mar',
-      itens: [bolo('Brigadeiro de chocolate', 2, 100, { recheio: 'Brigadeiro', cobertura: 'Granulado' })],
-      mensagens: [],
-    },
-    {
-      numero: 11, status: STATUS.CONFIRMADO, dataRetirada: dia(7), criadoEm: dia(-2, '16:03'), confirmadoEm: dia(-2, '18:20'),
-      cliente: { nome: 'João Pereira', telefone: '5511987650011' },
-      itens: [bolo('Brigadeiro de chocolate', 3, 100, { recheio: 'Brigadeiro com morango', cobertura: 'Ganache' })],
-      mensagens: [['Confirmação']],
-    },
-    {
-      numero: 10, status: STATUS.CONFIRMADO, dataRetirada: dia(6), criadoEm: dia(-3, '09:15'), confirmadoEm: dia(-3, '12:00'),
-      cliente: { nome: 'Carla Dias', telefone: '5511987650010' }, observacao: 'Para o escritório',
-      itens: [salgado('Coxinha de frango', 100, 1.2)],
-      mensagens: [['Confirmação', dia(-3, '12:02')]],
-    },
-    {
-      numero: 9, status: STATUS.EM_PRODUCAO, dataRetirada: dia(0), criadoEm: dia(-5, '14:30'), confirmadoEm: dia(-5, '17:45'), producaoEm: dia(-1, '08:00'),
-      cliente: { nome: 'Beatriz Rocha', telefone: '5511987650009' },
-      itens: [bolo('Ninho com morango', 2, 115, { recheio: 'Ninho com morango', cobertura: 'Chantilly', observacao: 'Escrever "Parabéns, Lia"' })],
-      mensagens: [['Confirmação', dia(-5, '17:50')]],
-    },
-    {
-      numero: 8, status: STATUS.CONCLUIDO, dataRetirada: dia(0), criadoEm: dia(-6, '11:00'), confirmadoEm: dia(-6, '13:10'), producaoEm: dia(-1, '07:30'), concluidoEm: dia(0, '08:30'),
-      cliente: { nome: 'Pedro Alves', telefone: '5511987650008' },
-      itens: [bolo('Brigadeiro de chocolate', 1, 100, { recheio: 'Brigadeiro', cobertura: 'Granulado' })],
-      mensagens: [['Confirmação', dia(-6, '13:15')], ['Pronto para retirada']],
-    },
-    {
-      numero: 7, status: STATUS.RECUSADO, dataRetirada: dia(1), criadoEm: dia(-4, '20:05'), recusadoEm: dia(-3, '08:10'),
-      cliente: { nome: 'Rita Gomes', telefone: '5511987650007' }, motivoRecusa: 'Agenda cheia nesse dia. Posso fazer para o dia seguinte.',
-      itens: [bolo('Ninho com morango', 4, 115, { recheio: 'Ninho com morango', cobertura: 'Chantilly' })],
-      mensagens: [['Recusa', dia(-3, '08:12')]],
-    },
-    {
-      numero: 6, status: STATUS.RECUSADO, dataRetirada: dia(-2), criadoEm: dia(-3, '22:40'), recusadoEm: dia(-2, '07:30'),
-      cliente: { nome: 'Lucas Moreira', telefone: '5511987650006' }, motivoRecusa: 'Pedido feito com menos de 2 dias de antecedência.',
-      itens: [salgado('Coxinha de frango', 200, 1.2)],
-      mensagens: [['Recusa', dia(-2, '07:32')]],
-    },
-  ]
-  return pedidos.map((pedido) => ({ ...pedido, mensagens: pedido.mensagens.map(([tipo, enviadoEm]) => mensagem(pedido, tipo, enviadoEm)) }))
-}
-
-let simulados = null
-const copia = (valor) => structuredClone(valor)
-
-function encontrar(numero) {
-  simulados ??= pedidosSimulados()
-  const pedido = simulados.find((p) => p.numero === numero)
-  if (!pedido) throw new AcaoNaoPermitidaError()
-  return pedido
-}
-
+// Todos, com os recusados: o filtro "Mostrar recusados" é da tela (RN04)
 export async function buscarPedidos() {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(400)
-  simulados ??= pedidosSimulados()
-  return copia(simulados)
+  return (await chamar('?recusados=true')).map(paraTela)
 }
 
-// Cadastro de pedido pela Lídia (ZAP-89, US7, RF13). O pedido começa como Novo (RN03) e recebe
-// o próximo número do estabelecimento; na API (ZAP-88), por MAX + 1 com bloqueio (RN09). Os itens
-// chegam com o preço do cardápio, que fica congelado no pedido (RN10). Sem o consentimento do
-// cliente, o pedido não é gravado (RN16).
-export async function cadastrarPedido(dados) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(700)
-  if (!dados.consentimentoLgpd || dados.itens.length === 0) throw new AcaoNaoPermitidaError()
-  simulados ??= pedidosSimulados()
-  const pedido = {
-    numero: Math.max(0, ...simulados.map((p) => p.numero)) + 1,
-    status: STATUS.NOVO,
-    dataRetirada: dados.dataRetirada,
-    criadoEm: agora(),
-    cliente: { nome: dados.cliente.nome, telefone: dados.cliente.telefone },
-    ...(dados.observacao ? { observacao: dados.observacao } : {}),
-    itens: dados.itens.map((item) => ({ ...item })),
-    mensagens: [],
-  }
-  simulados.push(pedido)
-  return copia(pedido)
+export const buscarPedido = (numero) => pedidoDaApi(`/${numero}`)
+
+// Cadastro de pedido pela Lídia (ZAP-88, RF13). O backend dá o número (RN09), usa o preço do
+// cardápio (RN10), calcula o total (RN11) e só grava com o consentimento do cliente (RN16).
+export const cadastrarPedido = (dados) => pedidoDaApi('', { metodo: 'POST', json: dados })
+
+// Edição conforme o status (ZAP-90, RF14, RN21). Os itens que continuam mantêm o preço da
+// época, e a confirmação é atualizada no pedido Confirmado.
+export const editarPedido = (numero, dados) => pedidoDaApi(`/${numero}`, { metodo: 'PUT', json: dados })
+
+// Novo → Confirmado, com a mensagem de confirmação pendente (ZAP-49)
+export const confirmarPedido = (numero) => pedidoDaApi(`/${numero}/confirmar`, { metodo: 'POST' })
+
+// Recusa um Novo ou cancela um Confirmado ou Em produção, com o motivo (ZAP-53)
+export const recusarPedido = (numero, motivo) =>
+  pedidoDaApi(`/${numero}/recusar`, { metodo: 'POST', json: { motivo: motivo.trim() } })
+
+// A rota depende de onde o pedido está agora, então ele é lido antes
+async function moverPedido(numero, rotas) {
+  const rota = rotas[(await buscarPedido(numero)).status]
+  if (!rota) throw new AcaoNaoPermitidaError()
+  return pedidoDaApi(`/${numero}/${rota}`, { metodo: 'POST' })
 }
 
-export async function buscarPedido(numero) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(300)
-  return copia(encontrar(numero))
-}
+// Confirmado → Em produção e Em produção → Concluído, com o aviso de pronto (ZAP-75, ZAP-76)
+export const avancarPedido = (numero) => moverPedido(numero, ROTA_AVANCO)
 
-// Depois que o pedido muda, a confirmação não pode ficar com dados antigos: a pendente é
-// refeita; se a última já foi enviada, entra uma nova para a Lídia enviar (ZAP-91)
-function atualizarConfirmacao(pedido) {
-  const indice = pedido.mensagens.findLastIndex((m) => m.tipo === 'Confirmação')
-  const nova = mensagem(pedido, 'Confirmação')
-  const ultima = pedido.mensagens[indice]
-  if (!ultima || ultima.texto === nova.texto) return
-  if (ultima.status === 'Pendente') pedido.mensagens[indice] = nova
-  else pedido.mensagens.push(nova)
-}
+// Em produção → Confirmado e Concluído → Em produção (ZAP-75, decisão da ZAP-64)
+export const voltarPedido = (numero) => moverPedido(numero, ROTA_VOLTA)
 
-// Edição do pedido conforme o status (ZAP-91, RF14, RN21). Depois de confirmado, o cliente não
-// troca. Os itens chegam com o preço já resolvido: o da época ou o atual, nos novos (RN10).
-export async function editarPedido(numero, dados) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(700)
-  const pedido = encontrar(numero)
-  if (!podeEditar(pedido.status) || dados.itens.length === 0) throw new AcaoNaoPermitidaError()
-  if (podeTrocarCliente(pedido.status)) pedido.cliente = { nome: dados.cliente.nome, telefone: dados.cliente.telefone }
-  else if (dados.cliente.telefone !== pedido.cliente.telefone) throw new AcaoNaoPermitidaError()
-  pedido.dataRetirada = dados.dataRetirada
-  pedido.itens = dados.itens.map((item) => ({ ...item }))
-  if (dados.observacao) pedido.observacao = dados.observacao
-  else delete pedido.observacao
-  if (pedido.status === STATUS.CONFIRMADO) atualizarConfirmacao(pedido)
-  return copia(pedido)
-}
-
-// Novo → Confirmado, gerando a mensagem de confirmação pendente (RN03, RN06, RN07)
-export async function confirmarPedido(numero) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(600)
-  const pedido = encontrar(numero)
-  if (pedido.status !== STATUS.NOVO) throw new AcaoNaoPermitidaError()
-  pedido.status = STATUS.CONFIRMADO
-  pedido.confirmadoEm = agora()
-  pedido.mensagens.push(mensagem(pedido, 'Confirmação'))
-  return copia(pedido)
-}
-
-// Recusa um pedido Novo ou cancela um Confirmado ou Em produção: o pedido vai para Recusado,
-// com o motivo, e ganha a mensagem de recusa pendente (RN03, RN05, RN06, RN07, ZAP-64)
-export async function recusarPedido(numero, motivo) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(600)
-  const pedido = encontrar(numero)
-  const texto = motivo.trim()
-  if (!podeRecusarOuCancelar(pedido.status) || !texto || texto.length > MOTIVO_MAXIMO) throw new AcaoNaoPermitidaError()
-  pedido.cancelado = pedido.status !== STATUS.NOVO
-  pedido.status = STATUS.RECUSADO
-  pedido.motivoRecusa = texto
-  pedido.recusadoEm = agora()
-  pedido.mensagens.push(mensagem(pedido, 'Recusa'))
-  return copia(pedido)
-}
-
-// Confirmado → Em produção e Em produção → Concluído. Ao concluir, gera o aviso de pronto
-// pendente (RN03, RN06, ZAP-77)
-export async function avancarPedido(numero) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(600)
-  const pedido = encontrar(numero)
-  const avanco = AVANCO[pedido.status]
-  if (!avanco) throw new AcaoNaoPermitidaError()
-  pedido.status = avanco.destino
-  if (avanco.destino === STATUS.EM_PRODUCAO) pedido.producaoEm = agora()
-  else {
-    pedido.concluidoEm = agora()
-    pedido.mensagens.push(mensagem(pedido, 'Pronto para retirada'))
-  }
-  return copia(pedido)
-}
-
-// Em produção → Confirmado e Concluído → Em produção (decisão da ZAP-64). A data da etapa
-// desfeita sai do histórico; as mensagens já geradas continuam guardadas.
-export async function voltarPedido(numero) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(600)
-  const pedido = encontrar(numero)
-  const volta = VOLTA[pedido.status]
-  if (!volta) throw new AcaoNaoPermitidaError()
-  if (pedido.status === STATUS.CONCLUIDO) delete pedido.concluidoEm
-  else delete pedido.producaoEm
-  pedido.status = volta.destino
-  if (pedido.status === STATUS.CONFIRMADO) atualizarConfirmacao(pedido)
-  return copia(pedido)
-}
-
-// O clique em "Enviar no WhatsApp" marca a mensagem como enviada; reenviar mantém a primeira data (ZAP-64)
+// O clique em "Enviar no WhatsApp" marca a mensagem como enviada; reenviar mantém a primeira
+// data (ZAP-50). A tela indica a mensagem pela posição na lista do pedido.
 export async function marcarMensagemEnviada(numero, indice) {
-  if (!import.meta.env.DEV) throw new ServicoIndisponivelError()
-  await esperar(200)
-  const alvo = encontrar(numero).mensagens[indice]
+  const alvo = (await buscarPedido(numero)).mensagens[indice]
   if (!alvo) throw new AcaoNaoPermitidaError()
-  alvo.status = 'Enviada'
-  alvo.enviadoEm ??= agora()
-  return copia(encontrar(numero))
+  return pedidoDaApi(`/${numero}/mensagens/${alvo.id}/enviada`, { metodo: 'POST' })
 }
