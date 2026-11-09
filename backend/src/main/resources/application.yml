@@ -52,6 +52,8 @@ zappi:
     url: ${SUPABASE_URL:}
     chave-secreta: ${SUPABASE_CHAVE_SECRETA:}
     bucket: produtos
+    # Logo e capa do estabelecimento (ZAP-119), no mesmo projeto, com leitura pública.
+    bucket-estabelecimento: estabelecimentos
 
 management:
   endpoints:

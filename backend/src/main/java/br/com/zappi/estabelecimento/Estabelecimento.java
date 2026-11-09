@@ -62,6 +62,14 @@ public class Estabelecimento {
 	@Column(name = "uf", length = 2)
 	private String uf;
 
+	/** Caminho do logo no bucket {@code estabelecimentos} (ZAP-119). */
+	@Column(name = "logo_caminho", length = 255)
+	private String logoCaminho;
+
+	/** Caminho da foto de capa no bucket {@code estabelecimentos} (ZAP-119). */
+	@Column(name = "capa_caminho", length = 255)
+	private String capaCaminho;
+
 	@Column(name = "ativo", nullable = false)
 	private boolean ativo;
 
@@ -93,6 +101,26 @@ public class Estabelecimento {
 		this.cidade = dados.cidade();
 		this.uf = dados.uf();
 		this.atualizadoEm = agora;
+	}
+
+	/** Troca ou tira (com {@code null}) o logo da loja (ZAP-119). */
+	void trocarLogo(String caminho, OffsetDateTime agora) {
+		this.logoCaminho = caminho;
+		this.atualizadoEm = agora;
+	}
+
+	/** Troca ou tira (com {@code null}) a foto de capa da loja (ZAP-119). */
+	void trocarCapa(String caminho, OffsetDateTime agora) {
+		this.capaCaminho = caminho;
+		this.atualizadoEm = agora;
+	}
+
+	public String getLogoCaminho() {
+		return logoCaminho;
+	}
+
+	public String getCapaCaminho() {
+		return capaCaminho;
 	}
 
 	public Long getId() {

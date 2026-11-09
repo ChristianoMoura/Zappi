@@ -36,7 +36,8 @@ public enum TipoDeImagem {
 		return extensao;
 	}
 
-	static Optional<TipoDeImagem> detectar(byte[] conteudo) {
+	/** Também usado pelo logo e pela capa do estabelecimento (ZAP-119). */
+	public static Optional<TipoDeImagem> detectar(byte[] conteudo) {
 		if (comecaCom(conteudo, 0, ASSINATURA_JPEG)) {
 			return Optional.of(JPEG);
 		}
