@@ -23,6 +23,7 @@ import {
   salvarEstabelecimento,
   SessaoExpiradaError,
 } from '../estabelecimento/servicoEstabelecimento'
+import { buscarEnderecoPorCep, CepNaoEncontradoError } from '../estabelecimento/buscarEndereco'
 import classes from './PaginaEstabelecimento.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
@@ -45,7 +46,10 @@ export function PaginaEstabelecimento() {
   const [salvando, setSalvando] = useState(false)
   const [acabouDeSalvar, setAcabouDeSalvar] = useState(false)
   const [aviso, setAviso] = useState(null)
+  const [buscandoCep, setBuscandoCep] = useState(false)
   const refs = useRef({})
+  // CEP digitado por último, para ignorar a resposta de uma busca que ficou para trás
+  const cepAtual = useRef('')
   const numeroAntes = useRef('')
   const arquivoCapa = useRef(null)
   const arquivoLogo = useRef(null)
@@ -98,6 +102,44 @@ export function PaginaEstabelecimento() {
   function mudar(campo, valor) {
     setDados((atual) => ({ ...atual, [campo]: valor }))
     if (erros[campo]) setErros((atual) => { const resto = { ...atual }; delete resto[campo]; return resto })
+  }
+
+  // CEP (ZAP-121): ao completar os 8 números de um CEP novo, busca o endereço. Só busca quando o
+  // CEP muda, para não sobrescrever o endereço que a Lídia já corrigiu à mão.
+  function mudarCep(digitado) {
+    const cep = soDigitos(digitado).slice(0, 8)
+    const mudou = cep !== dados.cep
+    mudar('cep', cep)
+    cepAtual.current = cep
+    if (cep.length < 8) setBuscandoCep(false)
+    else if (mudou) preencherPeloCep(cep)
+  }
+
+  async function preencherPeloCep(cep) {
+    setBuscandoCep(true)
+    try {
+      const endereco = await buscarEnderecoPorCep(cep)
+      if (cepAtual.current !== cep) return
+      // Só o que veio preenchido (CEP geral de cidade não tem rua) e com UF da lista
+      const campos = Object.fromEntries(
+        Object.entries(endereco).filter(([campo, valor]) => valor && (campo !== 'uf' || UFS.includes(valor))),
+      )
+      setDados((atual) => ({ ...atual, ...campos }))
+      setErros((atual) => Object.fromEntries(Object.entries(atual).filter(([campo]) => !(campo in campos))))
+      setAviso({ tipo: 'ok', texto: 'Endereço preenchido pelo CEP. Confira e complete o número.' })
+      // O próximo campo a preencher é o número; com "Sem número", o complemento
+      setTimeout(() => (refs.current.numero?.disabled ? refs.current.complemento : refs.current.numero)?.focus())
+    } catch (erro) {
+      if (cepAtual.current !== cep) return
+      setAviso({
+        tipo: 'erro',
+        texto: erro instanceof CepNaoEncontradoError
+          ? 'Não encontramos esse CEP. Confira os números ou preencha o endereço.'
+          : 'Não foi possível buscar o endereço agora. Preencha os campos do endereço.',
+      })
+    } finally {
+      if (cepAtual.current === cep) setBuscandoCep(false)
+    }
   }
 
   // Sem número: o campo fica bloqueado com "S/N"; ao desmarcar, volta o número que estava
@@ -299,14 +341,18 @@ export function PaginaEstabelecimento() {
           </h2>
           <div className={classes.endereco}>
             <TextInput
-              {...propsCampo('cep', 'CEP')}
+              {...propsCampo('cep', 'CEP', { dica: 'Com o CEP, a rua, o bairro e a cidade são preenchidos sozinhos.' })}
               className={classes.col12}
               value={mascaraCep(dados.cep)}
-              onChange={(e) => mudar('cep', soDigitos(e.currentTarget.value).slice(0, 8))}
+              onChange={(e) => mudarCep(e.currentTarget.value)}
+              rightSection={buscandoCep ? <Loader size="xs" color="zappi" aria-hidden /> : null}
+              aria-busy={buscandoCep || undefined}
               inputMode="numeric"
               autoComplete="postal-code"
               maxLength={9}
             />
+            {/* Anuncia a busca ao leitor de tela (NBR 17225 5.3.1); o resultado vai no aviso */}
+            <VisuallyHidden role="status">{buscandoCep ? 'Buscando o endereço…' : ''}</VisuallyHidden>
             <TextInput {...propsCampo('logradouro', 'Rua')} className={classes.col12} value={dados.logradouro} onChange={(e) => mudar('logradouro', e.currentTarget.value)} autoComplete="address-line1" />
             <div className={classes.col6}>
               <TextInput
