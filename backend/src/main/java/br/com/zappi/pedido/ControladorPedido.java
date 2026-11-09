@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,6 +27,12 @@ public class ControladorPedido {
 	public List<RespostaPedido> listar(@AuthenticationPrincipal UsuarioAutenticado usuario,
 			@RequestParam(defaultValue = "false") boolean recusados) {
 		return servico.listar(usuario, recusados);
+	}
+
+	/** Pedido completo pelo número do card, ex.: {@code /api/pedidos/12} (ZAP-45). */
+	@GetMapping("/{numero}")
+	public RespostaPedido detalhar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable Integer numero) {
+		return servico.detalhar(usuario, numero);
 	}
 
 }

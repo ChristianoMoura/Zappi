@@ -1,11 +1,16 @@
 package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import br.com.zappi.cliente.Cliente;
+import br.com.zappi.mensagem.MensagemWhatsapp;
 
 /**
  * Pedido como a tela usa (ZAP-44). O número ({@code #1}) identifica o pedido no
@@ -14,19 +19,51 @@ import br.com.zappi.cliente.Cliente;
  *
  * @param cancelado {@code true} quando o pedido recusado já tinha sido confirmado: a tela
  *        mostra "Motivo do cancelamento" (ZAP-64)
+ * @param mensagens mensagens geradas para o cliente, só nos detalhes do pedido (ZAP-45); na
+ *        listagem, o campo não aparece
  */
 public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada, String observacao,
 		BigDecimal valorTotal, ClienteDoPedido cliente, List<ItemDoPedido> itens, OffsetDateTime criadoEm,
 		OffsetDateTime confirmadoEm, OffsetDateTime producaoEm, OffsetDateTime concluidoEm,
-		OffsetDateTime recusadoEm, String motivoRecusa, boolean cancelado) {
+		OffsetDateTime recusadoEm, String motivoRecusa, boolean cancelado,
+		@JsonInclude(JsonInclude.Include.NON_NULL) List<MensagemDoPedido> mensagens) {
 
+	/** Para a listagem do quadro, sem as mensagens. */
 	static RespostaPedido de(Pedido pedido, List<ItemPedido> itens) {
+		return de(pedido, itens, null);
+	}
+
+	/** Para os detalhes, com as mensagens geradas. */
+	static RespostaPedido de(Pedido pedido, List<ItemPedido> itens, List<MensagemWhatsapp> mensagens) {
 		boolean cancelado = pedido.getStatus() == StatusPedido.RECUSADO && pedido.getConfirmadoEm() != null;
+		boolean anonimizado = pedido.getCliente().getAnonimizadoEm() != null;
 		return new RespostaPedido(pedido.getNumero(), pedido.getStatus().getCodigo(), pedido.getDataRetirada(),
 				pedido.getObservacao(), pedido.getValorTotal(), ClienteDoPedido.de(pedido.getCliente()),
 				itens.stream().map(ItemDoPedido::de).toList(), pedido.getCriadoEm(), pedido.getConfirmadoEm(),
 				pedido.getProducaoEm(), pedido.getConcluidoEm(), pedido.getRecusadoEm(), pedido.getMotivoRecusa(),
-				cancelado);
+				cancelado,
+				mensagens == null ? null : mensagens.stream().map(m -> MensagemDoPedido.de(m, anonimizado)).toList());
+	}
+
+	/**
+	 * Mensagem gerada para o cliente (RN07), com o link {@code wa.me} que abre o WhatsApp com o
+	 * texto pronto. Com o cliente anonimizado (RN17), o link não é montado: o telefone já não
+	 * é o dele.
+	 *
+	 * @param tipo {@code CONFIRMACAO}, {@code RECUSA} ou {@code PRONTO}
+	 * @param status {@code PENDENTE}, {@code ENVIADA} ou {@code FALHA}
+	 */
+	public record MensagemDoPedido(String tipo, String status, String texto, OffsetDateTime criadoEm,
+			OffsetDateTime enviadoEm, String link) {
+
+		static MensagemDoPedido de(MensagemWhatsapp mensagem, boolean clienteAnonimizado) {
+			String link = clienteAnonimizado ? null
+					: "https://wa.me/" + mensagem.getTelefoneDestino() + "?text="
+							+ URLEncoder.encode(mensagem.getConteudo(), StandardCharsets.UTF_8).replace("+", "%20");
+			return new MensagemDoPedido(mensagem.getTipo().name(), mensagem.getStatus().name(), mensagem.getConteudo(),
+					mensagem.getCriadoEm(), mensagem.getEnviadoEm(), link);
+		}
+
 	}
 
 	/**

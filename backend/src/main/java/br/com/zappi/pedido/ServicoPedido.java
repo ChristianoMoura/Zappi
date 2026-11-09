@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.zappi.mensagem.MensagemWhatsappRepositorio;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 
 /**
@@ -28,9 +29,24 @@ public class ServicoPedido {
 
 	private final ItemPedidoRepositorio itens;
 
-	public ServicoPedido(PedidoRepositorio pedidos, ItemPedidoRepositorio itens) {
+	private final MensagemWhatsappRepositorio mensagens;
+
+	public ServicoPedido(PedidoRepositorio pedidos, ItemPedidoRepositorio itens, MensagemWhatsappRepositorio mensagens) {
 		this.pedidos = pedidos;
 		this.itens = itens;
+		this.mensagens = mensagens;
+	}
+
+	/**
+	 * Pedido completo pelo número (ZAP-45), com os itens e as mensagens geradas. Número de
+	 * outro estabelecimento é tratado como inexistente (RN01).
+	 */
+	@Transactional(readOnly = true)
+	public RespostaPedido detalhar(UsuarioAutenticado usuario, Integer numero) {
+		Pedido pedido = pedidos.findByEstabelecimentoIdAndNumero(usuario.estabelecimentoId(), numero)
+			.orElseThrow(PedidoNaoEncontradoException::new);
+		return RespostaPedido.de(pedido, itens.buscarDosPedidos(List.of(pedido.getId())),
+				mensagens.findByPedidoIdOrderByCriadoEmAscIdAsc(pedido.getId()));
 	}
 
 	/** Os recusados só vêm com o filtro ligado (RN04). */
