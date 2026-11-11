@@ -19,6 +19,12 @@ public interface EstabelecimentoRepositorio extends JpaRepository<Estabeleciment
 	boolean existsBySlugAndIdNot(String slug, Long id);
 
 	/**
+	 * Loja ativa pelo link do cardápio público (ZAP-104), a única busca que não vem do token. Loja
+	 * desativada é tratada como link inexistente.
+	 */
+	Optional<Estabelecimento> findBySlugAndAtivoTrue(String slug);
+
+	/**
 	 * Estabelecimento com a linha bloqueada até o fim da transação. Dois pedidos cadastrados
 	 * ao mesmo tempo ficam um depois do outro e recebem números seguidos (RN09).
 	 */
