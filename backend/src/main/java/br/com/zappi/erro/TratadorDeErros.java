@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.autenticacao.CredenciaisInvalidasException;
 import br.com.zappi.autenticacao.LoginBloqueadoException;
+import br.com.zappi.cardapio.EnviosDemaisException;
 import br.com.zappi.cliente.ClienteComPedidoEmAbertoException;
 import br.com.zappi.cliente.ClienteJaAnonimizadoException;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
@@ -54,6 +55,16 @@ public class TratadorDeErros {
 		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
 			.header(HttpHeaders.RETRY_AFTER, Long.toString(segundos))
 			.body(new RespostaErro("LOGIN_BLOQUEADO", erro.getMessage()));
+	}
+
+	/**
+	 * Limite de envios do Portal do Cliente (ZAP-112): 429 com a mensagem para o cliente, que a
+	 * tela mostra como veio.
+	 */
+	@ExceptionHandler(EnviosDemaisException.class)
+	@ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+	RespostaErro enviosDemais(EnviosDemaisException erro) {
+		return new RespostaErro("LIMITE_DE_ENVIOS", erro.getMessage());
 	}
 
 	/** Campos inválidos: a mensagem de cada um vai em {@code campos}, para o formulário. */

@@ -570,7 +570,7 @@ Trilha de auditoria (ISO 8.16).
     - **massa:** na observação do item, com a dica "Quer outra massa? Escreva aqui" nos produtos vendidos por KG (item 4);
     - **recheio e cobertura:** texto livre e opcional, com os campos aparecendo só em produtos vendidos por KG;
     - **validade do pedido:** aviso de que o pedido só vale depois da confirmação da Lídia (seção 9);
-    - **proteção do envio sem login:** 5 envios por hora por IP e 3 por dia por telefone, com o excesso recusado sem gravar nada e registrado no log, e um campo invisível que descarta envios automáticos. Sem captcha no início;
+    - **proteção do envio sem login:** 5 envios por hora por IP e 3 por dia por telefone, com o excesso recusado sem gravar nada e registrado no log, e um campo invisível que descarta envios automáticos. Sem captcha no início. **Implementado na ZAP-112:** o "dia" do telefone é uma janela de 24 horas, como no bloqueio de login, e só os pedidos aceitos pelo portal contam (os da Lídia pelo painel, não). O excesso recebe `429 LIMITE_DE_ENVIOS` e o log `PEDIDO_PUBLICO_RECUSADO`, sem o telefone. O campo invisível se chama `site`: preenchido, o envio recebe a mesma resposta de um aceito, sem número e sem gravar nada;
     - **exclusão de dados:** pedido pelo WhatsApp da Lídia, que anonimiza no painel (RN17, história `ZAP-114`).
 12. **WhatsApp Cloud API.** **Decidido (10/11/2026, ZAP-94): fica fora da entrega, e os avisos ao cliente continuam pelo `wa.me`.** O fluxo da entrega é:
     1. **o cliente manda mensagem para a Lídia** no WhatsApp dela, como já acontece hoje;

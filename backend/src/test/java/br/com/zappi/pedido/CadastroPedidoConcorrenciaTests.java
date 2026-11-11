@@ -97,7 +97,7 @@ class CadastroPedidoConcorrenciaTests {
 	void cadastrosAoMesmoTempoRecebemNumerosSeguidos() throws Exception {
 		int quantos = 4;
 		RequisicaoPedido requisicao = new RequisicaoPedido(new ClienteDaRequisicao("Carla Nova", CARLA), true, amanha().atTime(12, 0),
-				null, List.of(new ItemDaRequisicao(brigadeiro, BigDecimal.ONE, null, null, null)));
+				null, List.of(new ItemDaRequisicao(brigadeiro, BigDecimal.ONE, null, null, null)), null);
 		CountDownLatch largada = new CountDownLatch(1);
 		ExecutorService executor = Executors.newFixedThreadPool(quantos);
 		try {
@@ -128,7 +128,7 @@ class CadastroPedidoConcorrenciaTests {
 		// A retirada a 8 dias vale para os dois: o portal exige 7 dias de antecedência (RN22)
 		RequisicaoPedido requisicao = new RequisicaoPedido(new ClienteDaRequisicao("Carla Nova", CARLA), true,
 				amanha().plusDays(7).atTime(12, 0), null,
-				List.of(new ItemDaRequisicao(brigadeiro, BigDecimal.ONE, null, null, null)));
+				List.of(new ItemDaRequisicao(brigadeiro, BigDecimal.ONE, null, null, null)), null);
 		CountDownLatch largada = new CountDownLatch(1);
 		ExecutorService executor = Executors.newFixedThreadPool(4);
 		try {
