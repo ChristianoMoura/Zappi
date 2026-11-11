@@ -2,11 +2,13 @@ package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,8 +39,9 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 import jakarta.persistence.EntityManager;
 
 /**
- * Cadastro (ZAP-88) e edição (ZAP-90) do pedido pela Lídia. O pedido, os itens, o cliente e o
- * log são gravados na mesma transação (RN08): se qualquer parte falhar, nada fica gravado.
+ * Cadastro (ZAP-88) e edição (ZAP-90) do pedido pela Lídia, e envio do pedido pelo cliente no
+ * Portal do Cliente (ZAP-109). O pedido, os itens, o cliente e o log são gravados na mesma
+ * transação (RN08): se qualquer parte falhar, nada fica gravado.
  */
 @Service
 public class ServicoCadastroPedido {
@@ -51,6 +54,17 @@ public class ServicoCadastroPedido {
 	private static final String DATA_PASSADA = "A data e o horário de retirada já passaram. Escolha um horário a partir de agora.";
 
 	private static final String HORARIO_FORA = "Escolha um horário entre 8h e 20h, de 30 em 30 minutos.";
+
+	/** Antecedência mínima dos pedidos feitos pelo Portal do Cliente (RN22). */
+	private static final int ANTECEDENCIA_DIAS = 7;
+
+	private static final DateTimeFormatter DIA_E_MES = DateTimeFormatter.ofPattern("dd/MM");
+
+	private static final String POUCA_ANTECEDENCIA = "Escolha uma data a partir de %s. A loja precisa de pelo menos %d dias"
+			+ " para preparar a encomenda.";
+
+	/** Origem gravada no log dos pedidos que o cliente envia pelo cardápio público (ZAP-109). */
+	static final String ORIGEM_PORTAL = "PORTAL_CLIENTE";
 
 	private static final LocalTime PRIMEIRA_RETIRADA = LocalTime.of(8, 0);
 
@@ -99,10 +113,35 @@ public class ServicoCadastroPedido {
 	 */
 	@Transactional
 	public RespostaPedido cadastrar(UsuarioAutenticado usuario, RequisicaoPedido requisicao) {
+		Pedido pedido = criar(usuario.estabelecimentoId(), usuario.usuarioId(), requisicao, false);
+		return consulta.detalhar(usuario, pedido.getNumero());
+	}
+
+	/**
+	 * Pedido enviado pelo cliente no Portal do Cliente, sem login (ZAP-109, RF21, RF22): as
+	 * mesmas regras do cadastro pela Lídia, mais a antecedência mínima de 7 dias (RN22). Loja
+	 * inexistente ou desativada recebe 404. Devolve só o número do pedido: a resposta não
+	 * revela se o telefone já era cliente (ISO 27002 5.34).
+	 */
+	@Transactional
+	public Integer cadastrarPeloPortal(String slug, RequisicaoPedido requisicao) {
+		Estabelecimento loja = estabelecimentos.findBySlugAndAtivoTrue(slug)
+			.orElseThrow(EstabelecimentoNaoEncontradoException::new);
+		return criar(loja.getId(), null, requisicao, true).getNumero();
+	}
+
+	/**
+	 * Cadastro comum ao painel e ao portal. Pelo portal, não há usuário: o log fica sem ele e
+	 * com a origem nos detalhes (ISO 27002 8.16).
+	 */
+	private Pedido criar(Long estabelecimentoId, Long usuarioId, RequisicaoPedido requisicao, boolean peloPortal) {
 		OffsetDateTime agora = OffsetDateTime.now(ZoneOffset.UTC);
 		Map<String, String> erros = new LinkedHashMap<>();
 		conferirRetirada(erros, requisicao.dataRetirada(), null);
-		Map<Long, Produto> doCardapio = produtosDoCardapio(usuario, requisicao.itens());
+		if (peloPortal) {
+			conferirAntecedencia(erros, requisicao.dataRetirada());
+		}
+		Map<Long, Produto> doCardapio = produtosDoCardapio(estabelecimentoId, requisicao.itens());
 		List<ItemDaRequisicao> itensDaRequisicao = requisicao.itens();
 		for (int i = 0; i < itensDaRequisicao.size(); i++) {
 			ItemDaRequisicao item = itensDaRequisicao.get(i);
@@ -113,7 +152,7 @@ public class ServicoCadastroPedido {
 		}
 
 		// Com o estabelecimento bloqueado, dois cadastros ao mesmo tempo recebem números seguidos
-		Estabelecimento estabelecimento = bloquearEstabelecimento(usuario);
+		Estabelecimento estabelecimento = bloquearEstabelecimento(estabelecimentoId);
 		Cliente cliente = clienteDoWhatsapp(estabelecimento, requisicao, agora);
 		Integer numero = pedidos.proximoNumero(estabelecimento.getId());
 		Pedido pedido = pedidos.save(new Pedido(estabelecimento, cliente, numero, requisicao.dataRetirada(),
@@ -129,10 +168,29 @@ public class ServicoCadastroPedido {
 		// Traz o criado_em, que o banco preenche
 		entityManager.refresh(pedido);
 
-		registrar(usuario, AcaoAuditoria.PEDIDO_CRIADO, pedido, Map.of("numero", numero, "clienteId",
-				cliente.getId(), "dataRetirada", pedido.getDataRetirada().toString(), "valorTotal",
-				dinheiro(pedido.getValorTotal()), "itens", itensDoPedido.size()));
-		return consulta.detalhar(usuario, numero);
+		Map<String, Object> detalhes = new LinkedHashMap<>();
+		detalhes.put("numero", numero);
+		detalhes.put("clienteId", cliente.getId());
+		detalhes.put("dataRetirada", pedido.getDataRetirada().toString());
+		detalhes.put("valorTotal", dinheiro(pedido.getValorTotal()));
+		detalhes.put("itens", itensDoPedido.size());
+		if (peloPortal) {
+			detalhes.put("origem", ORIGEM_PORTAL);
+		}
+		registrar(estabelecimentoId, usuarioId, AcaoAuditoria.PEDIDO_CRIADO, pedido, detalhes);
+		return pedido;
+	}
+
+	/**
+	 * Pelo Portal do Cliente, a data de retirada precisa ser de pelo menos 7 dias corridos depois
+	 * de hoje, no horário de São Paulo; a hora não entra na conta (RN22).
+	 */
+	private static void conferirAntecedencia(Map<String, String> erros, LocalDateTime retirada) {
+		LocalDate primeiraData = LocalDate.now(FUSO).plusDays(ANTECEDENCIA_DIAS);
+		if (retirada.toLocalDate().isBefore(primeiraData)) {
+			erros.putIfAbsent("dataRetirada", POUCA_ANTECEDENCIA
+				.formatted(primeiraData.format(DIA_E_MES), ANTECEDENCIA_DIAS));
+		}
 	}
 
 	/**
@@ -160,7 +218,7 @@ public class ServicoCadastroPedido {
 				novos.add(itensDaRequisicao.get(i));
 			}
 		}
-		Map<Long, Produto> doCardapio = produtosDoCardapio(usuario, novos);
+		Map<Long, Produto> doCardapio = produtosDoCardapio(usuario.estabelecimentoId(), novos);
 		for (int i = 0; i < itensDaRequisicao.size(); i++) {
 			ItemPedido existente = correspondentes.get(i);
 			Produto produto = existente != null ? existente.getProduto()
@@ -202,7 +260,7 @@ public class ServicoCadastroPedido {
 		detalhes.put("antes", antes);
 		detalhes.put("depois", retrato(pedido, itensDoPedido));
 		confirmacao.ifPresent(mensagem -> detalhes.put("mensagemId", mensagem.getId()));
-		registrar(usuario, AcaoAuditoria.PEDIDO_EDITADO, pedido, detalhes);
+		registrar(usuario.estabelecimentoId(), usuario.usuarioId(), AcaoAuditoria.PEDIDO_EDITADO, pedido, detalhes);
 		return consulta.detalhar(usuario, numero);
 	}
 
@@ -221,7 +279,7 @@ public class ServicoCadastroPedido {
 			return;
 		}
 		pedido.exigirClienteTrocavel();
-		pedido.trocarCliente(clienteDoWhatsapp(bloquearEstabelecimento(usuario), requisicao, agora), agora);
+		pedido.trocarCliente(clienteDoWhatsapp(bloquearEstabelecimento(usuario.estabelecimentoId()), requisicao, agora), agora);
 	}
 
 	/**
@@ -242,12 +300,12 @@ public class ServicoCadastroPedido {
 		return correspondentes;
 	}
 
-	private Map<Long, Produto> produtosDoCardapio(UsuarioAutenticado usuario, List<ItemDaRequisicao> itensDaRequisicao) {
+	private Map<Long, Produto> produtosDoCardapio(Long estabelecimentoId, List<ItemDaRequisicao> itensDaRequisicao) {
 		List<Long> ids = itensDaRequisicao.stream().map(ItemDaRequisicao::produtoId).distinct().toList();
 		if (ids.isEmpty()) {
 			return Map.of();
 		}
-		return produtos.findByIdInAndEstabelecimentoIdAndAtivoTrue(ids, usuario.estabelecimentoId())
+		return produtos.findByIdInAndEstabelecimentoIdAndAtivoTrue(ids, estabelecimentoId)
 			.stream()
 			.collect(Collectors.toMap(Produto::getId, Function.identity()));
 	}
@@ -264,8 +322,8 @@ public class ServicoCadastroPedido {
 		}
 	}
 
-	private Estabelecimento bloquearEstabelecimento(UsuarioAutenticado usuario) {
-		return estabelecimentos.buscarParaNumerarPedido(usuario.estabelecimentoId())
+	private Estabelecimento bloquearEstabelecimento(Long estabelecimentoId) {
+		return estabelecimentos.buscarParaNumerarPedido(estabelecimentoId)
 			.orElseThrow(EstabelecimentoNaoEncontradoException::new);
 	}
 
@@ -339,10 +397,11 @@ public class ServicoCadastroPedido {
 		return Objects.requireNonNull(valor).setScale(2, RoundingMode.HALF_UP).toPlainString();
 	}
 
-	private void registrar(UsuarioAutenticado usuario, AcaoAuditoria acao, Pedido pedido, Map<String, ?> detalhes) {
+	private void registrar(Long estabelecimentoId, Long usuarioId, AcaoAuditoria acao, Pedido pedido,
+			Map<String, ?> detalhes) {
 		auditoria.registrar(RegistroAuditoria.de(acao)
-			.estabelecimento(usuario.estabelecimentoId())
-			.usuario(usuario.usuarioId())
+			.estabelecimento(estabelecimentoId)
+			.usuario(usuarioId)
 			.entidade(ENTIDADE, pedido.getId())
 			.detalhes(detalhes));
 	}

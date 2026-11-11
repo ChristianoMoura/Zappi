@@ -48,8 +48,10 @@ public class ConfiguracaoSeguranca {
 			.authorizeHttpRequests(rotas -> rotas
 				.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 				.requestMatchers(HttpMethod.POST, ROTA_LOGIN).permitAll()
-				// Portal do Cliente (RN02): só a leitura do cardápio pelo link da loja (ZAP-104)
+				// Portal do Cliente (RN02): a leitura do cardápio pelo link da loja (ZAP-104)
 				.requestMatchers(HttpMethod.GET, ControladorCardapio.ROTA + "/*").permitAll()
+				// e o envio do pedido pelo cliente (ZAP-109)
+				.requestMatchers(HttpMethod.POST, ControladorCardapio.ROTA + "/*/pedidos").permitAll()
 				// Erros (ex.: 404) mostram o status certo em vez de 401. Uma rota protegida
 				// sem token é barrada antes de chegar aqui.
 				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()

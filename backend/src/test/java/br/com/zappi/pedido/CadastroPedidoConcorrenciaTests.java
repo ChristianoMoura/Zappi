@@ -124,6 +124,53 @@ class CadastroPedidoConcorrenciaTests {
 	}
 
 	@Test
+	void pedidosDoPortalEDoPainelAoMesmoTempoRecebemNumerosSeguidos() throws Exception {
+		// A retirada a 8 dias vale para os dois: o portal exige 7 dias de antecedência (RN22)
+		RequisicaoPedido requisicao = new RequisicaoPedido(new ClienteDaRequisicao("Carla Nova", CARLA), true,
+				amanha().plusDays(7).atTime(12, 0), null,
+				List.of(new ItemDaRequisicao(brigadeiro, BigDecimal.ONE, null, null, null)));
+		CountDownLatch largada = new CountDownLatch(1);
+		ExecutorService executor = Executors.newFixedThreadPool(4);
+		try {
+			List<Future<Integer>> numeros = new ArrayList<>();
+			for (int i = 0; i < 4; i++) {
+				boolean peloPortal = i % 2 == 0;
+				numeros.add(executor.submit(() -> {
+					largada.await();
+					return peloPortal ? cadastro.cadastrarPeloPortal("casa-belt", requisicao)
+							: cadastro.cadastrar(lidia, requisicao).numero();
+				}));
+			}
+			largada.countDown();
+			List<Integer> recebidos = new ArrayList<>();
+			for (Future<Integer> numero : numeros) {
+				recebidos.add(numero.get(30, TimeUnit.SECONDS));
+			}
+			assertThat(recebidos).containsExactlyInAnyOrder(3, 4, 5, 6);
+		}
+		finally {
+			executor.shutdownNow();
+		}
+		assertThat(jdbc.queryForObject("select count(*) from cliente where telefone_whatsapp = ?", Integer.class, CARLA))
+			.isEqualTo(1);
+	}
+
+	@Test
+	void pedidoDoPortalDesfeitoSeOLogFalhar() {
+		doThrow(new IllegalStateException("log fora do ar")).when(auditoria).registrar(any(RegistroAuditoria.class));
+
+		assertThatThrownBy(() -> mockMvc.perform(post("/api/cardapio/casa-belt/pedidos")
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json.writeValueAsString(CadastroPedidoTests.pedido("Carla Nova", CARLA, amanha().plusDays(7),
+					List.of(CadastroPedidoTests.item(brigadeiro, 1, Map.of())))))))
+			.hasRootCauseMessage("log fora do ar");
+
+		assertThat(jdbc.queryForObject("select count(*) from pedido where numero > 2", Integer.class)).isZero();
+		assertThat(jdbc.queryForObject("select count(*) from cliente where telefone_whatsapp = ?", Integer.class, CARLA))
+			.isZero();
+	}
+
+	@Test
 	void cadastroDesfeitoSeOLogFalhar() {
 		doThrow(new IllegalStateException("log fora do ar")).when(auditoria).registrar(any(RegistroAuditoria.class));
 
