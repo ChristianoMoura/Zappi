@@ -7,6 +7,7 @@ import {
   IconChevronLeft,
   IconCircleCheck,
   IconCreditCard,
+  IconCreditCardPay,
   IconExternalLink,
   IconLinkOff,
   IconMapPin,
@@ -30,6 +31,7 @@ import {
   agruparPorCategoria,
   AVISO_ENCOMENDA,
   filtrarProdutos,
+  FORMAS_PAGAMENTO,
   linkWhatsapp,
   mensagemContato,
   mensagemPedido,
@@ -45,7 +47,20 @@ import { iniciaisDaLoja } from '../estabelecimento/useMarcaLoja'
 import classes from './PaginaCardapio.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
-const ICONES_REGRAS = { calendario: IconCalendarEvent, retirada: IconShoppingBag, pagamento: IconCreditCard, confirmacao: IconCircleCheck }
+// Símbolo do Pix desenhado aqui (o Tabler não tem): quatro losangos em volta de um centro vazado
+function IconePix({ size = 24, ...resto }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" {...resto}>
+      <path d="M12 2.5l4 4l-4 4l-4 -4z" />
+      <path d="M17.5 8l4 4l-4 4l-4 -4z" />
+      <path d="M12 13.5l4 4l-4 4l-4 -4z" />
+      <path d="M6.5 8l4 4l-4 4l-4 -4z" />
+    </svg>
+  )
+}
+const ICONES_PAGAMENTO = { pix: IconePix, credito: IconCreditCard, debito: IconCreditCardPay }
+
+const ICONES_REGRAS ={ calendario: IconCalendarEvent, retirada: IconShoppingBag, pagamento: IconCreditCard, confirmacao: IconCircleCheck }
 
 const juntar = (...nomes) => nomes.filter(Boolean).join(' ')
 // Altura da barra compacta (logo, nome e ícones) em PaginaCardapio.module.css: 48 + 12 + 1 px
@@ -580,7 +595,20 @@ function PerfilLoja({ loja, escuro }) {
         <section aria-labelledby="perfil-pagamento">
           <h2 id="perfil-pagamento" className={classes.tituloBloco}>Formas de pagamento</h2>
           <div className={classes.bloco}>
-            <p>Pagamento na retirada. Combine a forma de pagamento com a loja pelo WhatsApp.</p>
+            <ul className={classes.pagamentos}>
+              {FORMAS_PAGAMENTO.map(({ id, nome }) => {
+                const Icone = ICONES_PAGAMENTO[id]
+                return (
+                  <li key={id} className={classes.pagamento}>
+                    <span className={classes.iconePagamento}>
+                      <Icone size={28} aria-hidden />
+                    </span>
+                    {nome}
+                  </li>
+                )
+              })}
+            </ul>
+            <p>Pagamento na retirada. Não há pagamento pelo site.</p>
           </div>
         </section>
         <section aria-labelledby="perfil-retirada">

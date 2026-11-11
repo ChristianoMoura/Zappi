@@ -849,6 +849,38 @@
   color: var(--secundario);
 }
 
+/* Formas de pagamento: um cartão por forma, com ícone e nome */
+.pagamentos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pagamento {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  background: var(--fundo);
+  font-weight: 600;
+  text-align: center;
+}
+
+.iconePagamento {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #006d6d;
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
 /* Botão do contato fora do bloco branco, como no cardápio */
 .botaoContato {
   display: flex;

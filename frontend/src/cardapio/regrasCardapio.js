@@ -11,6 +11,14 @@ export const REGRAS_ENCOMENDA = [
   { icone: 'confirmacao', titulo: 'Confirmação', texto: 'O pedido vale depois da confirmação da loja pelo WhatsApp.' },
 ]
 
+// Formas de pagamento aceitas na retirada (RN19: o sistema não registra pagamento). Fixas por
+// enquanto: o cadastro da loja não tem esse campo.
+export const FORMAS_PAGAMENTO = [
+  { id: 'pix', nome: 'Pix' },
+  { id: 'credito', nome: 'Crédito' },
+  { id: 'debito', nome: 'Débito' },
+]
+
 // Local de retirada mostrado no mapa de "Mais informações". Por enquanto é um endereço
 // fictício, só para representar o mapa: o banco não tem um ponto de retirada, e a API pública
 // não expõe o endereço da loja, que é a casa da Lídia (LGPD). Quando houver um ponto de

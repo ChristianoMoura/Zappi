@@ -132,6 +132,9 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(screen.getByText('WhatsApp: (11) 90000-0000')).toBeVisible()
     expect(buscarCardapio).toHaveBeenCalledTimes(1)
 
+    const pagamento = screen.getByRole('region', { name: 'Formas de pagamento' })
+    expect(within(pagamento).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Pix', 'Crédito', 'Débito'])
+
     // O endereço do mapa é fictício e avisa isso; o da loja (casa da Lídia) não vem da API (LGPD)
     const retirada = screen.getByRole('region', { name: 'Retirada' })
     expect(within(retirada).getByText('Endereço ilustrativo')).toBeVisible()
