@@ -306,10 +306,15 @@ class EdicaoPedidoTests {
 				select entidade_id, detalhes ->> 'status' as status,
 				       detalhes -> 'antes' ->> 'valorTotal' as antes, detalhes -> 'depois' ->> 'valorTotal' as depois,
 				       detalhes -> 'depois' -> 'itens' -> 0 ->> 'quantidade' as quantidade,
-				       detalhes -> 'depois' ->> 'clienteId' as cliente, detalhes::text as tudo
+				       detalhes -> 'depois' ->> 'clienteId' as cliente, detalhes::text as tudo,
+				       entidade, ip_origem, user_agent, criado_em
 				from log_auditoria where acao = 'PEDIDO_EDITADO'
 				""");
 		assertThat(((Number) log.get("entidade_id")).longValue()).isEqualTo(pedido);
+		assertThat(log).containsEntry("entidade", "pedido")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", CadastroPedidoTests.NAVEGADOR);
+		assertThat(log.get("criado_em")).isNotNull();
 		assertThat(log).containsEntry("status", "NOVO")
 			.containsEntry("antes", "200.00")
 			.containsEntry("depois", "150.00")
@@ -349,6 +354,7 @@ class EdicaoPedidoTests {
 
 	private ResultActions editar(int numero, Map<String, Object> corpo) throws Exception {
 		return mockMvc.perform(put("/api/pedidos/" + numero).header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, CadastroPedidoTests.NAVEGADOR)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(json.writeValueAsString(corpo)));
 	}
