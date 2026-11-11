@@ -111,13 +111,18 @@ class CadastroPedidoTests {
 		assertThat(cliente.get("consentimento_em")).isNotNull();
 		assertThat(jdbc.queryForMap("""
 				select detalhes ->> 'numero' as numero, detalhes ->> 'clienteId' as cliente,
-				       detalhes ->> 'valorTotal' as total, detalhes ->> 'itens' as itens
+				       detalhes ->> 'valorTotal' as total, detalhes ->> 'itens' as itens,
+				       entidade, ip_origem, user_agent, criado_em
 				from log_auditoria where acao = 'PEDIDO_CRIADO'
 				"""))
 			.containsEntry("numero", "3")
 			.containsEntry("cliente", cliente.get("id").toString())
 			.containsEntry("total", "212.50")
-			.containsEntry("itens", "2");
+			.containsEntry("itens", "2")
+			.containsEntry("entidade", "pedido")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull();
 	}
 
 	@Test
@@ -144,6 +149,17 @@ class CadastroPedidoTests {
 		assertThat(jdbc.queryForObject("select count(*) from cliente", Integer.class)).isEqualTo(clientes);
 		assertThat(jdbc.queryForObject("select cliente_id from pedido where estabelecimento_id = ? and numero = 3",
 				Long.class, casaBelt)).isEqualTo(ana);
+	}
+
+	@Test
+	void recusaPedidoSemDataDeRetirada() throws Exception {
+		Map<String, Object> semData = pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1, Map.of())));
+		semData.remove("dataRetirada");
+
+		cadastrar(semData)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.dataRetirada").value("Escolha a data de retirada."));
+		nadaFoiGravado();
 	}
 
 	@Test
@@ -251,6 +267,7 @@ class CadastroPedidoTests {
 
 	private ResultActions cadastrar(Map<String, Object> pedido) throws Exception {
 		return mockMvc.perform(post("/api/pedidos").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(json.writeValueAsString(pedido)));
 	}
@@ -259,6 +276,8 @@ class CadastroPedidoTests {
 		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and sabor = ?", Long.class,
 				casaBelt, sabor);
 	}
+
+	static final String NAVEGADOR = "Navegador de teste";
 
 	static Map<String, Object> pedido(String nome, String telefone, LocalDate dataRetirada,
 			List<Map<String, Object>> itens) {
