@@ -113,6 +113,7 @@ class DetalhesPedidoTests {
 		detalhar(2)
 			.andExpect(jsonPath("$.status").value(5))
 			.andExpect(jsonPath("$.motivoRecusa").value("Agenda cheia."))
+			.andExpect(jsonPath("$.recusadoEm").isString())
 			.andExpect(jsonPath("$.cancelado").value(false))
 			.andExpect(jsonPath("$.mensagens[*].tipo", contains("RECUSA")))
 			.andExpect(jsonPath("$.mensagens[0].status").value("PENDENTE"))

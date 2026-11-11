@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos } from '../pedidos/servicoPedidos'
-import { abrirQuadro, pedidoDeTeste, renderizarQuadro, usarTela } from '../testes/pedidosDeTeste'
+import { abrirPedido, abrirQuadro, pedidoDeTeste, renderizarQuadro, usarTela } from '../testes/pedidosDeTeste'
 
 // O backend é simulado aqui para os testes não dependerem da ZAP-44
 vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({
@@ -79,6 +79,44 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       await usuario.keyboard('{Escape}')
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
       expect(cartao).toHaveFocus()
+    })
+
+    test('os detalhes mostram itens, preço congelado, total igual à soma e histórico (RF08, RN10, RN11)', async () => {
+      const usuario = userEvent.setup()
+      buscarPedidos.mockResolvedValue([
+        pedido(15, STATUS.CONCLUIDO, 'Ana Souza', {
+          observacao: 'Festa infantil',
+          confirmadoEm: '2030-01-11T09:00',
+          producaoEm: '2030-01-12T08:30',
+          concluidoEm: '2030-01-14T17:45',
+          itens: [
+            { produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 1.5, precoUnitario: 100, recheio: 'Brigadeiro', cobertura: 'Granulado', observacao: 'Massa branca' },
+            { produto: 'Salgado', sabor: 'Cento de coxinha', unidade: 'UN', quantidade: 1, precoUnitario: 120 },
+          ],
+        }),
+      ])
+
+      const detalhes = await abrirPedido(usuario, 15)
+
+      for (const texto of [
+        'Festa infantil',
+        'Na retirada',
+        'Ana Souza',
+        'Bolo · Brigadeiro de chocolate',
+        'R$ 150,00',
+        '1,5 kg × R$ 100,00/kg',
+        'Recheio: Brigadeiro · Cobertura: Granulado',
+        'Obs.: Massa branca',
+        'Salgado · Cento de coxinha',
+        'R$ 120,00',
+        'TotalR$ 270,00',
+        'Recebido10/01 às 10:00',
+        'Confirmado11/01 às 09:00',
+        'Em produção12/01 às 08:30',
+        'Concluído14/01 às 17:45',
+      ]) {
+        expect(detalhes).toHaveTextContent(texto)
+      }
     })
   })
 
