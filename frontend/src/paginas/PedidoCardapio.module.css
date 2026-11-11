@@ -1,0 +1,463 @@
+/* Detalhes do produto e "Seu pedido" (ZAP-107). Usam as variáveis de cor do tema do cardápio
+   (PaginaCardapio.module.css), então funcionam no claro e no escuro. */
+.pagina {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.coluna {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  flex: 1;
+  padding-bottom: 16px;
+}
+
+/* ---------- Topo ---------- */
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--cartao);
+  border-bottom: 1px solid var(--borda);
+}
+
+.topoConteudo {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.topoConteudo h1 {
+  margin: 0;
+  flex: 1;
+  font-size: 1.15rem;
+}
+
+/* ---------- Produto ---------- */
+.info {
+  display: grid;
+  background: var(--cartao);
+}
+
+.fotoProduto {
+  height: 260px;
+}
+
+.texto {
+  padding: 18px 16px 20px;
+  display: grid;
+  gap: 6px;
+  align-content: center;
+}
+
+.texto h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.tipo {
+  color: var(--destaque);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.precoGrande {
+  font-size: 1.35rem;
+}
+
+.descricao {
+  margin: 0;
+  color: var(--secundario);
+}
+
+.lembrete {
+  margin: 4px 0 0;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 0.88rem;
+  color: var(--secundario);
+}
+
+.lembrete svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ---------- Cartões ---------- */
+.cartao {
+  background: var(--cartao);
+  border-radius: 18px;
+  margin: 14px 12px 0;
+  overflow: hidden;
+}
+
+.cartao > header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.cartao h2,
+.cartao h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.cartao header small {
+  color: var(--secundario);
+  font-size: 0.88rem;
+}
+
+.cartao header a {
+  color: var(--destaque);
+  font-weight: 600;
+}
+
+.corpo {
+  padding: 14px 16px 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.campo {
+  display: grid;
+  gap: 6px;
+}
+
+.campo b {
+  font-size: 0.95rem;
+}
+
+.campo span {
+  color: var(--secundario);
+  font-size: 0.88rem;
+}
+
+.campo input,
+.campo textarea,
+.campo select {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--texto);
+  background: var(--cartao);
+  border: 2px solid var(--borda);
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-height: 50px;
+  width: 100%;
+}
+
+.campo textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.campo input::placeholder,
+.campo textarea::placeholder {
+  color: var(--secundario);
+}
+
+.campo input:focus-visible,
+.campo textarea:focus-visible,
+.campo select:focus-visible {
+  border-color: var(--destaque);
+  outline: 3px solid var(--zappi-cor-foco);
+  outline-offset: 2px;
+}
+
+.campo [aria-invalid='true'] {
+  border-color: #b42318;
+}
+
+/* ---------- Quantidade ---------- */
+.linhaQuantidade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.passo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 2px solid var(--borda);
+  border-radius: 14px;
+  padding: 2px;
+}
+
+.passo button {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--destaque);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.passo button:disabled {
+  color: var(--borda);
+  cursor: not-allowed;
+}
+
+.passo button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--destaque) 12%, transparent);
+}
+
+.passo output {
+  min-width: 96px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.valor {
+  color: var(--secundario);
+}
+
+.valor b,
+.subtotal {
+  color: var(--texto);
+}
+
+/* ---------- Itens do pedido ---------- */
+.itens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.item + .item {
+  border-top: 1px solid var(--borda);
+}
+
+.fotoMini {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+}
+
+.dados {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dados h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.precoPequeno {
+  font-size: 1rem;
+}
+
+.detalhe {
+  margin: 0;
+  color: var(--secundario);
+  font-size: 0.88rem;
+}
+
+.remover {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #b42318;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+/* ---------- Data e hora ---------- */
+.dataHora {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.dica {
+  color: var(--secundario);
+  font-size: 0.88rem;
+}
+
+.erro {
+  margin: 0;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  color: #b42318;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.erro svg {
+  flex: none;
+}
+
+.resumoData {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--destaque) 12%, transparent);
+}
+
+.pressa {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.pressa a {
+  color: var(--destaque);
+  font-weight: 600;
+}
+
+.linhaTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.linhaTotal b {
+  font-size: 1.4rem;
+  color: var(--destaque);
+}
+
+/* ---------- Vazio ---------- */
+.vazio {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 24px;
+}
+
+.vazio h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.vazio p {
+  margin: 0;
+  color: var(--secundario);
+}
+
+.iconeVazio {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  display: grid;
+  place-items: center;
+  color: var(--destaque);
+}
+
+/* ---------- Rodapé com o botão ---------- */
+.baixo {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--cartao);
+  border-top: 1px solid var(--borda);
+  padding: 10px 12px;
+}
+
+.baixoConteudo {
+  max-width: 776px;
+  margin: 0 auto;
+  display: grid;
+  gap: 6px;
+}
+
+.baixoConteudo small {
+  color: var(--secundario);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.principal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--botao);
+  color: var(--botao-texto);
+  font: inherit;
+  font-weight: 600;
+  font-size: 1.05rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.principal:hover {
+  background: #005a5a;
+}
+
+.principal b {
+  white-space: nowrap;
+}
+
+.principal span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (min-width: 48em) {
+  .coluna {
+    padding: 18px 16px 24px;
+  }
+
+  .info {
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+    align-items: center;
+    background: transparent;
+  }
+
+  .fotoProduto {
+    height: 220px;
+    border-radius: 18px;
+  }
+
+  .texto {
+    padding: 0;
+  }
+
+  .cartao {
+    margin-inline: 0;
+  }
+}

@@ -1,10 +1,9 @@
 import { Modal } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import {
   IconAlertCircle,
-  IconBrandWhatsapp,
   IconCalendarEvent,
   IconChevronLeft,
+  IconShoppingCart,
   IconCircleCheck,
   IconCreditCard,
   IconCreditCardPay,
@@ -13,7 +12,6 @@ import {
   IconMapPin,
   IconMenu2,
   IconMoon,
-  IconPhotoOff,
   IconRefresh,
   IconSearch,
   IconShare,
@@ -22,29 +20,26 @@ import {
   IconX,
 } from '@tabler/icons-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
-import zappiNomeCreme from '../assets/zappi-nome-creme.svg'
-import zappiNome from '../assets/zappi-nome.svg'
-import zappiSimboloCreme from '../assets/zappi-simbolo-creme.svg'
-import zappiSimbolo from '../assets/zappi-simbolo.svg'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import {
   agruparPorCategoria,
   AVISO_ENCOMENDA,
   filtrarProdutos,
   FORMAS_PAGAMENTO,
-  linkWhatsapp,
   mensagemContato,
-  mensagemPedido,
   PONTO_RETIRADA_EXEMPLO,
-  precoTexto,
   REGRAS_ENCOMENDA,
   telefoneTexto,
-  unidadeTexto,
 } from '../cardapio/regrasCardapio'
+import { juntar } from '../cardapio/juntarClasses'
+import { totalDoPedido } from '../cardapio/regrasPedidoCliente'
+import { moeda } from '../pedidos/regrasPedidos'
+import { usePedidoCliente } from '../cardapio/usePedidoCliente'
 import { buscarCardapio, CardapioNaoEncontradoError } from '../cardapio/servicoCardapio'
 import { useTemaCardapio } from '../cardapio/useTemaCardapio'
-import { iniciaisDaLoja } from '../estabelecimento/useMarcaLoja'
 import classes from './PaginaCardapio.module.css'
+import { BotaoWhatsapp, Foto, LogoLoja, Preco, Rodape } from './partesCardapio'
+import { DetalheDoProduto, SeuPedido } from './PedidoCardapio'
 import { useTituloPagina } from './useTituloPagina'
 
 // Símbolo do Pix desenhado aqui (o Tabler não tem): quatro losangos em volta de um centro vazado
@@ -62,7 +57,6 @@ const ICONES_PAGAMENTO = { pix: IconePix, credito: IconCreditCard, debito: IconC
 
 const ICONES_REGRAS ={ calendario: IconCalendarEvent, retirada: IconShoppingBag, pagamento: IconCreditCard, confirmacao: IconCircleCheck }
 
-const juntar = (...nomes) => nomes.filter(Boolean).join(' ')
 // Altura da barra compacta (logo, nome e ícones) em PaginaCardapio.module.css: 48 + 12 + 1 px
 const ALTURA_BARRA_COMPACTA = 61
 const movimentoReduzido =() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -71,12 +65,15 @@ const movimentoReduzido =() => window.matchMedia?.('(prefers-reduced-motion: red
 // sem login (RN02), com só os produtos ativos (RN14). No celular, tudo em uma coluna; no
 // computador, uma coluna central. A loja não tem endereço na página (LGPD).
 export function PaginaCardapio() {
-  const { slug, pagina } = useParams()
+  const { slug, '*': resto = '' } = useParams()
+  const [pagina, idProduto, sobra] = resto.split('/').filter(Boolean)
+  const montagem = usePedidoCliente(slug)
   const [estado, setEstado] = useState({ situacao: 'carregando' })
   const [tentativa, setTentativa] = useState(0)
   const [escuro, alternarTema] = useTemaCardapio()
 
-  useTituloPagina(estado.estabelecimento?.nome ? `Cardápio da ${estado.estabelecimento.nome}` : 'Cardápio')
+  // Com o cardápio carregado, cada tela (cardápio, produto, pedido, informações) dá o próprio título
+  useTituloPagina(estado.situacao === 'inexistente' ? 'Cardápio não encontrado' : 'Cardápio')
 
   useEffect(() => {
     let ativo = true
@@ -98,9 +95,14 @@ export function PaginaCardapio() {
   if (estado.situacao === 'carregando') conteudo = <Carregando />
   else if (estado.situacao === 'erro') conteudo = <ErroAoCarregar aoTentar={tentarDeNovo} />
   else if (estado.situacao === 'inexistente') conteudo = <NaoEncontrado escuro={escuro} />
-  else if (pagina === 'informacoes') conteudo = <PerfilLoja loja={estado.estabelecimento} escuro={escuro} />
-  else if (pagina) conteudo = <NaoEncontrado escuro={escuro} />
-  else conteudo = <Cardapio loja={estado.estabelecimento} produtos={estado.produtos} escuro={escuro} alternarTema={alternarTema} tema={tema} />
+  else if (sobra) conteudo = <NaoEncontrado escuro={escuro} />
+  else if (pagina === 'informacoes' && !idProduto) conteudo = <PerfilLoja loja={estado.estabelecimento} escuro={escuro} />
+  else if (pagina === 'produto' && idProduto) {
+    conteudo = <DetalheDoProduto key={idProduto} loja={estado.estabelecimento} produtos={estado.produtos} idProduto={idProduto} montagem={montagem} escuro={escuro} />
+  } else if (pagina === 'pedido' && !idProduto) {
+    conteudo = <SeuPedido loja={estado.estabelecimento} produtos={estado.produtos} montagem={montagem} escuro={escuro} />
+  } else if (pagina) conteudo = <NaoEncontrado escuro={escuro} />
+  else conteudo = <Cardapio loja={estado.estabelecimento} produtos={estado.produtos} montagem={montagem} escuro={escuro} alternarTema={alternarTema} tema={tema} />
 
   return <div className={juntar(tema, classes.pagina)}>{conteudo}</div>
 }
@@ -154,58 +156,6 @@ function NaoEncontrado({ escuro }) {
 
 // ---------- Partes comuns ----------
 
-function Rodape({ escuro }) {
-  return (
-    <p className={classes.rodape}>
-      Cardápio feito com o
-      <img src={escuro ? zappiSimboloCreme : zappiSimbolo} alt="" />
-      <img src={escuro ? zappiNomeCreme : zappiNome} alt="Zappi" />
-    </p>
-  )
-}
-
-function LogoLoja({ loja, className }) {
-  if (loja.logo) return <img src={loja.logo} alt={`Logo de ${loja.nome}`} className={className} />
-  return (
-    <span className={juntar(className, classes.iniciais)} role="img" aria-label={`Logo de ${loja.nome}`}>
-      {iniciaisDaLoja(loja.nome)}
-    </span>
-  )
-}
-
-function Foto({ produto, className }) {
-  return (
-    <div className={juntar(classes.foto, className)}>
-      {produto.foto ? (
-        <img src={produto.foto} alt={produto.textoAlternativo} loading="lazy" />
-      ) : (
-        <span className={classes.semFoto}>
-          <IconPhotoOff size={24} aria-hidden />
-          Sem foto
-        </span>
-      )}
-    </div>
-  )
-}
-
-function Preco({ produto, className }) {
-  return (
-    <span className={juntar(classes.preco, className)}>
-      {precoTexto(produto)} <small>{unidadeTexto(produto)}</small>
-    </span>
-  )
-}
-
-function BotaoWhatsapp({ loja, texto, rotulo, className }) {
-  return (
-    <a className={juntar(classes.whats, className)} href={linkWhatsapp(loja.whatsapp, texto)} target="_blank" rel="noopener noreferrer">
-      <IconBrandWhatsapp size={24} aria-hidden />
-      {rotulo}
-      <span className={classes.somenteLeitor}> (abre o WhatsApp)</span>
-    </a>
-  )
-}
-
 function RegrasEncomenda() {
   return REGRAS_ENCOMENDA.map(({ icone, titulo, texto }) => {
     const Icone = ICONES_REGRAS[icone]
@@ -225,13 +175,15 @@ function RegrasEncomenda() {
 
 // ---------- Cardápio ----------
 
-function Cardapio({ loja, produtos, escuro, alternarTema, tema }) {
-  const celular = useMediaQuery('(max-width: 47.99em)')
+function Cardapio({ loja, produtos, montagem, escuro, alternarTema, tema }) {
+  useTituloPagina(`Cardápio da ${loja.nome}`)
+  const navegar = useNavigate()
+  const { state } = useLocation()
   const [busca, setBusca] = useState('')
   const [buscaAberta, setBuscaAberta] = useState(false)
   const [categoriasAbertas, setCategoriasAbertas] = useState(false)
-  const [produtoAberto, setProdutoAberto] = useState(null)
-  const [aviso, setAviso] = useState('')
+  // O aviso de 'adicionado ao pedido' chega junto da volta do produto
+  const [aviso, setAviso] = useState(state?.aviso ?? '')
   const [rolou, setRolou] = useState(false)
   const [atual, setAtual] = useState(null)
 
@@ -289,6 +241,34 @@ function Cardapio({ loja, produtos, escuro, alternarTema, tema }) {
     setAviso(texto)
     setTimeout(() => setAviso(''), 4000)
   }, [])
+
+  // Volta do produto: mesmo ponto da lista e o aviso de "adicionado ao pedido"
+  useEffect(() => {
+    const chaveRolagem = `zappi.cardapio.rolagem.${loja.slug}`
+    let rolagem = null
+    try {
+      rolagem = sessionStorage.getItem(chaveRolagem)
+      sessionStorage.removeItem(chaveRolagem)
+    } catch {
+      // Sem armazenamento: começa do topo
+    }
+    if (rolagem) window.scrollTo(0, Number(rolagem))
+    if (state?.aviso) {
+      setTimeout(() => setAviso(''), 4000)
+      navegar(`/cardapio/${loja.slug}`, { replace: true, state: null })
+    }
+  }, [loja.slug, state, navegar])
+
+  function abrirProduto(produto) {
+    try {
+      sessionStorage.setItem(`zappi.cardapio.rolagem.${loja.slug}`, String(window.scrollY))
+    } catch {
+      // Sem armazenamento: a volta começa do topo
+    }
+    navegar(`/cardapio/${loja.slug}/produto/${produto.id}`)
+  }
+
+  const itensNoPedido = montagem.pedido.itens.filter((item) => produtos.some((p) => p.id === item.produtoId)).length
 
   async function compartilhar(produto) {
     const url = window.location.href
@@ -405,7 +385,7 @@ function Cardapio({ loja, produtos, escuro, alternarTema, tema }) {
                   <ul className={classes.lista}>
                     {c.produtos.map((p) => (
                       <li key={p.id}>
-                        <button type="button" className={classes.item} onClick={() => setProdutoAberto(p)}>
+                        <button type="button" className={classes.item} onClick={() => abrirProduto(p)}>
                           <div className={classes.textoItem}>
                             <h3>{p.sabor}</h3>
                             {p.descricao && <p className={classes.descricao}>{p.descricao}</p>}
@@ -425,7 +405,17 @@ function Cardapio({ loja, produtos, escuro, alternarTema, tema }) {
 
         <Rodape escuro={escuro} />
         <div className={classes.barraBaixo}>
-          <BotaoWhatsapp loja={loja} texto={mensagemContato(loja)} rotulo="Falar com a loja no WhatsApp" />
+          {itensNoPedido > 0 ? (
+            <Link to={`/cardapio/${loja.slug}/pedido`} className={juntar(classes.whats, classes.verPedido)}>
+              <span>
+                <IconShoppingCart size={24} aria-hidden />
+                Ver pedido · {itensNoPedido} {itensNoPedido === 1 ? 'item' : 'itens'}
+              </span>
+              <b>{moeda(totalDoPedido(montagem.pedido.itens, produtos))}</b>
+            </Link>
+          ) : (
+            <BotaoWhatsapp loja={loja} texto={mensagemContato(loja)} rotulo="Falar com a loja no WhatsApp" />
+          )}
         </div>
       </div>
 
@@ -462,69 +452,7 @@ function Cardapio({ loja, produtos, escuro, alternarTema, tema }) {
           </Modal.Body>
         </Modal.Content>
       </Modal.Root>
-
-      <DetalheProduto
-        key={produtoAberto?.id ?? 'nenhum'}
-        loja={loja}
-        produto={produtoAberto}
-        tema={tema}
-        telaCheia={celular}
-        aoFechar={() => setProdutoAberto(null)}
-        aoCompartilhar={compartilhar}
-      />
     </>
-  )
-}
-
-// Detalhe do produto: página inteira no celular e janela no computador. A observação vai junto
-// na mensagem do WhatsApp; montar o pedido pelo portal é outra história (ZAP-101 em diante).
-function DetalheProduto({ loja, produto, tema, telaCheia, aoFechar, aoCompartilhar }) {
-  const [observacao, setObservacao] = useState('')
-  return (
-    <Modal.Root opened={Boolean(produto)} onClose={aoFechar} fullScreen={telaCheia} size="56rem" centered>
-      <Modal.Overlay />
-      <Modal.Content className={juntar(tema, classes.janela, classes.janelaProduto)}>
-        {produto && (
-          <div className={classes.detalhe}>
-            <div className={classes.fotoDetalhe}>
-              <Foto produto={produto} />
-              <button type="button" className={juntar(classes.botaoFoto, classes.voltar)} onClick={aoFechar} aria-label="Voltar ao cardápio">
-                <IconChevronLeft size={24} aria-hidden />
-              </button>
-              <button type="button" className={juntar(classes.botaoFoto, classes.compartilharFoto)} onClick={() => aoCompartilhar(produto)} aria-label="Compartilhar este produto">
-                <IconShare size={22} aria-hidden />
-              </button>
-            </div>
-            <div className={classes.textoDetalhe}>
-              <span className={classes.categoriaProduto}>{produto.nome}</span>
-              <Modal.Title component="h2" className={classes.tituloProduto}>
-                {produto.sabor}
-              </Modal.Title>
-              <Preco produto={produto} className={classes.precoDetalhe} />
-              {produto.descricao && <p className={classes.descricaoDetalhe}>{produto.descricao}</p>}
-              <label className={classes.observacao}>
-                <b>Observações</b>
-                <span id="dica-observacao">Opcional. Vai junto na mensagem para a loja.</span>
-                <textarea
-                  value={observacao}
-                  onChange={(e) => setObservacao(e.currentTarget.value)}
-                  maxLength={300}
-                  rows={3}
-                  placeholder="Ex.: escrever “Feliz aniversário, Ana” no bolo"
-                  aria-describedby="dica-observacao"
-                />
-              </label>
-              <p className={classes.regrasDetalhe}>
-                Encomende com pelo menos 7 dias. Retirada na data combinada e pagamento na retirada. O pedido vale depois da confirmação da loja.
-              </p>
-            </div>
-            <div className={classes.baixoDetalhe}>
-              <BotaoWhatsapp loja={loja} texto={mensagemPedido(loja, produto, observacao)} rotulo="Pedir pelo WhatsApp" />
-            </div>
-          </div>
-        )}
-      </Modal.Content>
-    </Modal.Root>
   )
 }
 
@@ -558,6 +486,7 @@ function MapaRetirada({ ponto }) {
 }
 
 function PerfilLoja({ loja, escuro }) {
+  useTituloPagina(`Informações · ${loja.nome}`)
   return (
     <div className={juntar(classes.coluna, classes.perfil)}>
       <header className={classes.topoPerfil}>

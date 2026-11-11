@@ -20,7 +20,7 @@ const CARDAPIO = {
 }
 
 function abrir(caminho = '/cardapio/casa-belt') {
-  return renderizarComRotas([{ path: '/cardapio/:slug/:pagina?', Component: PaginaCardapio }], caminho)
+  return renderizarComRotas([{ path: '/cardapio/:slug/*', Component: PaginaCardapio }], caminho)
 }
 
 describe('PaginaCardapio (ZAP-105)', () => {
@@ -107,17 +107,15 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(localStorage.getItem('zappi.cardapio.tema')).toBe('escuro')
   })
 
-  test('o produto abre com a observação, que vai na mensagem do WhatsApp', async () => {
+  test('o produto abre na página de detalhes', async () => {
     const usuario = userEvent.setup()
-    abrir()
+    const roteador = abrir()
 
     await usuario.click(await screen.findByRole('button', { name: /Brigadeiro de chocolate/ }))
-    const janela = await screen.findByRole('dialog', { name: 'Brigadeiro de chocolate' })
-    await usuario.type(within(janela).getByRole('textbox', { name: /Observações/ }), 'Feliz aniversário')
 
-    const pedir = within(janela).getByRole('link', { name: /Pedir pelo WhatsApp/ })
-    const texto = new URL(pedir.getAttribute('href')).searchParams.get('text')
-    expect(texto).toBe('Olá! Vi o cardápio da Casa Belt no Zappi e quero encomendar: Brigadeiro de chocolate (R$ 100,00 por kg). Observação: Feliz aniversário')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Detalhes do produto' })).toBeVisible()
+    expect(screen.getByRole('heading', { level: 2, name: 'Brigadeiro de chocolate' })).toBeVisible()
+    expect(roteador.state.location.pathname).toBe('/cardapio/casa-belt/produto/1')
   })
 
   test('"Mais informações" mostra as regras da encomenda, o contato e o mapa da retirada', async () => {

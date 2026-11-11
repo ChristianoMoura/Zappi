@@ -12,8 +12,9 @@ import { RotaProtegida } from './RotaProtegida'
 
 export const rotas = createBrowserRouter([
   { path: '/login', Component: PaginaLogin },
-  // Portal do Cliente: cardápio público, sem login (RN02). Com /informacoes, mostra os dados da loja.
-  { path: '/cardapio/:slug/:pagina?', Component: PaginaCardapio },
+  // Portal do Cliente: cardápio público, sem login (RN02). Dentro dele: /informacoes (dados da loja),
+  // /produto/:id (detalhes do produto) e /pedido (o pedido em montagem, ZAP-107).
+  { path: '/cardapio/:slug/*', Component: PaginaCardapio },
   {
     Component: RotaProtegida,
     children: [
