@@ -1,10 +1,11 @@
 import { Alert, Button, Drawer } from '@mantine/core'
-import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconPencil, IconSend, IconToolsKitchen2, IconX } from '@tabler/icons-react'
+import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconPencil, IconSend, IconToolsKitchen2, IconUserX, IconX } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { JanelaAnonimizar } from './JanelaAnonimizar'
 import { JanelaMotivo } from './JanelaMotivo'
 import { JanelaVoltar } from './JanelaVoltar'
-import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeCancelar, podeEditar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
+import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeAnonimizar, podeCancelar, podeEditar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
 const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
@@ -42,23 +43,29 @@ function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef, focoInici
             </div>
             <p className={classes.mensagemTexto}>{atual.mensagem.texto}</p>
             <div className={classes.mensagemAcoes}>
-              <Button
-                ref={botaoEnviarRef}
-                data-autofocus={focoInicial || undefined}
-                component="a"
-                href={atual.mensagem.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => aoEnviarMensagem(atual.indice)}
-                color="#1f7a4d"
-                fullWidth
-                leftSection={<IconSend size={22} aria-hidden />}
-                aria-label={`${atual.mensagem.status === 'Enviada' ? 'Enviar de novo' : 'Enviar'} no WhatsApp para ${primeiroNome} (abre o WhatsApp)`}
-              >
-                {atual.mensagem.status === 'Enviada' ? 'Enviar de novo no WhatsApp' : 'Enviar no WhatsApp'}
-              </Button>
-              {atual.mensagem.enviadoEm && (
-                <span className={classes.apoio}>Enviada em {dataHora(atual.mensagem.enviadoEm)}. Se fechou o WhatsApp sem mandar, envie de novo.</span>
+              {pedido.cliente.anonimizado ? (
+                <span className={classes.apoio}>Os dados deste cliente foram apagados. Não há WhatsApp para enviar.</span>
+              ) : (
+                <>
+                  <Button
+                    ref={botaoEnviarRef}
+                    data-autofocus={focoInicial || undefined}
+                    component="a"
+                    href={atual.mensagem.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => aoEnviarMensagem(atual.indice)}
+                    color="#1f7a4d"
+                    fullWidth
+                    leftSection={<IconSend size={22} aria-hidden />}
+                    aria-label={`${atual.mensagem.status === 'Enviada' ? 'Enviar de novo' : 'Enviar'} no WhatsApp para ${primeiroNome} (abre o WhatsApp)`}
+                  >
+                    {atual.mensagem.status === 'Enviada' ? 'Enviar de novo no WhatsApp' : 'Enviar no WhatsApp'}
+                  </Button>
+                  {atual.mensagem.enviadoEm && (
+                    <span className={classes.apoio}>Enviada em {dataHora(atual.mensagem.enviadoEm)}. Se fechou o WhatsApp sem mandar, envie de novo.</span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -106,6 +113,7 @@ const SUCESSO = {
   pronto: { texto: 'Pedido pronto e movido para a coluna Concluído.', enviar: true },
   voltar: { texto: 'Pedido voltou para a coluna' },
   editar: { texto: 'Pedido atualizado.', enviar: true },
+  anonimizar: { texto: 'Dados do cliente apagados. Os pedidos continuam no histórico.' },
 }
 
 function textoSucesso(acabouDe, coluna, primeiroNome) {
@@ -118,7 +126,7 @@ function textoSucesso(acabouDe, coluna, primeiroNome) {
   return enviar ? `${texto} Agora envie a mensagem para ${primeiroNome}.` : texto
 }
 
-export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoAvancar, aoVoltar, aoEnviarMensagem, enviando, acabouDe, erroAcao }) {
+export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoAvancar, aoVoltar, aoAnonimizar, aoEnviarMensagem, enviando, acabouDe, erroAcao }) {
   const coluna = pedido && COLUNAS.find((c) => c.status === pedido.status)
   const botaoEnviarRef = useRef(null)
   const sucessoRef = useRef(null)
@@ -141,8 +149,15 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
     if (await aoVoltar(pedido)) setJanela(null)
   }
 
+  async function concluirAnonimizacao() {
+    if (await aoAnonimizar(pedido)) setJanela(null)
+  }
+
+  const anonimizado = pedido?.cliente.anonimizado
   const avanco = pedido && AVANCO[pedido.status]
-  const volta = pedido && VOLTA[pedido.status]
+  // Cliente anonimizado não volta para produção: não haveria para quem avisar (RN17)
+  const volta = pedido && !anonimizado && VOLTA[pedido.status]
+  const bloqueadoAnonimizar = pedido && !podeAnonimizar(pedido.status)
 
   const primeiroNome = pedido?.cliente.nome.split(' ')[0]
   const historico = pedido
@@ -221,9 +236,33 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
             <dl>
               <dt>Nome</dt>
               <dd>{pedido.cliente.nome}</dd>
-              <dt>WhatsApp</dt>
-              <dd>{telefoneTela(pedido.cliente.telefone)}</dd>
+              {!anonimizado && (
+                <>
+                  <dt>WhatsApp</dt>
+                  <dd>{telefoneTela(pedido.cliente.telefone)}</dd>
+                </>
+              )}
             </dl>
+            {!anonimizado && (
+              <div className={classes.apagarDados}>
+                <Button
+                  fullWidth
+                  variant="outline"
+                  color="#b42318"
+                  onClick={() => setJanela('anonimizar')}
+                  disabled={bloqueadoAnonimizar || enviando}
+                  aria-describedby={bloqueadoAnonimizar ? 'motivo-bloqueio-dados' : undefined}
+                  leftSection={<IconUserX size={22} aria-hidden />}
+                >
+                  Apagar dados do cliente
+                </Button>
+                {bloqueadoAnonimizar && (
+                  <p id="motivo-bloqueio-dados" className={classes.motivoBloqueio}>
+                    Só dá para apagar os dados quando o pedido estiver concluído ou recusado. Até lá, o nome e o WhatsApp são necessários para atender o pedido.
+                  </p>
+                )}
+              </div>
+            )}
           </section>
 
           <section className={classes.bloco} aria-labelledby="detalhes-itens">
@@ -304,6 +343,8 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
           )}
 
           <JanelaVoltar pedido={pedido} aberta={janela === 'voltar'} aoFechar={() => setJanela(null)} aoConfirmar={concluirVolta} enviando={enviando} erro={janela === 'voltar' ? erroAcao : ''} />
+
+          <JanelaAnonimizar pedido={pedido} aberta={janela === 'anonimizar'} aoFechar={() => setJanela(null)} aoConfirmar={concluirAnonimizacao} enviando={enviando} erro={janela === 'anonimizar' ? erroAcao : ''} />
 
           <JanelaMotivo
             pedido={pedido}

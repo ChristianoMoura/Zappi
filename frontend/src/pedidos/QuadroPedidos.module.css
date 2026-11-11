@@ -601,6 +601,29 @@
   color: #1f7a4d;
 }
 
+/* Aviso de que apagar os dados do cliente não tem volta (ZAP-116) */
+.lembreteAlerta {
+  background: #fef3f2;
+  border-left-color: #b42318;
+}
+
+.lembreteAlerta svg {
+  color: #b42318;
+}
+
+/* Botão de apagar os dados do cliente e o motivo de estar bloqueado (ZAP-116) */
+.apagarDados {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.motivoBloqueio {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
 /* Botão "Novo pedido" ao lado do filtro (ZAP-89) */
 .acoesTopo {
   display: flex;
