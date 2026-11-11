@@ -34,6 +34,8 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 @Transactional
 class AndamentoPedidoTests {
 
+	private static final String NAVEGADOR = "Navegador de teste";
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -71,7 +73,13 @@ class AndamentoPedidoTests {
 			.andExpect(jsonPath("$.mensagens.length()").value(0))
 			.andExpect(jsonPath("$.avisoDeProntoEnviado").doesNotExist());
 
-		assertThat(log()).containsEntry("antes", "CONFIRMADO").containsEntry("depois", "EM_PRODUCAO");
+		assertThat(jdbc.queryForObject("select producao_em from pedido where id = ?", Object.class, pedido)).isNotNull();
+		assertThat(log()).containsEntry("antes", "CONFIRMADO")
+			.containsEntry("depois", "EM_PRODUCAO")
+			.containsEntry("entidade", "pedido")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull();
 	}
 
 	@Test
@@ -99,6 +107,9 @@ class AndamentoPedidoTests {
 			.andExpect(jsonPath("$.concluidoEm").value(nullValue()))
 			.andExpect(jsonPath("$.avisoDeProntoEnviado").value(false));
 
+		assertThat(jdbc.queryForMap("select producao_em, concluido_em from pedido where id = ?", pedido))
+			.containsEntry("concluido_em", null)
+			.extractingByKey("producao_em").isNotNull();
 		assertThat(log()).containsEntry("antes", "CONCLUIDO").containsEntry("depois", "EM_PRODUCAO");
 	}
 
@@ -170,7 +181,8 @@ class AndamentoPedidoTests {
 	}
 
 	private ResultActions acao(String rota) throws Exception {
-		return mockMvc.perform(post("/api/pedidos/1/" + rota).header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+		return mockMvc.perform(post("/api/pedidos/1/" + rota).header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR));
 	}
 
 	private void etapa(String campos) {
@@ -179,7 +191,8 @@ class AndamentoPedidoTests {
 
 	private Map<String, Object> log() {
 		return jdbc.queryForMap("""
-				select detalhes ->> 'statusAntes' as antes, detalhes ->> 'statusDepois' as depois
+				select detalhes ->> 'statusAntes' as antes, detalhes ->> 'statusDepois' as depois,
+				       entidade, ip_origem, user_agent, criado_em
 				from log_auditoria where acao = 'PEDIDO_STATUS_ALTERADO' and entidade_id = ?
 				""", pedido);
 	}
