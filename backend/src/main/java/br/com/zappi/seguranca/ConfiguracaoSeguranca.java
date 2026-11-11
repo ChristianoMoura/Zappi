@@ -20,6 +20,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import br.com.zappi.cardapio.ControladorCardapio;
+
 /**
  * Regras de acesso da API (RN02, ISO 27002 5.15).
  *
@@ -31,7 +33,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableConfigurationProperties(PropriedadesCors.class)
 public class ConfiguracaoSeguranca {
 
-	/** Rota de login (ZAP-31), a única da API aberta sem token. */
+	/** Rota de login (ZAP-31), aberta sem token, como as do Portal do Cliente. */
 	public static final String ROTA_LOGIN = "/api/autenticacao/login";
 
 	@Bean
@@ -46,6 +48,8 @@ public class ConfiguracaoSeguranca {
 			.authorizeHttpRequests(rotas -> rotas
 				.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 				.requestMatchers(HttpMethod.POST, ROTA_LOGIN).permitAll()
+				// Portal do Cliente (RN02): só a leitura do cardápio pelo link da loja (ZAP-104)
+				.requestMatchers(HttpMethod.GET, ControladorCardapio.ROTA + "/*").permitAll()
 				// Erros (ex.: 404) mostram o status certo em vez de 401. Uma rota protegida
 				// sem token é barrada antes de chegar aqui.
 				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
