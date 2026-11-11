@@ -171,6 +171,7 @@ public class ServicoCadastroPedido {
 		Map<String, Object> detalhes = new LinkedHashMap<>();
 		detalhes.put("numero", numero);
 		detalhes.put("clienteId", cliente.getId());
+		detalhes.put("dataRetirada", pedido.getDataRetirada().toString());
 		detalhes.put("valorTotal", dinheiro(pedido.getValorTotal()));
 		detalhes.put("itens", itensDoPedido.size());
 		if (peloPortal) {
