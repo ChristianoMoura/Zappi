@@ -120,7 +120,7 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(texto).toBe('Olá! Vi o cardápio da Casa Belt no Zappi e quero encomendar: Brigadeiro de chocolate (R$ 100,00 por kg). Observação: Feliz aniversário')
   })
 
-  test('"Mais informações" mostra as regras da encomenda e o contato, sem endereço', async () => {
+  test('"Mais informações" mostra as regras da encomenda, o contato e o mapa da retirada', async () => {
     const usuario = userEvent.setup()
     abrir()
 
@@ -130,7 +130,16 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(screen.getByText('Encomende com pelo menos 7 dias.')).toBeVisible()
     expect(screen.getByText('Na retirada.')).toBeVisible()
     expect(screen.getByText('WhatsApp: (11) 90000-0000')).toBeVisible()
-    expect(screen.queryByText(/endereço|rua/i)).not.toBeInTheDocument()
     expect(buscarCardapio).toHaveBeenCalledTimes(1)
+
+    const pagamento = screen.getByRole('region', { name: 'Formas de pagamento' })
+    expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Pix', 'Crédito', 'Débito'])
+    expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
+
+    // O endereço do mapa é fictício e avisa isso; o da loja (casa da Lídia) não vem da API (LGPD)
+    const retirada = screen.getByRole('region', { name: 'Retirada' })
+    expect(within(retirada).getByText('Endereço ilustrativo')).toBeVisible()
+    expect(within(retirada).getByTitle(/Mapa do local de retirada/)).toHaveAttribute('src', expect.stringContaining('openstreetmap.org'))
+    expect(within(retirada).getByRole('link', { name: /Abrir no mapa/ })).toHaveAttribute('target', '_blank')
   })
 })
