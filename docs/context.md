@@ -241,7 +241,8 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN19 | Não há delivery: o pedido tem `data_retirada`, e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
 | RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído e 5-Recusado: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 |
-| RN22 | **Antecedência mínima.** Pelo Portal do Cliente, a data de retirada deve ser de pelo menos 7 dias corridos após o envio do pedido, contados no horário de São Paulo e validados também no backend. No Portal do Administrador, a Lídia pode escolher hoje ou uma data futura, inclusive ao editar pedidos que vieram do portal. | RF20 / ZAP-18 |
+| RN22 | **Antecedência mínima.** Pelo Portal do Cliente, a data de retirada deve ser de pelo menos 7 dias corridos após o envio do pedido, contados no horário de São Paulo e validados também no backend. No Portal do Administrador, a Lídia pode escolher hoje ou uma data futura, inclusive ao editar pedidos que vieram do portal. O horário segue a RN23. | RF20 / ZAP-18 |
+| RN23 | **Horário de retirada.** A retirada tem data e hora: das 8h às 20h, de 30 em 30 minutos, no horário de São Paulo, nos dois portais. A data e hora não pode ser antes de agora; na edição, a que já estava no pedido pode ficar, se não foi mudada. Validado na tela, no backend e no banco. | ZAP-127 |
 
 ---
 
@@ -465,7 +466,7 @@ Encomenda. Cada pedido é um card do Kanban (RF07–RF16).
 | cliente_id | BIGINT | Sim | FK | → cliente.id |
 | numero | INTEGER | Sim | UK* | *Único por estabelecimento. Exibido no card (#1) |
 | status | SMALLINT | Sim | | 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado |
-| data_retirada | DATE | Sim | | Não há delivery |
+| data_retirada | TIMESTAMP | Sim | | Data e hora da retirada, no horário de São Paulo, sem fuso (RN23, ZAP-127). Não há delivery |
 | observacao | VARCHAR(500) | Não | | Ocasião, tema da festa |
 | motivo_recusa | VARCHAR(500) | Não | | Obrigatório quando status = 5 (RF11) |
 | valor_total | NUMERIC(10,2) | Sim | | Soma dos subtotais. Pago na retirada |
@@ -531,6 +532,7 @@ Trilha de auditoria (ISO 8.16).
 - `CHECK (status <> 5 OR motivo_recusa IS NOT NULL)` em `pedido`.
 - `CHECK (status BETWEEN 1 AND 5)` em `pedido`; `tipo` e `status` de `mensagem_whatsapp` entre 1 e 3.
 - `CHECK (consentimento_lgpd = TRUE)` em `cliente`.
+- `CHECK` do horário de retirada em `pedido`: das 8h às 20h, em hora cheia ou meia hora (RN23, ZAP-127).
 - `CHECK (foto_caminho IS NULL OR foto_texto_alternativo IS NOT NULL)` em `produto`.
 - `ON DELETE CASCADE` em `item_pedido.pedido_id` e `mensagem_whatsapp.pedido_id`.
 - Consistência de tenant (decisão da ZAP-64): `UNIQUE (id, estabelecimento_id)` em `cliente` e FK composta `(cliente_id, estabelecimento_id)` em `pedido`, referenciando `cliente (id, estabelecimento_id)`. O banco recusa um pedido com cliente de outro estabelecimento.
@@ -672,6 +674,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Logo e capa do estabelecimento | Sem campos no dicionário da Atividade #14; a tela "Meu estabelecimento" (ZAP-37) guardava as fotos só no navegador | **Colunas novas `logo_caminho` e `capa_caminho`** em `estabelecimento`, com as fotos no bucket `estabelecimentos` do Supabase Storage, nas mesmas regras da foto do produto (ZAP-119, ZAP-83). O texto alternativo do logo é "Logo de" + nome da loja, sem coluna própria; a capa é decorativa. Motivo: a tela e o topo do painel mostram a marca da loja, e a foto guardada só no navegador some em outro aparelho |
 | Endereço do estabelecimento | Digitado campo a campo (ZAP-37) | **Preenchido pelo CEP** (ZAP-121, ZAP-83): ao completar os 8 números, o navegador consulta a ViaCEP e, se ela falhar, a BrasilAPI, e preenche rua, bairro, cidade e UF, que continuam editáveis. CEP não encontrado ou APIs fora do ar não impedem de preencher à mão e salvar. Motivo: menos digitação e menos erro para a Lídia (diretriz de UX, seção 2.3). Só o CEP do estabelecimento vai para o serviço externo |
 | Envio pela WhatsApp Cloud API | Faz parte da entrega, com as condições a validar (08/11/2026, ZAP-83) | **Fora da entrega; os avisos continuam pelo `wa.me`, e o link do cardápio vai pela mensagem de saudação do WhatsApp Business** (10/11/2026, ZAP-94, ZAP-83). Motivo: para os avisos saírem sozinhos do número da Lídia sem ela perder o aplicativo, a Meta exige uma empresa parceira; com outro número, as respostas do cliente não chegariam a ela. Com o `wa.me`, tudo fica na conversa dela, e a saudação envia o link sem código e sem custo |
+| Retirada do pedido | Só a data (`data_retirada DATE`, Atividade #14) | **Data e hora** (`data_retirada TIMESTAMP`, no horário de São Paulo), das 8h às 20h, de 30 em 30 minutos (RN23), nos dois portais e nas mensagens ao cliente ("sábado, 14/11, às 15h"). Os pedidos que já existiam ficaram com 12:00 (10/11/2026, ZAP-127, ZAP-83). Motivo: a Lídia precisa saber a que horas o cliente vai buscar a encomenda |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
