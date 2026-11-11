@@ -12,7 +12,7 @@ vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({
   excluirProduto: vi.fn(),
 }))
 
-const brigadeiro = { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: 'brigadeiro.jpg', textoAlternativo: 'Bolo de brigadeiro coberto com granulado', ativo: true }
+const brigadeiro = { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: 'brigadeiro.jpg', textoAlternativo: 'Bolo de brigadeiro coberto com granulado', ativo: true, alergenos: ['GLUTEN', 'LEITE'], outrosAlergenos: 'Canela' }
 const coxinha = { id: 4, nome: 'Salgado', sabor: 'Coxinha de frango', unidade: 'UN', preco: 1.2, descricao: '', foto: '', textoAlternativo: '', ativo: true }
 
 async function abrirLista() {
@@ -39,6 +39,14 @@ describe('Lista de produtos (ZAP-41, RF05, RF06)', () => {
     expect(within(semFoto).getByText('por unidade')).toBeVisible()
     expect(within(semFoto).getByRole('link', { name: 'Editar Salgado de coxinha de frango' })).toHaveAttribute('href', '/produtos/4')
     expect(screen.getByRole('link', { name: 'Cadastrar produto' })).toHaveAttribute('href', '/produtos/novo')
+  })
+
+  test('mostra os selos de alérgenos só nos produtos que têm (ZAP-132)', async () => {
+    await abrirLista()
+
+    const selos = within(screen.getByRole('article', { name: 'Brigadeiro de chocolate' })).getByRole('list', { name: 'Alérgenos' })
+    expect(within(selos).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Contém glúten', 'Leite e derivados', 'Canela'])
+    expect(within(screen.getByRole('article', { name: 'Coxinha de frango' })).queryByRole('list', { name: 'Alérgenos' })).not.toBeInTheDocument()
   })
 
   test('excluir pede confirmação, e "Manter produto" não muda nada', async () => {

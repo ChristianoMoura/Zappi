@@ -37,7 +37,7 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('lista os produtos com o token e troca os nulos por texto vazio', async () => {
     const chamadas = simularBackend(json(200, [doBackend]))
 
-    await expect(buscarProdutos()).resolves.toEqual([{ ...doBackend, descricao: '', foto: '', textoAlternativo: '' }])
+    await expect(buscarProdutos()).resolves.toEqual([{ ...doBackend, descricao: '', foto: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' }])
     const [[endereco, opcoes]] = chamadas()
     expect(endereco).toBe('/api/produtos')
     expect(opcoes.headers.Authorization).toBe('Bearer jwt-de-teste')
@@ -58,7 +58,18 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
     const [[endereco, opcoes]] = chamadas()
     expect(endereco).toBe('/api/produtos')
     expect(opcoes.method).toBe('POST')
-    expect(JSON.parse(opcoes.body)).toEqual({ nome: 'Bolo', sabor: 'Prestígio', unidade: 'KG', preco: 110, descricao: '', textoAlternativo: '' })
+    expect(JSON.parse(opcoes.body)).toEqual({ nome: 'Bolo', sabor: 'Prestígio', unidade: 'KG', preco: 110, descricao: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' })
+  })
+
+  it('envia e recebe os alérgenos sempre na ordem da lista fixa (ZAP-132)', async () => {
+    const chamadas = simularBackend(json(201, { ...doBackend, id: 7, alergenos: ['OVOS', 'GLUTEN'], outrosAlergenos: 'Canela' }))
+
+    const salvo = await salvarProduto({ nome: 'Bolo', sabor: 'Nozes', unidade: 'KG', preco: 120, descricao: '', foto: '', textoAlternativo: '', alergenos: ['CASTANHAS', 'LEITE', 'GLUTEN'], outrosAlergenos: 'Canela' })
+
+    const corpo = JSON.parse(chamadas()[0][1].body)
+    expect(corpo.alergenos).toEqual(['GLUTEN', 'LEITE', 'CASTANHAS'])
+    expect(corpo.outrosAlergenos).toBe('Canela')
+    expect(salvo.alergenos).toEqual(['GLUTEN', 'OVOS'])
   })
 
   it('cadastra com foto: cria o produto e depois envia o arquivo com a descrição', async () => {

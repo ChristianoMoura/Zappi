@@ -15,7 +15,7 @@ vi.mock('../cardapio/servicoCardapio', async (importarOriginal) => ({
 const CARDAPIO = {
   estabelecimento: { nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: '' },
   produtos: [
-    { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: '', textoAlternativo: '' },
+    { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: '', textoAlternativo: '', alergenos: ['GLUTEN', 'OVOS'], outrosAlergenos: '' },
     { id: 4, nome: 'Salgado', sabor: 'Coxinha por unidade', unidade: 'UN', preco: 1.25, descricao: 'Coxinha de frango.', foto: '', textoAlternativo: '' },
   ],
 }
@@ -55,6 +55,15 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(await screen.findByText('Brigadeiro de chocolate adicionado ao pedido.')).toBeVisible()
     expect(screen.getByRole('link', { name: /Ver pedido · 1 item/ })).toHaveTextContent('R$ 150,00')
     expect(guardado().itens[0]).toMatchObject({ produtoId: 1, quantidade: 1.5, recheio: 'brigadeiro branco' })
+  })
+
+  test('o detalhe mostra os alérgenos e lembra de falar com a loja (ZAP-132)', async () => {
+    abrir('/cardapio/casa-belt/produto/1')
+
+    const selos = await screen.findByRole('list', { name: 'Alérgenos' })
+    expect(within(selos).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Contém glúten', 'Ovos'])
+    expect(screen.getByText(/Tem alergia?/)).toBeVisible()
+    expect(screen.getByRole('link', { name: /Fale com a loja pelo WhatsApp/ })).toHaveAttribute('href', expect.stringContaining('wa.me/5511900000000'))
   })
 
   test('produto por unidade não tem recheio nem cobertura', async () => {
