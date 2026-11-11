@@ -155,7 +155,7 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 13. **Cadastrar e editar pedidos** (US7): a Lídia registra as encomendas que recebe pelo WhatsApp e corrige um pedido, com a edição limitada pelo status (RN21).
 14. **Anonimizar os dados de um cliente** a pedido do titular (RN17, LGPD), sem apagar o histórico de pedidos (decisão da ZAP-64).
 
-15. **Envio automático das mensagens pela WhatsApp Cloud API** (Meta): o sistema envia ao cliente as mensagens de confirmação, recusa e pronto para retirada. As condições para ativar ainda precisam ser validadas (seção 14, item 12).
+15. **Resposta automática com o link do cardápio** pela mensagem de saudação do WhatsApp Business, configurada pela Lídia no aplicativo, sem código no Zappi (decisão da ZAP-94, seção 14, item 12). O envio automático pela WhatsApp Cloud API ficou fora da entrega (seção 5.4).
 
 **Portal do Cliente** (épico `ZAP-2`; requisitos e regras definidos na `ZAP-18`, seção 14, item 11)
 
@@ -176,6 +176,7 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 - Relatórios e gestão financeira (precificação, margens).
 - Divulgação e fidelização.
 - Acesso da Romilda ao sistema.
+- Envio automático das mensagens pela WhatsApp Cloud API (Meta), história `ZAP-93`. Os avisos continuam pelo `wa.me` (decisão da ZAP-94, seção 14, item 12).
 
 ### 5.5 Por que a entrega importa além do PI
 A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 horas** com a Lídia e a Romilda, que **só acontece depois que o sistema estiver funcional**. Nele, a Lídia opera o Kanban do Zappi (login, ver pedidos, confirmar um e recusar outro com motivo). O sistema precisa estar estável e utilizável por uma pessoa leiga.
@@ -310,7 +311,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Banco | **PostgreSQL (Supabase)** | Banco relacional gerenciado; TLS; criptografia em repouso; RLS em todas as tabelas; o backend e o Flyway conectam pelo session pooler (IPv4, porta 5432) |
 | Arquivos | **Supabase Storage** | Bucket `produtos` (fotos dos produtos) e bucket `estabelecimentos` (logo e capa da loja, ZAP-119); o banco guarda só o caminho; upload só pelo backend; leitura pública |
 | Mensagens | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
-| Mensagens (a integrar) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS, com o status informado pela Meta. Condições em validação (seção 14, item 12) |
+| Mensagens (futuro) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS, com o status informado pela Meta. Fora da entrega (seção 14, item 12) |
 | Endereço pelo CEP | **ViaCEP**, com a **BrasilAPI** como alternativa | No "Meu estabelecimento", o navegador consulta o CEP digitado e preenche rua, bairro, cidade e UF, que continuam editáveis (ZAP-121). Só o CEP do estabelecimento sai do sistema, sem dado de cliente; sem as APIs, a Lídia preenche à mão |
 | Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
 | Testes (frontend) | **Vitest e React Testing Library** (jsdom, user-event e jest-dom) | Testes das telas e das regras do painel, escritos ao lado do código (`*.test.jsx`), com o backend simulado |
@@ -331,7 +332,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 - O backend monta o texto e um link no formato `https://wa.me/<telefone_destino>?text=<texto codificado em URL>`.
 - A Lídia clica em "Enviar no WhatsApp". O WhatsApp abre com a mensagem pronta e ela só aperta enviar.
 - O clique marca a mensagem como 2-Enviada e grava `enviado_em`, porque o sistema não tem como saber se ela apertou enviar dentro do WhatsApp. O botão continua disponível para reenviar, e o reenvio mantém o primeiro `enviado_em` (ZAP-64).
-- O envio é **semiautomático**: o sistema prepara, a Lídia envia. Este é o funcionamento atual. O envio automático pela **Cloud API** será integrado (seção 5.2, item 15), usando o campo `id_externo` e o status 3-Falha, que já existem.
+- O envio é **semiautomático**: o sistema prepara, a Lídia envia. Este é o funcionamento da entrega (decisão da ZAP-94, seção 14, item 12). O envio automático pela **Cloud API** ficou como Futuro (seção 5.4); o campo `id_externo` e o status 3-Falha continuam reservados para ele.
 
 ### 12.4 Limitações aceitas da hospedagem gratuita
 - O backend no Render (plano gratuito) **dorme após 15 minutos sem acesso**, e o primeiro acesso leva cerca de 1 minuto. Antes do ensaio, do vídeo e do treinamento, acordar o backend.
@@ -569,13 +570,23 @@ Trilha de auditoria (ISO 8.16).
     - **validade do pedido:** aviso de que o pedido só vale depois da confirmação da Lídia (seção 9);
     - **proteção do envio sem login:** 5 envios por hora por IP e 3 por dia por telefone, com o excesso recusado sem gravar nada e registrado no log, e um campo invisível que descarta envios automáticos. Sem captcha no início;
     - **exclusão de dados:** pedido pelo WhatsApp da Lídia, que anonimiza no painel (RN17, história `ZAP-114`).
-12. **WhatsApp Cloud API** (decidido usar; a validar com a Meta e com a Lídia):
-    - verificação da conta na Meta para um negócio informal, sem CNPJ/MEI, e os limites de envio sem verificação;
-    - qual número será usado, sem a Lídia perder o WhatsApp que usa com os clientes;
-    - aprovação dos modelos de mensagem (`docs/mensagens-whatsapp.md`) pela Meta e o tempo que leva;
-    - custo por mensagem e quem cadastra o meio de pagamento;
-    - LGPD: telefone e texto passam pela Meta, então a seção 9 ("nada de compartilhar com terceiros") e o texto do consentimento precisam ser revistos;
-    - o que fazer com o `wa.me` e até quando validar tudo isso para caber na entrega de 22/11/2026.
+12. **WhatsApp Cloud API.** **Decidido (10/11/2026, ZAP-94): fica fora da entrega, e os avisos ao cliente continuam pelo `wa.me`.** O fluxo da entrega é:
+    1. **o cliente manda mensagem para a Lídia** no WhatsApp dela, como já acontece hoje;
+    2. **resposta automática com o link do cardápio**, pela **mensagem de saudação do WhatsApp Business**: recurso nativo e gratuito do aplicativo, sem código no Zappi. Ela é enviada no primeiro contato e quando o cliente volta a escrever depois de 14 dias sem conversa. A Lídia configura no aplicativo (Ferramentas comerciais › Mensagem de saudação);
+    3. **o cliente faz o pedido no Portal do Cliente**, e o pedido aparece no quadro da Lídia como Novo. O cardápio público já existe (ZAP-105); faltam a montagem e o envio do pedido (ZAP-107 e ZAP-110 no front, ZAP-109 no backend);
+    4. **a Lídia envia a confirmação, a recusa ou o aviso de pronto pelo botão "Enviar no WhatsApp"** (`wa.me`), como hoje. Não é automático, mas tudo fica na conversa dela, e as respostas do cliente chegam a ela.
+    - **Motivo:** para os avisos saírem sozinhos do número da Lídia sem ela perder o aplicativo, a Meta exige uma empresa parceira (recurso de coexistência, para Solution Partners e Tech Providers). Com um número separado só para os avisos, o cliente receberia de outro número, e as respostas dele não chegariam à Lídia. A resposta automática do passo 2 pela Cloud API também exigiria o número dela na API e uma caixa de entrada no Zappi.
+    - **Para quando a Cloud API voltar a ser avaliada**, condições levantadas na documentação oficial da Meta (10/11/2026):
+      - mensagens iniciadas pela empresa (depois de 24 h da última mensagem do cliente) só saem por **modelos aprovados**. Os avisos do pedido são da categoria **utility**, em `pt_BR`, com até 1.024 caracteres no corpo, e a análise leva até 24 h;
+      - cobrança **por mensagem entregue**, com meio de pagamento cadastrado na Meta. Desde 01/10/2026, os modelos utility enviados dentro das 24 h também são cobrados, e as respostas de atendimento têm 1.000 grátis por mês por número. O valor para o Brasil não foi conferido na tabela oficial (cerca de R$ 0,035 por mensagem utility, segundo fontes de terceiros);
+      - sem a verificação da empresa, o limite é de **250 clientes diferentes a cada 24 h** fora da janela de atendimento, o que basta para a Casa Belt. Não foi confirmado se a verificação exige CNPJ;
+      - a Meta informa o status de cada mensagem pelo webhook (`sent`, `delivered`, `read` ou `failed`), e cada aviso vem assinado (`X-Hub-Signature-256`, com o App Secret do app);
+      - o servidor usa o token de um usuário do sistema, guardado em variável de ambiente (ISO 27002 8.24).
+    - **A decidir se a Cloud API voltar** (história ZAP-93, fora da entrega):
+      - **número**: o da própria Lídia ligado à API pela coexistência, que mantém o aplicativo e deixa saudação, avisos e respostas na mesma conversa (exige empresa parceira da Meta e WhatsApp Business 2.24.17 ou mais novo); ou um número separado só para os avisos (chip novo, que recebe o código de ativação e não usa o aplicativo), com o texto orientando o cliente a falar com a Lídia no WhatsApp dela. Para testes, a Meta oferece um número de teste, sem chip, que só envia para os números cadastrados no painel;
+      - quem cadastra o meio de pagamento e paga as mensagens;
+      - LGPD: o telefone e o texto passam pela Meta, então a seção 9 ("nada de compartilhar com terceiros") e o texto do consentimento precisam ser revistos;
+      - quebra de linha nos campos variáveis: há relatos de que a Meta recusa quebra de linha dentro de um campo, o que deixaria a lista de itens da confirmação em uma linha só. Testar com o número de teste e, se confirmado, ajustar `docs/mensagens-whatsapp.md` (ZAP-63) com a equipe.
 
 ---
 
@@ -660,6 +671,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Alterações fora da documentação original | Sem registro definido | **Toda alteração é registrada na `ZAP-83`** e nesta seção, com antes, agora e motivo (seção 0). Motivo: manter os documentos entregues em sala coerentes com o sistema entregue |
 | Logo e capa do estabelecimento | Sem campos no dicionário da Atividade #14; a tela "Meu estabelecimento" (ZAP-37) guardava as fotos só no navegador | **Colunas novas `logo_caminho` e `capa_caminho`** em `estabelecimento`, com as fotos no bucket `estabelecimentos` do Supabase Storage, nas mesmas regras da foto do produto (ZAP-119, ZAP-83). O texto alternativo do logo é "Logo de" + nome da loja, sem coluna própria; a capa é decorativa. Motivo: a tela e o topo do painel mostram a marca da loja, e a foto guardada só no navegador some em outro aparelho |
 | Endereço do estabelecimento | Digitado campo a campo (ZAP-37) | **Preenchido pelo CEP** (ZAP-121, ZAP-83): ao completar os 8 números, o navegador consulta a ViaCEP e, se ela falhar, a BrasilAPI, e preenche rua, bairro, cidade e UF, que continuam editáveis. CEP não encontrado ou APIs fora do ar não impedem de preencher à mão e salvar. Motivo: menos digitação e menos erro para a Lídia (diretriz de UX, seção 2.3). Só o CEP do estabelecimento vai para o serviço externo |
+| Envio pela WhatsApp Cloud API | Faz parte da entrega, com as condições a validar (08/11/2026, ZAP-83) | **Fora da entrega; os avisos continuam pelo `wa.me`, e o link do cardápio vai pela mensagem de saudação do WhatsApp Business** (10/11/2026, ZAP-94, ZAP-83). Motivo: para os avisos saírem sozinhos do número da Lídia sem ela perder o aplicativo, a Meta exige uma empresa parceira; com outro número, as respostas do cliente não chegariam a ela. Com o `wa.me`, tudo fica na conversa dela, e a saudação envia o link sem código e sem custo |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**

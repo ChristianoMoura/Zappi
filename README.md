@@ -43,9 +43,7 @@ O cardápio público da Casa Belt, sem login.
 - Identificação com nome e WhatsApp, com consentimento LGPD
 - O pedido entra na coluna **Novo** do quadro da Lídia
 
-**Em validação:** envio automático das mensagens pela WhatsApp Cloud API (Meta).
-
-**Fora da entrega (futuro):** pagamento online, controle de estoque, relatórios financeiros e fidelização.
+**Fora da entrega (futuro):** pagamento online, controle de estoque, relatórios financeiros, fidelização e envio automático das mensagens pela WhatsApp Cloud API (Meta). Os avisos ao cliente continuam pelo botão "Enviar no WhatsApp", e o link do cardápio vai pela mensagem de saudação do WhatsApp Business (decisão da ZAP-94).
 
 ## Tecnologias
 
