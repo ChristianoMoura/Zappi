@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,12 +23,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import br.com.zappi.TestcontainersConfiguration;
 import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
+import br.com.zappi.mensagem.MensagemWhatsappRepositorio;
 import br.com.zappi.seguranca.ServicoToken;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 
 /**
- * Se o log falhar, a recusa inteira é desfeita (RN08): o pedido continua Novo, sem motivo e
- * sem mensagem. O teste não usa transação própria, para ver o que de fato ficou no banco.
+ * Se o log ou a mensagem falharem, a recusa inteira é desfeita (RN08): o pedido continua Novo,
+ * sem motivo e sem mensagem. O teste não usa transação própria, para ver o que de fato ficou
+ * no banco.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -46,19 +49,51 @@ class RecusarPedidoRollbackTests {
 	@MockitoSpyBean
 	private ServicoAuditoria auditoria;
 
-	@Test
-	void desfazTudoSeOLogFalhar() {
+	@MockitoSpyBean
+	private MensagemWhatsappRepositorio mensagens;
+
+	private long casaBelt;
+
+	private String token;
+
+	@BeforeEach
+	void prepara() {
 		Map<String, Object> lidia = jdbc.queryForMap(
 				"select id, estabelecimento_id from usuario where email = 'lidia@casabelt.com'");
-		long casaBelt = ((Number) lidia.get("estabelecimento_id")).longValue();
-		String token = servicoToken.gerar(new UsuarioAutenticado(((Number) lidia.get("id")).longValue(), casaBelt));
+		casaBelt = ((Number) lidia.get("estabelecimento_id")).longValue();
+		token = servicoToken.gerar(new UsuarioAutenticado(((Number) lidia.get("id")).longValue(), casaBelt));
+	}
+
+	@Test
+	void desfazTudoSeOLogFalhar() {
 		doThrow(new IllegalStateException("log fora do ar")).when(auditoria).registrar(any(RegistroAuditoria.class));
 
+		recusarFalhaCom("log fora do ar");
+
+		nadaFoiGravado();
+	}
+
+	@Test
+	void desfazTudoSeAMensagemFalhar() {
+		doThrow(new IllegalStateException("mensagem fora do ar")).when(mensagens).saveAndFlush(any());
+
+		recusarFalhaCom("mensagem fora do ar");
+
+		nadaFoiGravado();
+		assertThat(jdbc.queryForObject("""
+				select count(*) from log_auditoria l join pedido p on p.id = l.entidade_id
+				where l.acao = 'PEDIDO_RECUSADO' and p.estabelecimento_id = ? and p.numero = 2
+				""", Integer.class, casaBelt)).isZero();
+	}
+
+	private void recusarFalhaCom(String motivo) {
 		assertThatThrownBy(() -> mockMvc.perform(post("/api/pedidos/2/recusar")
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"motivo\": \"Agenda cheia.\"}"))).hasRootCauseMessage("log fora do ar");
+			.content("{\"motivo\": \"Agenda cheia.\"}"))).hasRootCauseMessage(motivo);
+	}
 
+	private void nadaFoiGravado() {
 		Map<String, Object> pedido = jdbc.queryForMap(
 				"select status, motivo_recusa, recusado_em from pedido where estabelecimento_id = ? and numero = 2", casaBelt);
 		assertThat(((Number) pedido.get("status")).intValue()).isEqualTo(1);
