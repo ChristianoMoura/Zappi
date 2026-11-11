@@ -57,6 +57,13 @@ describe('regras do quadro de pedidos (ZAP-28)', () => {
     expect(retiraHoje(pedido(), hoje)).toBe(false)
   })
 
+  test('o selo "Retira hoje" vale pelo dia, em qualquer horário', () => {
+    for (const hora of ['08:00', '20:00']) {
+      expect(retiraHoje(pedido({ dataRetirada: `2026-11-07T${hora}`, status: STATUS.CONFIRMADO }), hoje)).toBe(true)
+    }
+    expect(retiraHoje(pedido({ dataRetirada: '2026-11-08T08:00', status: STATUS.CONFIRMADO }), hoje)).toBe(false)
+  })
+
   test('ordena a coluna pela data de retirada', () => {
     const lista = [pedido({ numero: 2, dataRetirada: '2026-11-20' }), pedido({ numero: 3, dataRetirada: '2026-11-09' }), pedido({ numero: 4, status: STATUS.CONFIRMADO })]
     expect(pedidosDaColuna(lista, STATUS.NOVO).map((p) => p.numero)).toEqual([3, 2])

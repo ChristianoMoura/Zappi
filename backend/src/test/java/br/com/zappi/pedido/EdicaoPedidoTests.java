@@ -310,6 +310,18 @@ class EdicaoPedidoTests {
 	}
 
 	@Test
+	void registraADataEAHoraNoAntesEDepois() throws Exception {
+		LocalDateTime nova = retirada.plusDays(1).withHour(15).withMinute(30);
+
+		editar(1, pedido("Ana Exemplo", ANA, nova, List.of(item(brigadeiro, 2, Map.of())))).andExpect(status().isOk());
+
+		assertThat(jdbc.queryForMap("""
+				select detalhes -> 'antes' ->> 'dataRetirada' as antes, detalhes -> 'depois' ->> 'dataRetirada' as depois
+				from log_auditoria where acao = 'PEDIDO_EDITADO'
+				""")).containsEntry("antes", retirada.toString()).containsEntry("depois", nova.toString());
+	}
+
+	@Test
 	void registraOAntesEODepoisSemDadosPessoais() throws Exception {
 		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 1.5, Map.of()))))
 			.andExpect(status().isOk());

@@ -53,6 +53,19 @@ class MigracoesTests {
 	}
 
 	@Test
+	void pedidosAntigosMantemADataERecebemOHorarioPadrao() {
+		List<Map<String, Object>> pedidos = jdbc.queryForList("""
+				select p.data_retirada::date - p.criado_em::date as dias, p.data_retirada::time::text as hora
+				from pedido p join estabelecimento e on e.id = p.estabelecimento_id
+				where e.slug = 'casa-belt' and p.numero in (1, 2) order by p.numero
+				""");
+
+		// Na V2, os pedidos #1 e #2 eram só data: hoje + 3 e hoje + 5; a V4 acrescenta 12:00
+		assertThat(pedidos).extracting(pedido -> ((Number) pedido.get("dias")).intValue()).containsExactly(3, 5);
+		assertThat(pedidos).allSatisfy(pedido -> assertThat(pedido).containsEntry("hora", "12:00:00"));
+	}
+
+	@Test
 	void aceitaPedidoComClienteDoMesmoEstabelecimento() {
 		long estabelecimento = criarEstabelecimento("confeitaria-a");
 		long cliente = criarCliente(estabelecimento, "5511900000001");

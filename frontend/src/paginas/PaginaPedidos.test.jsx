@@ -49,7 +49,7 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       const doze = screen.getByRole('button', { name: /Pedido 12/ })
       expect(doze).toHaveTextContent('#12')
       expect(doze).toHaveTextContent('Ana Souza')
-      expect(doze).toHaveTextContent('Retirada: ter, 15/01')
+      expect(doze).toHaveTextContent('Retirada: ter, 15/01, 15h')
       expect(doze).toHaveTextContent('Bolo de brigadeiro de chocolate · 2 kg')
       expect(doze).toHaveTextContent('R$ 200,00')
     })
@@ -99,6 +99,7 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       const detalhes = await abrirPedido(usuario, 15)
 
       for (const texto of [
+        'Datater, 15/01, 15h',
         'Festa infantil',
         'Na retirada',
         'Ana Souza',
