@@ -26,6 +26,9 @@ import jakarta.persistence.Table;
 @Table(name = "pedido")
 public class Pedido {
 
+	/** Tamanho de {@code motivo_recusa} no banco. */
+	static final int TAMANHO_MOTIVO = 500;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -51,7 +54,7 @@ public class Pedido {
 	@Column(name = "observacao", length = 500)
 	private String observacao;
 
-	@Column(name = "motivo_recusa", length = 500)
+	@Column(name = "motivo_recusa", length = TAMANHO_MOTIVO)
 	private String motivoRecusa;
 
 	@Column(name = "valor_total", nullable = false, precision = 10, scale = 2)
@@ -158,6 +161,12 @@ public class Pedido {
 	 */
 	public void voltarParaProducao(OffsetDateTime agora) {
 		exigir(StatusPedido.CONCLUIDO, "Só pedidos concluídos podem voltar para produção.");
+		// Cliente anonimizado nunca tem pedido em aberto (RN17): sem nome nem WhatsApp, o aviso
+		// de pronto não teria para quem ir
+		if (cliente.getAnonimizadoEm() != null) {
+			throw new TransicaoNaoPermitidaException(
+					"Os dados deste cliente foram apagados. O pedido não pode voltar para a produção.");
+		}
 		this.status = StatusPedido.EM_PRODUCAO;
 		this.concluidoEm = null;
 		this.atualizadoEm = agora;
@@ -189,6 +198,19 @@ public class Pedido {
 		this.status = StatusPedido.RECUSADO;
 		this.motivoRecusa = motivo;
 		this.recusadoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
+	/**
+	 * O cliente foi anonimizado (RN17): o motivo da recusa é trocado pelo texto já sem o nome e
+	 * o telefone, cortado no tamanho da coluna, porque "Cliente anonimizado" é mais longo que
+	 * o nome. Só os pedidos recusados têm motivo; os outros não mudam.
+	 */
+	public void substituirMotivoRecusa(String motivo, OffsetDateTime agora) {
+		if (this.motivoRecusa == null || this.motivoRecusa.equals(motivo)) {
+			return;
+		}
+		this.motivoRecusa = motivo.length() > TAMANHO_MOTIVO ? motivo.substring(0, TAMANHO_MOTIVO) : motivo;
 		this.atualizadoEm = agora;
 	}
 
