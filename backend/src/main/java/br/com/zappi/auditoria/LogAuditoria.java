@@ -85,6 +85,14 @@ public class LogAuditoria {
 		this.criadoEm = criadoEm;
 	}
 
+	/**
+	 * Troca os detalhes ao anonimizar um cliente (RN17): o registro continua, só sem os dados
+	 * pessoais.
+	 */
+	void substituirDetalhes(Map<String, Object> detalhes) {
+		this.detalhes = detalhes;
+	}
+
 	public Long getId() {
 		return id;
 	}

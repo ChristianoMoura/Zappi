@@ -77,11 +77,9 @@ public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada,
 	 */
 	public record ClienteDoPedido(String nome, String telefone, boolean anonimizado) {
 
-		static final String NOME_ANONIMIZADO = "Cliente anonimizado";
-
 		static ClienteDoPedido de(Cliente cliente) {
 			if (cliente.getAnonimizadoEm() != null) {
-				return new ClienteDoPedido(NOME_ANONIMIZADO, null, true);
+				return new ClienteDoPedido(Cliente.NOME_ANONIMIZADO, null, true);
 			}
 			return new ClienteDoPedido(cliente.getNome(), cliente.getTelefoneWhatsapp(), false);
 		}

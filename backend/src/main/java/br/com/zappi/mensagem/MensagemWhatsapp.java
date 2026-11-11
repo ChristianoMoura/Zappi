@@ -89,6 +89,15 @@ public class MensagemWhatsapp {
 		this.conteudo = conteudo;
 	}
 
+	/**
+	 * O cliente foi anonimizado (RN17): o telefone e o texto, já sem o nome, são trocados. O
+	 * status e as datas ficam, para o histórico.
+	 */
+	public void anonimizar(String telefoneDestino, String conteudo) {
+		this.telefoneDestino = telefoneDestino;
+		this.conteudo = conteudo;
+	}
+
 	public Long getId() {
 		return id;
 	}

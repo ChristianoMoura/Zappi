@@ -2,6 +2,11 @@ package br.com.zappi.auditoria;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.UnaryOperator;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -41,6 +46,48 @@ public class ServicoAuditoria {
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public LogAuditoria registrarEmTransacaoPropria(RegistroAuditoria registro) {
 		return repositorio.save(montar(registro));
+	}
+
+	/**
+	 * Tira dados pessoais dos detalhes já gravados, ao anonimizar um cliente (RN17, LGPD). Os
+	 * registros do estabelecimento que citam {@code procurado1} ou {@code procurado2} têm cada
+	 * texto dos detalhes, em qualquer nível, passado por {@code troca}. Os registros continuam,
+	 * com a mesma ação, data e autor (ISO 27002 8.16). Grava na transação de quem chamou.
+	 *
+	 * @return quantos registros mudaram
+	 */
+	@Transactional
+	public int substituirNosDetalhes(Long estabelecimentoId, String procurado1, String procurado2,
+			UnaryOperator<String> troca) {
+		int alterados = 0;
+		for (LogAuditoria registro : repositorio.buscarDetalhesQueCitam(estabelecimentoId, procurado1, procurado2)) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> novos = (Map<String, Object>) trocarTextos(registro.getDetalhes(), troca);
+			if (!novos.equals(registro.getDetalhes())) {
+				registro.substituirDetalhes(novos);
+				alterados++;
+			}
+		}
+		repositorio.flush();
+		return alterados;
+	}
+
+	/** Copia o valor do JSON trocando cada texto; números, booleanos e nulos ficam iguais. */
+	private static Object trocarTextos(Object valor, UnaryOperator<String> troca) {
+		if (valor instanceof String texto) {
+			return troca.apply(texto);
+		}
+		if (valor instanceof Map<?, ?> mapa) {
+			Map<String, Object> copia = new LinkedHashMap<>();
+			mapa.forEach((chave, item) -> copia.put(String.valueOf(chave), trocarTextos(item, troca)));
+			return copia;
+		}
+		if (valor instanceof List<?> lista) {
+			List<Object> copia = new ArrayList<>();
+			lista.forEach(item -> copia.add(trocarTextos(item, troca)));
+			return copia;
+		}
+		return valor;
 	}
 
 	private static LogAuditoria montar(RegistroAuditoria registro) {

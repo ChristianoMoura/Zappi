@@ -20,6 +20,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.autenticacao.CredenciaisInvalidasException;
 import br.com.zappi.autenticacao.LoginBloqueadoException;
+import br.com.zappi.cliente.ClienteComPedidoEmAbertoException;
+import br.com.zappi.cliente.ClienteJaAnonimizadoException;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
 import br.com.zappi.estabelecimento.LinkEmUsoException;
 import br.com.zappi.mensagem.MensagemNaoEncontradaException;
@@ -107,6 +109,19 @@ public class TratadorDeErros {
 	@ResponseStatus(HttpStatus.CONFLICT)
 	RespostaErro transicaoNaoPermitida(TransicaoNaoPermitidaException erro) {
 		return new RespostaErro("TRANSICAO_NAO_PERMITIDA", erro.getMessage());
+	}
+
+	/** O cliente tem pedido em aberto e não pode ser anonimizado (RN17). */
+	@ExceptionHandler(ClienteComPedidoEmAbertoException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	RespostaErro clienteComPedidoEmAberto(ClienteComPedidoEmAbertoException erro) {
+		return new RespostaErro("CLIENTE_COM_PEDIDO_EM_ABERTO", erro.getMessage());
+	}
+
+	@ExceptionHandler(ClienteJaAnonimizadoException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	RespostaErro clienteJaAnonimizado(ClienteJaAnonimizadoException erro) {
+		return new RespostaErro("CLIENTE_JA_ANONIMIZADO", erro.getMessage());
 	}
 
 	@ExceptionHandler(FotoInvalidaException.class)

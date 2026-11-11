@@ -28,10 +28,14 @@ public class ControladorPedido {
 
 	private final ServicoCadastroPedido cadastro;
 
-	public ControladorPedido(ServicoPedido servico, ServicoAcoesPedido acoes, ServicoCadastroPedido cadastro) {
+	private final ServicoAnonimizacaoCliente anonimizacao;
+
+	public ControladorPedido(ServicoPedido servico, ServicoAcoesPedido acoes, ServicoCadastroPedido cadastro,
+			ServicoAnonimizacaoCliente anonimizacao) {
 		this.servico = servico;
 		this.acoes = acoes;
 		this.cadastro = cadastro;
+		this.anonimizacao = anonimizacao;
 	}
 
 	/** Lista para o quadro (ZAP-44). {@code ?recusados=true} inclui os recusados (RN04). */
@@ -125,6 +129,16 @@ public class ControladorPedido {
 	public RespostaPedido marcarMensagemEnviada(@AuthenticationPrincipal UsuarioAutenticado usuario,
 			@PathVariable Integer numero, @PathVariable Long id) {
 		return acoes.marcarMensagemEnviada(usuario, numero, id);
+	}
+
+	/**
+	 * Anonimiza o cliente do pedido a pedido do titular (ZAP-115, RN17, LGPD) e devolve o pedido
+	 * com "Cliente anonimizado". Com pedido do cliente em aberto, responde 409.
+	 */
+	@PostMapping("/{numero}/anonimizar-cliente")
+	public RespostaPedido anonimizarCliente(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Integer numero) {
+		return anonimizacao.anonimizar(usuario, numero);
 	}
 
 }

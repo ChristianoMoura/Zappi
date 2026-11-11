@@ -16,6 +16,9 @@ public interface MensagemWhatsappRepositorio extends JpaRepository<MensagemWhats
 	/** As mensagens de vários pedidos numa consulta só, para a listagem do quadro (ZAP-122). */
 	List<MensagemWhatsapp> findByPedidoIdInOrderByCriadoEmAscIdAsc(Collection<Long> pedidoIds);
 
+	/** Todas as mensagens dos pedidos de um cliente, para anonimizar (RN17). */
+	List<MensagemWhatsapp> findByPedidoClienteId(Long clienteId);
+
 	/** A mensagem só é encontrada se for daquele pedido, no estabelecimento do token (RN01). */
 	@Query("""
 			select m from MensagemWhatsapp m join m.pedido p
