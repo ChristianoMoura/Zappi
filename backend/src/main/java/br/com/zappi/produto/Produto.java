@@ -51,6 +51,13 @@ public class Produto {
 	@Column(name = "foto_texto_alternativo", length = 150)
 	private String fotoTextoAlternativo;
 
+	/** Nulo é "não informado": nunca vira "não contém glúten" sem a Lídia ter dito (ZAP-128). */
+	@Column(name = "contem_gluten")
+	private Boolean contemGluten;
+
+	@Column(name = "outros_alergenos", length = 300)
+	private String outrosAlergenos;
+
 	@Column(name = "ativo", nullable = false)
 	private boolean ativo;
 
@@ -66,10 +73,12 @@ public class Produto {
 
 	/** Produto novo, já ativo no cardápio (ZAP-39). */
 	public Produto(Estabelecimento estabelecimento, UnidadeMedida unidadeMedida, String nome, String sabor,
-			String descricao, BigDecimal preco, String fotoTextoAlternativo, OffsetDateTime agora) {
+			String descricao, BigDecimal preco, String fotoTextoAlternativo, Boolean contemGluten,
+			String outrosAlergenos, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.ativo = true;
-		atualizar(unidadeMedida, nome, sabor, descricao, preco, fotoTextoAlternativo, agora);
+		atualizar(unidadeMedida, nome, sabor, descricao, preco, fotoTextoAlternativo, contemGluten, outrosAlergenos,
+				agora);
 	}
 
 	/**
@@ -77,13 +86,16 @@ public class Produto {
 	 * preço congelado (RN10).
 	 */
 	public void atualizar(UnidadeMedida unidadeMedida, String nome, String sabor, String descricao,
-			BigDecimal preco, String fotoTextoAlternativo, OffsetDateTime agora) {
+			BigDecimal preco, String fotoTextoAlternativo, Boolean contemGluten, String outrosAlergenos,
+			OffsetDateTime agora) {
 		this.unidadeMedida = unidadeMedida;
 		this.nome = nome;
 		this.sabor = sabor;
 		this.descricao = descricao;
 		this.preco = preco;
 		this.fotoTextoAlternativo = fotoTextoAlternativo;
+		this.contemGluten = contemGluten;
+		this.outrosAlergenos = outrosAlergenos;
 		this.atualizadoEm = agora;
 	}
 
@@ -146,6 +158,15 @@ public class Produto {
 
 	public String getFotoTextoAlternativo() {
 		return fotoTextoAlternativo;
+	}
+
+	/** Nulo quando a Lídia ainda não informou (produto anterior à ZAP-128). */
+	public Boolean getContemGluten() {
+		return contemGluten;
+	}
+
+	public String getOutrosAlergenos() {
+		return outrosAlergenos;
 	}
 
 	public boolean isAtivo() {

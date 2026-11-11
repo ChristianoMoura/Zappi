@@ -70,7 +70,7 @@ public class ServicoProduto {
 	public RespostaProduto criar(UsuarioAutenticado usuario, RequisicaoProduto dados) {
 		Produto produto = new Produto(entityManager.getReference(Estabelecimento.class, usuario.estabelecimentoId()),
 				unidade(dados), dados.nome(), dados.sabor(), dados.descricao(), preco(dados), dados.textoAlternativo(),
-				agora());
+				dados.contemGluten(), dados.outrosAlergenos(), agora());
 		produtos.saveAndFlush(produto);
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_CRIADO, produto, Map.of("depois", retrato(produto)));
@@ -86,7 +86,7 @@ public class ServicoProduto {
 		Map<String, Object> antes = retrato(produto);
 
 		produto.atualizar(unidade(dados), dados.nome(), dados.sabor(), dados.descricao(), preco(dados),
-				dados.textoAlternativo(), agora());
+				dados.textoAlternativo(), dados.contemGluten(), dados.outrosAlergenos(), agora());
 		produtos.flush();
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
@@ -202,6 +202,9 @@ public class ServicoProduto {
 		campos.put("descricao", produto.getDescricao());
 		campos.put("foto", produto.getFotoCaminho());
 		campos.put("textoAlternativo", produto.getFotoTextoAlternativo());
+		// Nulo no log também quer dizer "não informado"
+		campos.put("contemGluten", produto.getContemGluten());
+		campos.put("outrosAlergenos", produto.getOutrosAlergenos());
 		campos.put("ativo", produto.isAtivo());
 		return campos;
 	}

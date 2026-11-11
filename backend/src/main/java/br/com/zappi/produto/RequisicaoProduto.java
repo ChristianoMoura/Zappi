@@ -23,7 +23,9 @@ public record RequisicaoProduto(
 		@DecimalMin(value = "0", inclusive = false, message = "Informe um preço maior que zero.")
 		@Digits(integer = 8, fraction = 2, message = "Use no máximo 2 casas decimais.") BigDecimal preco,
 		@Size(max = 500, message = "Use até 500 caracteres.") String descricao,
-		@Size(max = 150, message = "Use até 150 caracteres.") String textoAlternativo) {
+		@Size(max = 150, message = "Use até 150 caracteres.") String textoAlternativo,
+		@NotNull(message = "Informe se o produto contém glúten.") Boolean contemGluten,
+		@Size(max = 300, message = "Use até 300 caracteres.") String outrosAlergenos) {
 
 	public RequisicaoProduto {
 		nome = obrigatorio(nome);
@@ -31,6 +33,7 @@ public record RequisicaoProduto(
 		unidade = unidade == null ? null : unidade.trim().toUpperCase(Locale.ROOT);
 		descricao = opcional(descricao);
 		textoAlternativo = opcional(textoAlternativo);
+		outrosAlergenos = opcional(outrosAlergenos);
 	}
 
 	/** Tira os espaços das pontas; vazio continua vazio, para o {@code @NotBlank} recusar. */
