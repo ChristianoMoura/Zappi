@@ -5,7 +5,7 @@
 // os tipos, status e datas da API viram os da tela (ZAP-122). O token, o 401 e a falta de conexão
 // ficam no clienteApi, o mesmo dos produtos.
 
-import { chamarApi, ServicoIndisponivelError } from '../autenticacao/clienteApi'
+import { chamarApi, lerJson, ServicoIndisponivelError } from '../autenticacao/clienteApi'
 import { dataLocal, STATUS } from './regrasPedidos'
 
 export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
@@ -22,8 +22,11 @@ const ROTA_VOLTA = { [STATUS.EM_PRODUCAO]: 'voltar-para-confirmado', [STATUS.CON
 async function chamar(caminho, opcoes) {
   const resposta = await chamarApi(`/pedidos${caminho}`, opcoes)
   // Inexistente ou de outro estabelecimento (404), fora da etapa certa (409) ou dados que o
-  // backend recusou (400): a tela mostra que não deu para fazer a ação
-  if ([400, 404, 409].includes(resposta.status)) throw new AcaoNaoPermitidaError()
+  // backend recusou (400): a tela mostra que não deu para fazer a ação. O 409 traz o motivo.
+  if ([400, 404, 409].includes(resposta.status)) {
+    const corpo = resposta.status === 409 ? await lerJson(resposta) : null
+    throw new AcaoNaoPermitidaError(corpo?.mensagem)
+  }
   if (!resposta.ok) throw new ServicoIndisponivelError()
   return resposta.json()
 }
@@ -107,6 +110,10 @@ export const confirmarPedido = (numero) => pedidoDaApi(`/${numero}/confirmar`, {
 // Recusa um Novo ou cancela um Confirmado ou Em produção, com o motivo (ZAP-53)
 export const recusarPedido = (numero, motivo) =>
   pedidoDaApi(`/${numero}/recusar`, { metodo: 'POST', json: { motivo: motivo.trim() } })
+
+// Apaga o nome e o WhatsApp do cliente do pedido, a pedido do titular (ZAP-116, RN17, LGPD).
+// Com pedido do cliente em aberto, o 409 explica o motivo.
+export const anonimizarCliente = (numero) => pedidoDaApi(`/${numero}/anonimizar-cliente`, { metodo: 'POST' })
 
 // A rota depende de onde o pedido está agora, então ele é lido antes
 async function moverPedido(numero, rotas) {

@@ -6,7 +6,7 @@ import { Link, useLocation } from 'react-router'
 import { CartaoPedido } from '../pedidos/CartaoPedido'
 import { DetalhesPedido } from '../pedidos/DetalhesPedido'
 import { colunasVisiveis, pedidosDaColuna, STATUS } from '../pedidos/regrasPedidos'
-import { avancarPedido, buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from '../pedidos/servicoPedidos'
+import { AcaoNaoPermitidaError, anonimizarCliente, avancarPedido, buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from '../pedidos/servicoPedidos'
 import classes from '../pedidos/QuadroPedidos.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
@@ -132,8 +132,9 @@ export function PaginaPedidos() {
   }
 
   // Executa uma ação sobre o pedido aberto. No celular, a aba acompanha o pedido para a coluna
-  // nova. Devolve se deu certo, para as janelas de confirmação fecharem só nesse caso.
-  async function agir(acao, chamada, oQueFazer) {
+  // nova. Devolve se deu certo, para as janelas de confirmação fecharem só nesse caso. Com
+  // `motivoDaApi`, a tela mostra o motivo que o backend deu para recusar a ação.
+  async function agir(acao, chamada, oQueFazer, motivoDaApi = false) {
     setEnviando(true)
     setErroAcao('')
     try {
@@ -143,8 +144,9 @@ export function PaginaPedidos() {
       if (pedido.status === STATUS.RECUSADO) setMostrarRecusados(true)
       if (!telaGrande) setAbaAtiva(String(pedido.status))
       return true
-    } catch {
-      setErroAcao(`Não foi possível ${oQueFazer} agora. Tente novamente em alguns minutos.`)
+    } catch (erro) {
+      const motivo = motivoDaApi && erro instanceof AcaoNaoPermitidaError && erro.message
+      setErroAcao(motivo || `Não foi possível ${oQueFazer} agora. Tente novamente em alguns minutos.`)
       return false
     } finally {
       setEnviando(false)
@@ -167,6 +169,15 @@ export function PaginaPedidos() {
   }
 
   const voltar = (pedido) => agir('voltar', () => voltarPedido(pedido.numero), 'voltar o pedido')
+
+  // Os dados saem de todos os pedidos do cliente (ZAP-116, RN17): a lista é lida de novo para os
+  // outros cards dele não continuarem com o nome antigo. Se a leitura falhar, o pedido aberto já
+  // está certo e os outros se acertam na próxima vez que o quadro carregar.
+  async function anonimizar(pedido) {
+    const deuCerto = await agir('anonimizar', () => anonimizarCliente(pedido.numero), 'apagar os dados do cliente', true)
+    if (deuCerto) buscarPedidos().then(setPedidos).catch(() => {})
+    return deuCerto
+  }
 
   // O link do WhatsApp abre na hora; marcar como enviada acontece em seguida
   async function enviarMensagem(indice) {
@@ -242,6 +253,7 @@ export function PaginaPedidos() {
         aoRecusar={recusar}
         aoAvancar={avancar}
         aoVoltar={voltar}
+        aoAnonimizar={anonimizar}
         aoEnviarMensagem={enviarMensagem}
         enviando={enviando}
         acabouDe={acabouDe}

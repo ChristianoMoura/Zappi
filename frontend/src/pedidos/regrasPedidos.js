@@ -92,6 +92,9 @@ export const podeRecusarOuCancelar = (status) => podeRecusar(status) || podeCanc
 export const podeEditar = (status) => [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(status)
 export const podeTrocarCliente = (status) => status === STATUS.NOVO
 
+// Os dados do cliente só podem ser apagados com o pedido encerrado (RN17, ZAP-116)
+export const podeAnonimizar = (status) => status === STATUS.CONCLUIDO || status === STATUS.RECUSADO
+
 // Andamento entre as colunas (ZAP-77, RN03): cada etapa tem um só passo à frente e, pela decisão
 // da ZAP-64, só Em produção e Concluído podem voltar uma coluna
 export const AVANCO = {

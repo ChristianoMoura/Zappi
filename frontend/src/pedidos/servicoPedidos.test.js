@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { dataLocal, STATUS } from './regrasPedidos'
 import {
   AcaoNaoPermitidaError,
+  anonimizarCliente,
   avancarPedido,
   buscarPedido,
   buscarPedidos,
@@ -182,6 +183,38 @@ describe('servicoPedidos (ZAP-122)', () => {
     simularBackend(json(status, { codigo: 'ERRO' }))
 
     await expect(confirmarPedido(1)).rejects.toBeInstanceOf(AcaoNaoPermitidaError)
+  })
+
+  it('anonimiza pela rota do pedido e devolve o cliente sem telefone', async () => {
+    const chamadas = simularBackend(json(200, { ...doBackend, status: STATUS.CONCLUIDO, cliente: { nome: 'Cliente anonimizado', telefone: null, anonimizado: true } }))
+
+    const pedido = await anonimizarCliente(1)
+
+    const [[endereco, opcoes]] = chamadas()
+    expect(endereco).toBe('/api/pedidos/1/anonimizar-cliente')
+    expect(opcoes.method).toBe('POST')
+    expect(pedido.cliente).toEqual({ nome: 'Cliente anonimizado', telefone: '', anonimizado: true })
+  })
+
+  it.each([
+    ['CLIENTE_COM_PEDIDO_EM_ABERTO', 'Este cliente ainda tem pedido em andamento.'],
+    ['CLIENTE_JA_ANONIMIZADO', 'Os dados deste cliente já foram apagados.'],
+  ])('o 409 %s traz o motivo do backend', async (codigo, mensagem) => {
+    simularBackend(json(409, { codigo, mensagem }))
+
+    const erro = await anonimizarCliente(1).catch((e) => e)
+
+    expect(erro).toBeInstanceOf(AcaoNaoPermitidaError)
+    expect(erro.message).toBe(mensagem)
+  })
+
+  it('o 409 sem corpo continua virando AcaoNaoPermitidaError, sem motivo', async () => {
+    simularBackend(new Response('', { status: 409 }))
+
+    const erro = await anonimizarCliente(1).catch((e) => e)
+
+    expect(erro).toBeInstanceOf(AcaoNaoPermitidaError)
+    expect(erro.message).toBe('')
   })
 
   it('erro do servidor ou sem conexão vira ServicoIndisponivelError', async () => {
