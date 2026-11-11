@@ -471,6 +471,17 @@
   pointer-events: none;
 }
 
+/* "Ver pedido": quantidade de itens à esquerda e total à direita */
+.verPedido {
+  justify-content: space-between;
+}
+
+.verPedido span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .barraBaixo .whats {
   pointer-events: auto;
   box-shadow: 0 8px 22px rgb(0 0 0 / 0.22);
