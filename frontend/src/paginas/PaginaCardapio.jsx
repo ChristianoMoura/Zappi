@@ -7,7 +7,9 @@ import {
   IconChevronLeft,
   IconCircleCheck,
   IconCreditCard,
+  IconExternalLink,
   IconLinkOff,
+  IconMapPin,
   IconMenu2,
   IconMoon,
   IconPhotoOff,
@@ -31,6 +33,7 @@ import {
   linkWhatsapp,
   mensagemContato,
   mensagemPedido,
+  PONTO_RETIRADA_EXEMPLO,
   precoTexto,
   REGRAS_ENCOMENDA,
   telefoneTexto,
@@ -512,6 +515,33 @@ function DetalheProduto({ loja, produto, tema, telaCheia, aoFechar, aoCompartilh
 
 // ---------- Perfil da loja ("Mais informações") ----------
 
+// Mapa do OpenStreetMap, sem chave de API, com o ponto marcado e o link para abrir em tela cheia
+function MapaRetirada({ ponto }) {
+  const margem = 0.004
+  const caixa = [ponto.longitude - margem, ponto.latitude - margem, ponto.longitude + margem, ponto.latitude + margem].join(',')
+  const mapa = `https://www.openstreetmap.org/export/embed.html?bbox=${caixa}&layer=mapnik&marker=${ponto.latitude},${ponto.longitude}`
+  const abrir = `https://www.openstreetmap.org/?mlat=${ponto.latitude}&mlon=${ponto.longitude}#map=17/${ponto.latitude}/${ponto.longitude}`
+  return (
+    <>
+      <div className={classes.endereco}>
+        <IconMapPin size={22} aria-hidden />
+        <div>
+          <b>{ponto.endereco}</b>
+          {ponto.ilustrativo && <span className={classes.etiqueta}>Endereço ilustrativo</span>}
+        </div>
+      </div>
+      <div className={classes.mapa}>
+        <iframe title={`Mapa do local de retirada: ${ponto.endereco}`} src={mapa} loading="lazy" referrerPolicy="no-referrer" />
+      </div>
+      <a className={classes.abrirMapa} href={abrir} target="_blank" rel="noopener noreferrer">
+        Abrir no mapa
+        <IconExternalLink size={18} aria-hidden />
+        <span className={classes.somenteLeitor}> (abre em outra aba)</span>
+      </a>
+    </>
+  )
+}
+
 function PerfilLoja({ loja, escuro }) {
   return (
     <div className={juntar(classes.coluna, classes.perfil)}>
@@ -522,14 +552,16 @@ function PerfilLoja({ loja, escuro }) {
         <h1>Informações da loja</h1>
       </header>
       <main>
-        <div className={classes.lojaLinha}>
-          <LogoLoja loja={loja} className={classes.logoPerfil} />
-          <b>{loja.nome}</b>
+        <div className={classes.cartaoPerfil}>
+          <div className={classes.lojaLinha}>
+            <LogoLoja loja={loja} className={classes.logoPerfil} />
+            <b>{loja.nome}</b>
+          </div>
+          <p className={classes.aviso}>
+            <IconCalendarEvent size={18} aria-hidden />
+            {AVISO_ENCOMENDA}
+          </p>
         </div>
-        <p className={classes.aviso}>
-          <IconCalendarEvent size={18} aria-hidden />
-          {AVISO_ENCOMENDA}
-        </p>
 
         {loja.descricao && (
           <section aria-labelledby="perfil-sobre">
@@ -554,13 +586,18 @@ function PerfilLoja({ loja, escuro }) {
         <section aria-labelledby="perfil-retirada">
           <h2 id="perfil-retirada" className={classes.tituloBloco}>Retirada</h2>
           <div className={classes.bloco}>
-            <p>O local e o horário de retirada são combinados pelo WhatsApp depois da confirmação do pedido. Não há entrega.</p>
+            <p>Retire no endereço abaixo, na data e no horário combinados. Não há entrega.</p>
+            <MapaRetirada ponto={PONTO_RETIRADA_EXEMPLO} />
           </div>
         </section>
         <section aria-labelledby="perfil-contato">
           <h2 id="perfil-contato" className={classes.tituloBloco}>Contato</h2>
-          <div className={classes.bloco}>
-            {loja.whatsapp && <p>WhatsApp: {telefoneTexto(loja.whatsapp)}</p>}
+          {loja.whatsapp && (
+            <div className={classes.bloco}>
+              <p>WhatsApp: {telefoneTexto(loja.whatsapp)}</p>
+            </div>
+          )}
+          <div className={classes.botaoContato}>
             <BotaoWhatsapp loja={loja} texto={mensagemContato(loja)} rotulo="Falar com a loja no WhatsApp" />
           </div>
         </section>

@@ -11,7 +11,18 @@ export const REGRAS_ENCOMENDA = [
   { icone: 'confirmacao', titulo: 'Confirmação', texto: 'O pedido vale depois da confirmação da loja pelo WhatsApp.' },
 ]
 
-export const AVISO_ENCOMENDA = 'Encomendas com pelo menos 7 dias de antecedência · Retirada, sem entrega'
+// Local de retirada mostrado no mapa de "Mais informações". Por enquanto é um endereço
+// fictício, só para representar o mapa: o banco não tem um ponto de retirada, e a API pública
+// não expõe o endereço da loja, que é a casa da Lídia (LGPD). Quando houver um ponto de
+// retirada cadastrado, ele vem da API no lugar deste.
+export const PONTO_RETIRADA_EXEMPLO = {
+  endereco: 'Rua das Confeiteiras, 120 — Vila Doce, São Paulo/SP',
+  latitude: -23.5505,
+  longitude: -46.6333,
+  ilustrativo: true,
+}
+
+export const AVISO_ENCOMENDA ='Encomendas com pelo menos 7 dias de antecedência · Retirada, sem entrega'
 
 // Preço sempre com a unidade ao lado (CDC): "R$ 100,00" e "por kg"
 export const precoTexto = (produto) => moeda(produto.preco)
