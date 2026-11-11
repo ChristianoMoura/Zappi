@@ -88,6 +88,38 @@ class MigracoesTests {
 			.hasMessageContaining("fk_pedido_cliente");
 	}
 
+	@Test
+	void criaGlutenEAlergenosDoProdutoComoOpcionais() {
+		List<Map<String, Object>> colunas = jdbc.queryForList("""
+				select column_name, data_type, character_maximum_length, is_nullable, column_default
+				from information_schema.columns
+				where table_name = 'produto' and column_name in ('contem_gluten', 'outros_alergenos')
+				order by column_name
+				""");
+
+		assertThat(colunas).hasSize(2);
+		assertThat(colunas.get(0)).containsEntry("column_name", "contem_gluten")
+			.containsEntry("data_type", "boolean")
+			.containsEntry("is_nullable", "YES")
+			.containsEntry("column_default", null);
+		assertThat(colunas.get(1)).containsEntry("column_name", "outros_alergenos")
+			.containsEntry("data_type", "character varying")
+			.containsEntry("character_maximum_length", 300)
+			.containsEntry("is_nullable", "YES");
+	}
+
+	@Test
+	void produtoSemGlutenInformadoFicaComoNaoInformado() {
+		long estabelecimento = criarEstabelecimento("confeitaria-a");
+
+		Map<String, Object> produto = jdbc.queryForMap("""
+				insert into produto (estabelecimento_id, unidade_medida_id, nome, sabor, preco)
+				values (?, 1, 'Bolo', 'Brigadeiro', 100.00) returning contem_gluten, outros_alergenos
+				""", estabelecimento);
+
+		assertThat(produto).containsEntry("contem_gluten", null).containsEntry("outros_alergenos", null);
+	}
+
 	private long criarEstabelecimento(String slug) {
 		return jdbc.queryForObject("""
 				insert into estabelecimento (nome, slug, telefone_whatsapp)
