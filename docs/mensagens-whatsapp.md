@@ -1,6 +1,6 @@
 # Zappi — Textos das mensagens do WhatsApp
 
-Versão de 07/11/2026 · aprovada pela equipe na ZAP-63 (validação com a Lídia autorizada pelo Lucas)
+Versão de 07/11/2026 · aprovada pela equipe na ZAP-63 (validação com a Lídia autorizada pelo Lucas) · hora da retirada incluída em 10/11/2026 (ZAP-127)
 
 Estes são os textos que o Zappi prepara para o cliente ao confirmar, recusar ou cancelar e concluir um pedido. O backend monta o texto com os campos variáveis e gera o link `wa.me` (ZAP-50); a Lídia clica em "Enviar no WhatsApp" e só aperta enviar.
 
@@ -22,7 +22,7 @@ Estes são os textos que o Zappi prepara para o cliente ao confirmar, recusar ou
 | `{estabelecimento}` | `estabelecimento.nome` | Como cadastrado | Casa Belt |
 | `{itens}` | `item_pedido` | Um item por linha: `- {produto} de {sabor} ({quantidade})`, com a quantidade em kg ou un | - Bolo de brigadeiro de chocolate (2 kg) |
 | `{valor_total}` | `pedido.valor_total` | Moeda brasileira | R$ 200,00 |
-| `{data_retirada}` | `pedido.data_retirada` | Dia da semana por extenso e dia/mês; no próprio dia, começa com "hoje," | sábado, 14/11 · hoje, sábado, 07/11 |
+| `{data_retirada}` | `pedido.data_retirada` | Dia da semana por extenso, dia/mês e hora ("15h" ou "15h30"); no próprio dia, começa com "hoje," | sábado, 14/11, às 15h · hoje, sábado, 07/11, às 9h30 |
 | `{motivo}` | `pedido.motivo_recusa` | Texto digitado pela Lídia, sem alteração | Agenda cheia nesse dia. |
 
 ## 1. Confirmação (tipo 1)
@@ -52,7 +52,7 @@ Seu pedido #12 na Casa Belt está confirmado.
 
 - Bolo de brigadeiro de chocolate (2 kg)
 Total: R$ 200,00
-Retirada: sábado, 14/11
+Retirada: sábado, 14/11, às 15h
 
 O pagamento é feito na retirada. Qualquer dúvida, é só responder esta mensagem.
 
@@ -81,7 +81,7 @@ Mensagem gerada pelo Zappi
 ```text
 Olá, João.
 
-Infelizmente não vamos conseguir atender o seu pedido #11 para sábado, 14/11.
+Infelizmente não vamos conseguir atender o seu pedido #11 para sábado, 14/11, às 15h.
 
 Motivo: Tive um imprevisto de saúde e não vou conseguir produzir nesse dia.
 
@@ -116,7 +116,7 @@ Olá, Beatriz!
 
 Seu pedido #9 está pronto para retirada.
 
-Retirada: hoje, sábado, 07/11
+Retirada: hoje, sábado, 07/11, às 9h30
 Total a pagar na retirada: R$ 230,00
 
 Qualquer dúvida, é só responder esta mensagem.

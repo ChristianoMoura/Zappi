@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
 import { CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
-import { dataLocal, moeda, podeEditar, podeTrocarCliente, STATUS } from '../pedidos/regrasPedidos'
+import { dataLocal, HORARIOS_RETIRADA, horaTexto, moeda, podeEditar, podeTrocarCliente, STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedido, cadastrarPedido, editarPedido } from '../pedidos/servicoPedidos'
 import { nomeCompleto, precoParaTela, UNIDADES } from '../produtos/regrasProdutos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
@@ -12,7 +12,7 @@ import formulario from '../produtos/Produtos.module.css'
 import classes from '../pedidos/NovoPedido.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
-const VAZIO = () => ({ clienteNome: '', clienteWhatsapp: '', consentimentoLgpd: false, itens: [itemVazio()], dataRetirada: '', observacao: '' })
+const VAZIO = () => ({ clienteNome: '', clienteWhatsapp: '', consentimentoLgpd: false, itens: [itemVazio()], dataRetirada: '', horaRetirada: '', observacao: '' })
 
 // Cadastro (ZAP-89, RF13) e edição (ZAP-91, RF14) de pedido pela Lídia: ela registra ou corrige a
 // encomenda que recebeu pelo WhatsApp. Ordem dos campos: cliente → itens → data de retirada →
@@ -324,14 +324,22 @@ export function PaginaFormularioPedido() {
 
         <section className={formulario.caixa} aria-labelledby="secao-retirada">
           <h2 id="secao-retirada" className={formulario.tituloCaixa}>Retirada</h2>
-          <TextInput
-            {...propsCampo('dataRetirada', 'Data de retirada', { obrigatorio: true })}
-            type="date"
-            min={hoje}
-            value={dados.dataRetirada}
-            onChange={(e) => mudar('dataRetirada', e.currentTarget.value)}
-            className={classes.data}
-          />
+          <div className={classes.dataHora}>
+            <TextInput
+              {...propsCampo('dataRetirada', 'Data de retirada', { obrigatorio: true })}
+              type="date"
+              min={hoje}
+              value={dados.dataRetirada}
+              onChange={(e) => mudar('dataRetirada', e.currentTarget.value)}
+            />
+            {/* RN23: das 8h às 20h, de 30 em 30 minutos (ZAP-127) */}
+            <NativeSelect
+              {...propsCampo('horaRetirada', 'Horário de retirada', { obrigatorio: true })}
+              data={[{ value: '', label: 'Escolha o horário' }, ...HORARIOS_RETIRADA.map((hora) => ({ value: hora, label: horaTexto(hora) }))]}
+              value={dados.horaRetirada}
+              onChange={(e) => mudar('horaRetirada', e.currentTarget.value)}
+            />
+          </div>
           <Textarea
             {...propsCampo('observacao', 'Observações do pedido', { limite: LIMITES.observacao })}
             value={dados.observacao}

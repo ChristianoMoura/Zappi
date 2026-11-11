@@ -2,7 +2,8 @@ package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -47,7 +48,13 @@ public class ServicoCadastroPedido {
 	/** "Hoje" é o dia na confeitaria, não no servidor. */
 	private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
 
-	private static final String DATA_PASSADA = "A data de retirada já passou. Escolha hoje ou um dia depois.";
+	private static final String DATA_PASSADA = "A data e o horário de retirada já passaram. Escolha um horário a partir de agora.";
+
+	private static final String HORARIO_FORA = "Escolha um horário entre 8h e 20h, de 30 em 30 minutos.";
+
+	private static final LocalTime PRIMEIRA_RETIRADA = LocalTime.of(8, 0);
+
+	private static final LocalTime ULTIMA_RETIRADA = LocalTime.of(20, 0);
 
 	private static final String PRODUTO_FORA_DO_CARDAPIO = "Escolha um produto do cardápio.";
 
@@ -94,9 +101,7 @@ public class ServicoCadastroPedido {
 	public RespostaPedido cadastrar(UsuarioAutenticado usuario, RequisicaoPedido requisicao) {
 		OffsetDateTime agora = OffsetDateTime.now(ZoneOffset.UTC);
 		Map<String, String> erros = new LinkedHashMap<>();
-		if (requisicao.dataRetirada().isBefore(hoje())) {
-			erros.put("dataRetirada", DATA_PASSADA);
-		}
+		conferirRetirada(erros, requisicao.dataRetirada(), null);
 		Map<Long, Produto> doCardapio = produtosDoCardapio(usuario, requisicao.itens());
 		List<ItemDaRequisicao> itensDaRequisicao = requisicao.itens();
 		for (int i = 0; i < itensDaRequisicao.size(); i++) {
@@ -145,10 +150,7 @@ public class ServicoCadastroPedido {
 		Map<String, Object> antes = retrato(pedido, atuais);
 
 		Map<String, String> erros = new LinkedHashMap<>();
-		// A data que já passou pode ficar, se não foi mudada
-		if (!requisicao.dataRetirada().equals(pedido.getDataRetirada()) && requisicao.dataRetirada().isBefore(hoje())) {
-			erros.put("dataRetirada", DATA_PASSADA);
-		}
+		conferirRetirada(erros, requisicao.dataRetirada(), pedido.getDataRetirada());
 		List<ItemDaRequisicao> itensDaRequisicao = requisicao.itens();
 		List<ItemPedido> correspondentes = correspondentes(atuais, itensDaRequisicao);
 		List<ItemDaRequisicao> novos = new ArrayList<>();
@@ -291,8 +293,28 @@ public class ServicoCadastroPedido {
 			.setScale(2, RoundingMode.HALF_UP);
 	}
 
-	private static LocalDate hoje() {
-		return LocalDate.now(FUSO);
+	/**
+	 * Retirada das 8h às 20h, de 30 em 30 minutos (RN23), e não antes de agora, no horário de
+	 * São Paulo. Na edição, a data e hora que já estava no pedido pode ficar, mesmo que já tenha
+	 * passado (ZAP-90).
+	 */
+	private static void conferirRetirada(Map<String, String> erros, LocalDateTime retirada, LocalDateTime atual) {
+		if (retirada.equals(atual)) {
+			return;
+		}
+		if (!horarioPermitido(retirada)) {
+			erros.put("dataRetirada", HORARIO_FORA);
+		}
+		else if (retirada.isBefore(LocalDateTime.now(FUSO))) {
+			erros.put("dataRetirada", DATA_PASSADA);
+		}
+	}
+
+	/** Das 8h às 20h, em hora cheia ou meia hora, sem segundos (RN23). */
+	static boolean horarioPermitido(LocalDateTime retirada) {
+		LocalTime hora = retirada.toLocalTime();
+		return !hora.isBefore(PRIMEIRA_RETIRADA) && !hora.isAfter(ULTIMA_RETIRADA) && hora.getMinute() % 30 == 0
+				&& hora.getSecond() == 0 && hora.getNano() == 0;
 	}
 
 	/**

@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.Map;
@@ -175,9 +175,9 @@ class ConcluirPedidoTests {
 	}
 
 	private String dataEsperada() {
-		LocalDate data = jdbc.queryForObject("select data_retirada from pedido where id = ?", LocalDate.class, pedido);
-		return "%s, %02d/%02d".formatted(data.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.forLanguageTag("pt-BR")),
-				data.getDayOfMonth(), data.getMonthValue());
+		LocalDateTime data = jdbc.queryForObject("select data_retirada from pedido where id = ?", LocalDateTime.class, pedido);
+		return "%s, %02d/%02d, às %dh".formatted(data.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.forLanguageTag("pt-BR")),
+				data.getDayOfMonth(), data.getMonthValue(), data.getHour());
 	}
 
 }

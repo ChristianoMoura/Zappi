@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.List;
@@ -136,11 +137,21 @@ public class GeradorDeMensagens {
 		return NumberFormat.getCurrencyInstance(PORTUGUES).format(valor).replace(' ', ' ');
 	}
 
-	/** "sábado, 14/11", ou "hoje, sábado, 07/11" quando a retirada é no dia. */
-	String dataDeRetirada(LocalDate data) {
-		String texto = "%s, %02d/%02d".formatted(data.getDayOfWeek().getDisplayName(TextStyle.FULL, PORTUGUES),
-				data.getDayOfMonth(), data.getMonthValue());
+	/**
+	 * "sábado, 14/11, às 15h" ou "sábado, 14/11, às 15h30", começando com "hoje," quando a
+	 * retirada é no dia (ZAP-127).
+	 */
+	String dataDeRetirada(LocalDateTime retirada) {
+		LocalDate data = retirada.toLocalDate();
+		String texto = "%s, %02d/%02d, às %s".formatted(data.getDayOfWeek().getDisplayName(TextStyle.FULL, PORTUGUES),
+				data.getDayOfMonth(), data.getMonthValue(), hora(retirada));
 		return data.equals(LocalDate.now(relogio)) ? "hoje, " + texto : texto;
+	}
+
+	/** "15h", ou "15h30" fora da hora cheia. */
+	static String hora(LocalDateTime retirada) {
+		int minutos = retirada.getMinute();
+		return minutos == 0 ? retirada.getHour() + "h" : "%dh%02d".formatted(retirada.getHour(), minutos);
 	}
 
 	static String primeiroNome(String nome) {

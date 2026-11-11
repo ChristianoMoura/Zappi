@@ -3,7 +3,11 @@
 // a Lídia antes de salvar.
 
 import { soDigitos } from '../estabelecimento/regrasEstabelecimento'
-import { dataLocal, subtotal } from './regrasPedidos'
+import { dataLocal, HORARIOS_RETIRADA, partesDaRetirada, subtotal } from './regrasPedidos'
+
+// Agora no formato da retirada, AAAA-MM-DDTHH:MM, no fuso de quem usa o painel
+const horaLocal = (data) =>
+  `${dataLocal(data)}T${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`
 
 export const LIMITES = { clienteNome: 100, observacao: 500, recheio: 100, cobertura: 100, observacaoItem: 300 }
 
@@ -36,7 +40,8 @@ export function formularioDoPedido(pedido) {
     clienteNome: pedido.cliente.nome,
     clienteWhatsapp: soDigitos(pedido.cliente.telefone).replace(/^55/, ''),
     consentimentoLgpd: true,
-    dataRetirada: pedido.dataRetirada,
+    dataRetirada: partesDaRetirada(pedido.dataRetirada).data,
+    horaRetirada: partesDaRetirada(pedido.dataRetirada).hora,
     observacao: pedido.observacao ?? '',
     itens: pedido.itens.map((item) => ({
       chave: ++proximaChave,
@@ -91,15 +96,22 @@ export function validarPedido(dados, produtos, hoje = new Date(), dataOriginal =
     else if (quantidade >= 100000) erros[chave] = 'Confira a quantidade: ela está alta demais.'
   }
 
+  // RN23: retirada das 8h às 20h, de 30 em 30 minutos. A data e hora que já estava no pedido
+  // pode ficar, mesmo que tenha passado, se não foi mudada (ZAP-127)
+  const retirada = `${dados.dataRetirada}T${dados.horaRetirada}`
+  const mudou = retirada !== dataOriginal
   if (!dados.dataRetirada) erros.dataRetirada = 'Escolha a data de retirada.'
-  else if (dados.dataRetirada !== dataOriginal && dados.dataRetirada < dataLocal(hoje)) erros.dataRetirada = 'A data de retirada já passou. Escolha hoje ou um dia depois.'
+  else if (mudou && dados.dataRetirada < dataLocal(hoje)) erros.dataRetirada = 'A data de retirada já passou. Escolha hoje ou um dia depois.'
+  if (!dados.horaRetirada) erros.horaRetirada = 'Escolha o horário de retirada.'
+  else if (mudou && !HORARIOS_RETIRADA.includes(dados.horaRetirada)) erros.horaRetirada = 'Escolha um horário entre 8h e 20h, de 30 em 30 minutos.'
+  else if (mudou && !erros.dataRetirada && dados.dataRetirada && retirada < horaLocal(hoje)) erros.horaRetirada = 'Esse horário já passou. Escolha um horário a partir de agora.'
 
   if (dados.observacao.length > LIMITES.observacao) erros.observacao = `Use no máximo ${LIMITES.observacao} caracteres.`
   return erros
 }
 
 // Ordem dos campos na tela para levar o foco ao primeiro erro (NBR 17225 5.1.4):
-// cliente → itens → data de retirada → observações
+// cliente → itens → data e horário de retirada → observações
 export function ordemDosCampos(itens) {
   return [
     'clienteNome',
@@ -107,6 +119,7 @@ export function ordemDosCampos(itens) {
     'consentimentoLgpd',
     ...itens.flatMap((item) => [`item-${item.chave}-produto`, `item-${item.chave}-quantidade`]),
     'dataRetirada',
+    'horaRetirada',
     'observacao',
   ]
 }
@@ -117,7 +130,7 @@ export function montarPedido(dados, produtos) {
   return {
     cliente: { nome: dados.clienteNome.trim(), telefone: `55${soDigitos(dados.clienteWhatsapp)}` },
     consentimentoLgpd: dados.consentimentoLgpd,
-    dataRetirada: dados.dataRetirada,
+    dataRetirada: `${dados.dataRetirada}T${dados.horaRetirada}`,
     observacao: dados.observacao.trim(),
     itens: dados.itens.map((item) => {
       const produto = produtoDoItem(item, produtos)

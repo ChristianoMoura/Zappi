@@ -2,12 +2,15 @@ package br.com.zappi.pedido;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
@@ -127,9 +130,9 @@ class CadastroPedidoTests {
 
 	@Test
 	void cadastrosSeguidosRecebemNumerosSeguidos() throws Exception {
-		cadastrar(pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1, Map.of()))))
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()))))
 			.andExpect(jsonPath("$.numero").value(3));
-		cadastrar(pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1, Map.of()))))
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()))))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.numero").value(4));
 
@@ -142,7 +145,7 @@ class CadastroPedidoTests {
 		long ana = jdbc.queryForObject("select id from cliente where telefone_whatsapp = '5511900000001'", Long.class);
 		int clientes = jdbc.queryForObject("select count(*) from cliente", Integer.class);
 
-		cadastrar(pedido("Ana Souza", "5511900000001", hoje(), List.of(item(coxinha, 10, Map.of()))))
+		cadastrar(pedido("Ana Souza", "5511900000001", amanha(), List.of(item(coxinha, 10, Map.of()))))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.cliente.nome").value("Ana Exemplo"));
 
@@ -158,7 +161,7 @@ class CadastroPedidoTests {
 
 		cadastrar(semData)
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.campos.dataRetirada").value("Escolha a data de retirada."));
+			.andExpect(jsonPath("$.campos.dataRetirada").value("Escolha a data e o horário de retirada."));
 		nadaFoiGravado();
 	}
 
@@ -168,8 +171,31 @@ class CadastroPedidoTests {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.codigo").value("DADOS_INVALIDOS"))
 			.andExpect(jsonPath("$.campos.dataRetirada")
-				.value("A data de retirada já passou. Escolha hoje ou um dia depois."));
+				.value("A data e o horário de retirada já passaram. Escolha um horário a partir de agora."));
 		nadaFoiGravado();
+	}
+
+	@Test
+	void soAceitaRetiradaDas8hAs20hDeMeiaEmMeiaHora() throws Exception {
+		for (LocalTime fora : List.of(LocalTime.of(7, 30), LocalTime.of(20, 30), LocalTime.of(15, 15),
+				LocalTime.of(15, 0, 30))) {
+			cadastrar(pedido("Carla", CARLA, amanha().atTime(fora), List.of(item(brigadeiro, 1, Map.of()))))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.campos.dataRetirada")
+					.value("Escolha um horário entre 8h e 20h, de 30 em 30 minutos."));
+		}
+		nadaFoiGravado();
+
+		cadastrar(pedido("Carla", CARLA, amanha().atTime(8, 0), List.of(item(brigadeiro, 1, Map.of()))))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.dataRetirada", startsWith(amanha() + "T08:00")));
+		cadastrar(pedido("Carla", CARLA, amanha().atTime(20, 0), List.of(item(brigadeiro, 1, Map.of()))))
+			.andExpect(status().isCreated());
+		cadastrar(pedido("Carla", CARLA, amanha().atTime(14, 30), List.of(item(brigadeiro, 1, Map.of()))))
+			.andExpect(status().isCreated());
+		assertThat(jdbc.queryForList("select data_retirada from pedido where numero > 2 order by numero",
+				LocalDateTime.class))
+			.containsExactly(amanha().atTime(8, 0), amanha().atTime(20, 0), amanha().atTime(14, 30));
 	}
 
 	@Test
@@ -185,7 +211,7 @@ class CadastroPedidoTests {
 				values (?, 1, 'Bolo', 'Cenoura', 90.00) returning id
 				""", Long.class, outraLoja);
 
-		cadastrar(pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1, Map.of()), item(excluido, 1, Map.of()),
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()), item(excluido, 1, Map.of()),
 				item(deOutraLoja, 1, Map.of()), item(999_999, 1, Map.of()))))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.campos.length()").value(3))
@@ -197,19 +223,19 @@ class CadastroPedidoTests {
 
 	@Test
 	void produtoPorUnidadeSoAceitaNumeroInteiro() throws Exception {
-		cadastrar(pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1.25, Map.of()), item(coxinha, 1.5, Map.of()))))
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1.25, Map.of()), item(coxinha, 1.5, Map.of()))))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.campos.length()").value(1))
 			.andExpect(jsonPath("$.campos['itens[1].quantidade']")
 				.value("Este produto é vendido por unidade: use um número inteiro."));
 
-		cadastrar(pedido("Carla", CARLA, hoje(), List.of(item(coxinha, 2.0, Map.of()))))
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(coxinha, 2.0, Map.of()))))
 			.andExpect(status().isCreated());
 	}
 
 	@Test
 	void confereOsCampos() throws Exception {
-		Map<String, Object> pedido = pedido(" ", "11900000000", hoje(), List.of());
+		Map<String, Object> pedido = pedido(" ", "11900000000", amanha(), List.of());
 		pedido.put("consentimentoLgpd", false);
 		pedido.put("observacao", "x".repeat(501));
 
@@ -223,7 +249,7 @@ class CadastroPedidoTests {
 			.andExpect(jsonPath("$.campos.observacao").value("Use no máximo 500 caracteres."))
 			.andExpect(jsonPath("$.campos.itens").value("Adicione pelo menos um item."));
 
-		cadastrar(pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 0, Map.of()),
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 0, Map.of()),
 				item(brigadeiro, 1.2345, Map.of()), item(brigadeiro, 100_000, Map.of()),
 				item(brigadeiro, 1, Map.of("recheio", "x".repeat(101), "observacao", "x".repeat(301))))))
 			.andExpect(status().isBadRequest())
@@ -239,7 +265,7 @@ class CadastroPedidoTests {
 
 	@Test
 	void semConsentimentoNaoGravaOCliente() throws Exception {
-		Map<String, Object> pedido = pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1, Map.of())));
+		Map<String, Object> pedido = pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of())));
 		pedido.remove("consentimentoLgpd");
 
 		cadastrar(pedido)
@@ -252,7 +278,7 @@ class CadastroPedidoTests {
 	@Test
 	void exigeOToken() throws Exception {
 		mockMvc.perform(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
-			.content(json.writeValueAsString(pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1, Map.of()))))))
+			.content(json.writeValueAsString(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()))))))
 			.andExpect(status().isUnauthorized());
 	}
 
@@ -279,7 +305,12 @@ class CadastroPedidoTests {
 
 	static final String NAVEGADOR = "Navegador de teste";
 
-	static Map<String, Object> pedido(String nome, String telefone, LocalDate dataRetirada,
+	/** Retirada ao meio-dia do dia informado, um horário permitido (RN23). */
+	static Map<String, Object> pedido(String nome, String telefone, LocalDate dia, List<Map<String, Object>> itens) {
+		return pedido(nome, telefone, dia.atTime(12, 0), itens);
+	}
+
+	static Map<String, Object> pedido(String nome, String telefone, LocalDateTime dataRetirada,
 			List<Map<String, Object>> itens) {
 		Map<String, Object> pedido = new HashMap<>();
 		pedido.put("cliente", Map.of("nome", nome, "telefone", telefone));
@@ -299,6 +330,10 @@ class CadastroPedidoTests {
 
 	static LocalDate hoje() {
 		return LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+	}
+
+	static LocalDate amanha() {
+		return hoje().plusDays(1);
 	}
 
 }

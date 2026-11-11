@@ -78,6 +78,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     expect(screen.getByText(/Confirme que o cliente autorizou/)).toBeVisible()
     expect(screen.getByText('Escolha o produto.')).toBeVisible()
     expect(screen.getByText('Escolha a data de retirada.')).toBeVisible()
+    expect(screen.getByText('Escolha o horário de retirada.')).toBeVisible()
   })
 
   test('calcula o subtotal e o total na tela, com mais de um item (RN11)', async () => {
@@ -123,6 +124,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     await usuario.type(campo(/^Recheio/), 'Brigadeiro')
     await usuario.type(campo(/^Observação do item/), 'massa branca')
     await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(5))
+    await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '14:30')
     await usuario.type(screen.getByRole('textbox', { name: /^Observações do pedido/ }), 'Aniversário')
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar pedido' }))
@@ -130,7 +132,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     expect(cadastrarPedido).toHaveBeenCalledWith({
       cliente: { nome: 'Fernanda Costa', telefone: '5511987650099' },
       consentimentoLgpd: true,
-      dataRetirada: daqui(5),
+      dataRetirada: `${daqui(5)}T14:30`,
       observacao: 'Aniversário',
       itens: [{ produtoId: 1, produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, recheio: 'Brigadeiro', observacao: 'massa branca' }],
     })
@@ -147,6 +149,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Produto/ }), '1')
     await usuario.type(campo(/^Quantidade/), '2')
     await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(3))
+    await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '10:00')
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar pedido' }))
 
