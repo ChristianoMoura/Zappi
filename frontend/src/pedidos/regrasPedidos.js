@@ -38,27 +38,48 @@ export const resumoItens = (pedido) => pedido.itens.map((item) => `${nomeItem(it
 export const dataLocal = (data) =>
   `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
 
+// Horários de retirada: das 8h às 20h, de 30 em 30 minutos (RN23, ZAP-127)
+export const HORARIOS_RETIRADA = Array.from({ length: 25 }, (_, i) =>
+  `${String(8 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`)
+
+// A retirada vem como AAAA-MM-DDTHH:MM; separa a data e a hora
+export const partesDaRetirada = (iso) => {
+  const [data, hora = ''] = iso.split('T')
+  return { data, hora: hora.slice(0, 5) }
+}
+
+// "15h", ou "15h30" fora da hora cheia
+export function horaTexto(hora) {
+  const [h, m] = hora.split(':').map(Number)
+  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
+}
+
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
-// "sáb, 14/11", ou "hoje, 07/11" quando a retirada é no dia
+// "sáb, 14/11, 15h", ou "hoje, 07/11, 15h" quando a retirada é no dia
 export function dataRetiradaCurta(iso, hoje = new Date()) {
-  const [ano, mes, dia] = iso.split('-').map(Number)
-  const rotulo = iso === dataLocal(hoje) ? 'hoje' : DIAS[new Date(ano, mes - 1, dia).getDay()]
-  return `${rotulo}, ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
+  const { data, hora } = partesDaRetirada(iso)
+  const [ano, mes, dia] = data.split('-').map(Number)
+  const rotulo = data === dataLocal(hoje) ? 'hoje' : DIAS[new Date(ano, mes - 1, dia).getDay()]
+  const texto = `${rotulo}, ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
+  return hora ? `${texto}, ${horaTexto(hora)}` : texto
 }
 
 const DIAS_POR_EXTENSO = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
 
-// Data das mensagens ao cliente (docs/mensagens-whatsapp.md): "sábado, 14/11" ou "hoje, sábado, 07/11"
+// Data das mensagens ao cliente (docs/mensagens-whatsapp.md): "sábado, 14/11, às 15h" ou
+// "hoje, sábado, 07/11, às 15h"
 export function dataRetiradaMensagem(iso, hoje = new Date()) {
-  const [ano, mes, dia] = iso.split('-').map(Number)
-  const data = `${DIAS_POR_EXTENSO[new Date(ano, mes - 1, dia).getDay()]}, ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
-  return iso === dataLocal(hoje) ? `hoje, ${data}` : data
+  const { data, hora } = partesDaRetirada(iso)
+  const [ano, mes, dia] = data.split('-').map(Number)
+  const dataTexto = `${DIAS_POR_EXTENSO[new Date(ano, mes - 1, dia).getDay()]}, ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
+  const texto = hora ? `${dataTexto}, às ${horaTexto(hora)}` : dataTexto
+  return data === dataLocal(hoje) ? `hoje, ${texto}` : texto
 }
 
 // O selo "Retira hoje" só faz sentido para pedido aceito que ainda não ficou pronto
 export const retiraHoje = (pedido, hoje = new Date()) =>
-  pedido.dataRetirada === dataLocal(hoje) && [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(pedido.status)
+  partesDaRetirada(pedido.dataRetirada).data === dataLocal(hoje) && [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(pedido.status)
 
 // Recusar vale para pedidos Novos; cancelar, para Confirmados e Em produção. Os dois levam o pedido
 // para Recusado com motivo obrigatório de até 500 caracteres (RN03, RN05, ZAP-64)

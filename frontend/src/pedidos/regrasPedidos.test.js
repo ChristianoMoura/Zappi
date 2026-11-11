@@ -3,6 +3,8 @@ import {
   colunasVisiveis,
   dataRetiradaCurta,
   dataRetiradaMensagem,
+  horaTexto,
+  HORARIOS_RETIRADA,
   mensagensDaEtapa,
   moeda,
   pedidosDaColuna,
@@ -86,5 +88,25 @@ describe('mensagens da etapa (ZAP-51)', () => {
   test('escreve a data da mensagem por extenso', () => {
     expect(dataRetiradaMensagem('2026-11-14', hoje)).toBe('sábado, 14/11')
     expect(dataRetiradaMensagem('2026-11-07', hoje)).toBe('hoje, sábado, 07/11')
+  })
+
+  test('mostra o horário da retirada no card, nos detalhes e na mensagem (ZAP-127)', () => {
+    expect(dataRetiradaCurta('2026-11-14T15:00', hoje)).toBe('sáb, 14/11, 15h')
+    expect(dataRetiradaCurta('2026-11-07T08:30', hoje)).toBe('hoje, 07/11, 8h30')
+    expect(dataRetiradaMensagem('2026-11-14T15:00', hoje)).toBe('sábado, 14/11, às 15h')
+    expect(dataRetiradaMensagem('2026-11-07T19:30', hoje)).toBe('hoje, sábado, 07/11, às 19h30')
+    expect(retiraHoje(pedido({ dataRetirada: '2026-11-07T20:00', status: STATUS.CONFIRMADO }), hoje)).toBe(true)
+  })
+
+  test('oferece os horários das 8h às 20h, de 30 em 30 minutos (RN23)', () => {
+    expect(HORARIOS_RETIRADA).toHaveLength(25)
+    expect(HORARIOS_RETIRADA.slice(0, 3)).toEqual(['08:00', '08:30', '09:00'])
+    expect(HORARIOS_RETIRADA.at(-1)).toBe('20:00')
+    expect(horaTexto('09:30')).toBe('9h30')
+  })
+
+  test('na mesma data, quem retira mais cedo aparece primeiro', () => {
+    const lista = [pedido({ numero: 2, dataRetirada: '2026-11-09T15:00' }), pedido({ numero: 3, dataRetirada: '2026-11-09T09:30' })]
+    expect(pedidosDaColuna(lista, STATUS.NOVO).map((p) => p.numero)).toEqual([3, 2])
   })
 })

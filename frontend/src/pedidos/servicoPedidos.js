@@ -67,7 +67,8 @@ function paraTela(pedido) {
   return {
     numero: pedido.numero,
     status: pedido.status,
-    dataRetirada: pedido.dataRetirada,
+    // AAAA-MM-DDTHH:MM, no horário de São Paulo, sem os segundos (ZAP-127)
+    dataRetirada: pedido.dataRetirada.slice(0, 16),
     observacao: opcional(pedido.observacao),
     // Cliente anonimizado (RN17) vem sem telefone
     cliente: { nome: pedido.cliente.nome, telefone: pedido.cliente.telefone ?? '', anonimizado: pedido.cliente.anonimizado },

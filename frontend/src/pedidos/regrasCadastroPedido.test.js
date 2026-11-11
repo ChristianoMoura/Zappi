@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import { lerQuantidade, montarPedido, ordemDosCampos, totalDoFormulario, validarPedido } from './regrasCadastroPedido'
+import { formularioDoPedido, lerQuantidade, montarPedido, ordemDosCampos, totalDoFormulario, validarPedido } from './regrasCadastroPedido'
 
-const hoje = new Date(2026, 10, 8)
+// Domingo, 08/11/2026, às 10h15
+const hoje = new Date(2026, 10, 8, 10, 15)
 const produtos = [
   { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100 },
   { id: 4, nome: 'Salgado', sabor: 'Coxinha de frango', unidade: 'UN', preco: 1.2 },
@@ -13,6 +14,7 @@ const dados = (extras) => ({
   consentimentoLgpd: true,
   itens: [item()],
   dataRetirada: '2026-11-14',
+  horaRetirada: '15:00',
   observacao: '',
   ...extras,
 })
@@ -30,8 +32,8 @@ describe('regras do cadastro de pedido (ZAP-89, RF13)', () => {
   })
 
   test('cliente, WhatsApp, consentimento, produto, quantidade e data são obrigatórios', () => {
-    const erros = validarPedido(dados({ clienteNome: ' ', clienteWhatsapp: '', consentimentoLgpd: false, itens: [item({ produtoId: '' })], dataRetirada: '' }), produtos, hoje)
-    expect(Object.keys(erros).sort()).toEqual(['clienteNome', 'clienteWhatsapp', 'consentimentoLgpd', 'dataRetirada', 'item-1-produto'].sort())
+    const erros = validarPedido(dados({ clienteNome: ' ', clienteWhatsapp: '', consentimentoLgpd: false, itens: [item({ produtoId: '' })], dataRetirada: '', horaRetirada: '' }), produtos, hoje)
+    expect(Object.keys(erros).sort()).toEqual(['clienteNome', 'clienteWhatsapp', 'consentimentoLgpd', 'dataRetirada', 'horaRetirada', 'item-1-produto'].sort())
     expect(validarPedido(dados({ itens: [item({ quantidade: '' })] }), produtos, hoje)['item-1-quantidade']).toBe('Escreva a quantidade em kg. Ex.: 1,5')
   })
 
@@ -43,7 +45,28 @@ describe('regras do cadastro de pedido (ZAP-89, RF13)', () => {
 
   test('não aceita data de retirada que já passou, mas aceita hoje', () => {
     expect(validarPedido(dados({ dataRetirada: '2026-11-07' }), produtos, hoje).dataRetirada).toMatch(/já passou/)
-    expect(validarPedido(dados({ dataRetirada: '2026-11-08' }), produtos, hoje)).toEqual({})
+    expect(validarPedido(dados({ dataRetirada: '2026-11-08', horaRetirada: '10:30' }), produtos, hoje)).toEqual({})
+  })
+
+  test('só aceita horário das 8h às 20h, de 30 em 30 minutos, e não um horário de hoje que já passou (RN23)', () => {
+    for (const hora of ['07:30', '20:30', '15:15']) {
+      expect(validarPedido(dados({ horaRetirada: hora }), produtos, hoje).horaRetirada).toMatch(/entre 8h e 20h/)
+    }
+    expect(validarPedido(dados({ horaRetirada: '08:00' }), produtos, hoje)).toEqual({})
+    expect(validarPedido(dados({ horaRetirada: '20:00' }), produtos, hoje)).toEqual({})
+    expect(validarPedido(dados({ dataRetirada: '2026-11-08', horaRetirada: '10:00' }), produtos, hoje).horaRetirada).toMatch(/já passou/)
+  })
+
+  test('na edição, a data e hora que já estava no pedido pode ficar, mesmo que tenha passado', () => {
+    const passada = dados({ dataRetirada: '2026-11-01', horaRetirada: '09:00' })
+    expect(validarPedido(passada, produtos, hoje, '2026-11-01T09:00')).toEqual({})
+    expect(validarPedido(passada, produtos, hoje, '2026-11-01T10:00').dataRetirada).toMatch(/já passou/)
+  })
+
+  test('monta a retirada com a data e o horário e separa os dois ao editar', () => {
+    expect(montarPedido(dados(), produtos).dataRetirada).toBe('2026-11-14T15:00')
+    const formulario = formularioDoPedido({ cliente: { nome: 'Ana', telefone: '5511987650012' }, dataRetirada: '2026-11-14T08:30', itens: [] })
+    expect(formulario).toMatchObject({ dataRetirada: '2026-11-14', horaRetirada: '08:30' })
   })
 
   test('confere o WhatsApp com DDD', () => {
@@ -63,7 +86,7 @@ describe('regras do cadastro de pedido (ZAP-89, RF13)', () => {
     expect(ordemDosCampos([item(), item({ chave: 2 })])).toEqual([
       'clienteNome', 'clienteWhatsapp', 'consentimentoLgpd',
       'item-1-produto', 'item-1-quantidade', 'item-2-produto', 'item-2-quantidade',
-      'dataRetirada', 'observacao',
+      'dataRetirada', 'horaRetirada', 'observacao',
     ])
   })
 })

@@ -74,8 +74,12 @@
   align-self: flex-start;
 }
 
-.data {
-  max-width: 280px;
+.dataHora {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  max-width: 560px;
 }
 
 /* Faixa de baixo: o total à esquerda, Cancelar e Salvar à direita */
@@ -115,7 +119,8 @@
     padding: 14px 12px;
   }
 
-  .data {
+  .dataHora {
+    grid-template-columns: 1fr;
     max-width: none;
   }
 
