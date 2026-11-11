@@ -3,9 +3,10 @@ import { IconPencil, IconPhotoOff, IconTrash } from '@tabler/icons-react'
 import { Link } from 'react-router'
 import { nomeCompleto, precoParaTela, UNIDADES } from './regrasProdutos'
 import classes from './Produtos.module.css'
+import { SelosAlergenos } from './SelosAlergenos'
 
 // Cartão de um produto do cardápio (ZAP-41): foto com texto alternativo (NBR 17225 5.9.1),
-// tipo, sabor em destaque, preço com a unidade e as ações de editar e excluir.
+// tipo, sabor em destaque, preço com a unidade, os alérgenos (ZAP-132) e as ações de editar e excluir.
 export function CartaoProduto({ produto, destaque, aoExcluir }) {
   const nome = nomeCompleto(produto)
   return (
@@ -30,6 +31,7 @@ export function CartaoProduto({ produto, destaque, aoExcluir }) {
           <strong>R$ {precoParaTela(produto.preco)}</strong>
           <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
         </p>
+        <SelosAlergenos alergenos={produto.alergenos} outros={produto.outrosAlergenos} className={classes.selosAlergenos} />
       </div>
       <div className={classes.acoes}>
         <Button

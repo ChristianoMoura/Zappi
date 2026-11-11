@@ -1,0 +1,30 @@
+/* Selos de alérgenos (ZAP-132). As cores vêm de variáveis, para o tema escuro do cardápio público
+   trocar: texto #7a3e00 no fundo #fff4e5 dá 8,6:1 (NBR 17225 5.11.2). */
+.selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  background: var(--selo-alergeno-fundo, #fff4e5);
+  color: var(--selo-alergeno-texto, #7a3e00);
+  border: 1px solid var(--selo-alergeno-borda, #f2c48d);
+}
+
+.selo svg {
+  flex: none;
+}

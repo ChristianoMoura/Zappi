@@ -595,3 +595,58 @@
     animation: none;
   }
 }
+
+/* ZAP-132: lista fixa de alérgenos no formulário. Grade que se ajusta à largura, com a caixinha,
+   o ícone e o nome em colunas fixas, para nada passar da borda (uma por linha no celular) */
+.alergenos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: 8px;
+}
+
+.alergeno {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 22px 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 2px solid #d9cbbe;
+  border-radius: 12px;
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+
+  & input {
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    accent-color: #006d6d;
+  }
+
+  & svg {
+    color: #006d6d;
+  }
+
+  & span {
+    min-width: 0;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  &:has(input:checked) {
+    border-color: #006d6d;
+    background: #e6f4f4;
+  }
+
+  &:has(input:focus-visible) {
+    outline: 3px solid var(--zappi-cor-foco);
+    outline-offset: 3px;
+  }
+}
+
+/* Selos de alérgenos no cartão do produto */
+.selosAlergenos {
+  margin-top: 4px;
+}
