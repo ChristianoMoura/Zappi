@@ -24,6 +24,10 @@ import jakarta.validation.constraints.Size;
  * das pontas, e os opcionais em branco viram nulos. O preço e o total não vêm da tela: o
  * backend usa o preço do cardápio (RN10) e calcula o total (RN11). Campos a mais, como o
  * {@code precoUnitario} que a tela manda, são ignorados.
+ *
+ * @param site campo invisível do formulário do Portal do Cliente (ZAP-112): pessoas não veem
+ *        nem preenchem; se vier preenchido, o envio foi feito por um robô e é descartado. No
+ *        painel, é ignorado
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record RequisicaoPedido(
@@ -33,7 +37,8 @@ public record RequisicaoPedido(
 		LocalDateTime dataRetirada,
 		@Size(max = 500, message = "Use no máximo 500 caracteres.") String observacao,
 		@NotEmpty(message = "Adicione pelo menos um item.") @Size(max = 100, message = "Use no máximo 100 itens.")
-		List<@NotNull(message = "Escolha o produto.") @Valid ItemDaRequisicao> itens) {
+		List<@NotNull(message = "Escolha o produto.") @Valid ItemDaRequisicao> itens,
+		@Size(max = 200, message = "Use no máximo 200 caracteres.") String site) {
 
 	static final String CONSENTIMENTO = "Confirme que o cliente autorizou o uso do nome e do WhatsApp.";
 
@@ -41,6 +46,7 @@ public record RequisicaoPedido(
 
 	public RequisicaoPedido {
 		observacao = opcional(observacao);
+		site = opcional(site);
 	}
 
 	/** Cliente pelo WhatsApp com 55 e DDD, ex.: {@code 5511900000000} (RN01). */

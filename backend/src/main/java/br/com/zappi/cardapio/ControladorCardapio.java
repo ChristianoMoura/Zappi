@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.zappi.pedido.RequisicaoPedido;
-import br.com.zappi.pedido.ServicoCadastroPedido;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 /**
@@ -26,11 +26,11 @@ public class ControladorCardapio {
 
 	private final ServicoCardapio servico;
 
-	private final ServicoCadastroPedido cadastro;
+	private final ServicoPedidoPeloPortal envio;
 
-	public ControladorCardapio(ServicoCardapio servico, ServicoCadastroPedido cadastro) {
+	public ControladorCardapio(ServicoCardapio servico, ServicoPedidoPeloPortal envio) {
 		this.servico = servico;
-		this.cadastro = cadastro;
+		this.envio = envio;
 	}
 
 	/**
@@ -44,12 +44,15 @@ public class ControladorCardapio {
 
 	/**
 	 * Pedido enviado pelo cliente (ZAP-109, RF21, RF22): entra como Novo no quadro da Lídia e
-	 * responde 201 só com o número, para a tela de "pedido recebido".
+	 * responde 201 só com o número, para a tela de "pedido recebido". Acima do limite de envios,
+	 * 429 (ZAP-112). Com o campo invisível preenchido, a resposta é a mesma de um envio aceito,
+	 * mas sem número e sem gravar nada, para não avisar o robô.
 	 */
 	@PostMapping("/{slug}/pedidos")
 	@ResponseStatus(HttpStatus.CREATED)
-	public PedidoRecebido enviarPedido(@PathVariable String slug, @Valid @RequestBody RequisicaoPedido requisicao) {
-		return new PedidoRecebido(cadastro.cadastrarPeloPortal(slug, requisicao));
+	public PedidoRecebido enviarPedido(@PathVariable String slug, @Valid @RequestBody RequisicaoPedido requisicao,
+			HttpServletRequest http) {
+		return new PedidoRecebido(envio.enviar(slug, requisicao, http.getRemoteAddr()).orElse(null));
 	}
 
 	/** Resposta do envio pelo portal: só o número do pedido (ISO 27002 5.34). */
