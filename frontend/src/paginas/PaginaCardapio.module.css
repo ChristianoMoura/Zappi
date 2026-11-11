@@ -798,11 +798,8 @@
   font-size: 1.2rem;
 }
 
-/* Os blocos têm as bordas arredondadas da lista do cardápio, para as duas telas ficarem iguais */
+/* Blocos de bordas retas, de ponta a ponta da coluna */
 .cartaoPerfil {
-  margin: 12px 12px 0;
-  border-radius: 18px;
-  overflow: hidden;
   background: var(--cartao);
 }
 
@@ -840,8 +837,6 @@
   padding: 14px 16px;
   display: grid;
   gap: 12px;
-  margin: 0 12px;
-  border-radius: 18px;
 }
 
 .bloco p {
@@ -849,34 +844,41 @@
   color: var(--secundario);
 }
 
-/* Formas de pagamento: um cartão por forma, com ícone e nome */
+/* Formas de pagamento: uma linha por forma, com o ícone num quadrado, o nome e a explicação */
 .pagamentos {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
 }
 
 .pagamento {
   display: grid;
-  justify-items: center;
-  gap: 8px;
-  padding: 14px 8px;
-  border: 1px solid var(--borda);
-  border-radius: 14px;
-  background: var(--fundo);
-  font-weight: 600;
-  text-align: center;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.pagamento + .pagamento {
+  border-top: 1px solid var(--borda);
+}
+
+.pagamento b {
+  display: block;
+  line-height: 1.25;
+}
+
+.pagamento small {
+  color: var(--secundario);
+  font-size: 0.88rem;
 }
 
 .iconePagamento {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: #006d6d;
-  color: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--fundo);
+  color: var(--destaque);
   display: grid;
   place-items: center;
 }

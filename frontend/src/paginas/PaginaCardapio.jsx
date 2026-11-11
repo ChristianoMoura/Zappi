@@ -601,9 +601,12 @@ function PerfilLoja({ loja, escuro }) {
                 return (
                   <li key={id} className={classes.pagamento}>
                     <span className={classes.iconePagamento}>
-                      <Icone size={28} aria-hidden />
+                      <Icone size={24} aria-hidden />
                     </span>
-                    {nome}
+                    <span>
+                      <b>{nome}</b>
+                      <small>Pagamento na retirada</small>
+                    </span>
                   </li>
                 )
               })}

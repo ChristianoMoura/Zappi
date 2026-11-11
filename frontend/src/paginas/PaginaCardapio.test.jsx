@@ -133,7 +133,8 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(buscarCardapio).toHaveBeenCalledTimes(1)
 
     const pagamento = screen.getByRole('region', { name: 'Formas de pagamento' })
-    expect(within(pagamento).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Pix', 'Crédito', 'Débito'])
+    expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Pix', 'Crédito', 'Débito'])
+    expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
 
     // O endereço do mapa é fictício e avisa isso; o da loja (casa da Lídia) não vem da API (LGPD)
     const retirada = screen.getByRole('region', { name: 'Retirada' })
