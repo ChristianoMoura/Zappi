@@ -166,6 +166,25 @@ class CadastroPedidoTests {
 	}
 
 	@Test
+	void registraADataEAHoraNoLogDeCriacao() throws Exception {
+		LocalDateTime retirada = amanha().atTime(14, 30);
+
+		cadastrar(pedido("Carla", CARLA, retirada, List.of(item(brigadeiro, 1, Map.of())))).andExpect(status().isCreated());
+
+		assertThat(jdbc.queryForObject("select detalhes ->> 'dataRetirada' from log_auditoria where acao = 'PEDIDO_CRIADO'",
+				String.class)).isEqualTo(retirada.toString());
+	}
+
+	@Test
+	void recusaPedidoComDataSemHora() throws Exception {
+		Map<String, Object> semHora = pedido("Carla", CARLA, hoje(), List.of(item(brigadeiro, 1, Map.of())));
+		semHora.put("dataRetirada", amanha().toString());
+
+		cadastrar(semHora).andExpect(status().isBadRequest()).andExpect(jsonPath("$.codigo").value("DADOS_INVALIDOS"));
+		nadaFoiGravado();
+	}
+
+	@Test
 	void recusaDataQueJaPassou() throws Exception {
 		cadastrar(pedido("Carla", CARLA, hoje().minusDays(1), List.of(item(brigadeiro, 1, Map.of()))))
 			.andExpect(status().isBadRequest())

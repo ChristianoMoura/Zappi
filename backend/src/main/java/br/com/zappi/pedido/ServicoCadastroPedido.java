@@ -130,7 +130,8 @@ public class ServicoCadastroPedido {
 		entityManager.refresh(pedido);
 
 		registrar(usuario, AcaoAuditoria.PEDIDO_CRIADO, pedido, Map.of("numero", numero, "clienteId",
-				cliente.getId(), "valorTotal", dinheiro(pedido.getValorTotal()), "itens", itensDoPedido.size()));
+				cliente.getId(), "dataRetirada", pedido.getDataRetirada().toString(), "valorTotal",
+				dinheiro(pedido.getValorTotal()), "itens", itensDoPedido.size()));
 		return consulta.detalhar(usuario, numero);
 	}
 
