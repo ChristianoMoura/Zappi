@@ -1,7 +1,7 @@
 package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -24,7 +24,7 @@ import br.com.zappi.mensagem.MensagemWhatsapp;
  *        quando a mensagem de pronto já tinha sido enviada, para a tela avisar a Lídia de que o
  *        cliente precisa saber da volta (ZAP-64); nas outras respostas, o campo não aparece
  */
-public record RespostaPedido(Integer numero, int status, LocalDate dataRetirada, String observacao,
+public record RespostaPedido(Integer numero, int status, LocalDateTime dataRetirada, String observacao,
 		BigDecimal valorTotal, ClienteDoPedido cliente, List<ItemDoPedido> itens, OffsetDateTime criadoEm,
 		OffsetDateTime confirmadoEm, OffsetDateTime producaoEm, OffsetDateTime concluidoEm,
 		OffsetDateTime recusadoEm, String motivoRecusa, boolean cancelado,

@@ -6,12 +6,13 @@ import static br.com.zappi.pedido.CadastroPedidoTests.pedido;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -65,7 +66,7 @@ class EdicaoPedidoTests {
 
 	private long pedido;
 
-	private LocalDate retirada;
+	private LocalDateTime retirada;
 
 	private long brigadeiro;
 
@@ -79,7 +80,7 @@ class EdicaoPedidoTests {
 		token = servicoToken.gerar(new UsuarioAutenticado(((Number) lidia.get("id")).longValue(), casaBelt));
 		pedido = jdbc.queryForObject("select id from pedido where estabelecimento_id = ? and numero = 1", Long.class,
 				casaBelt);
-		retirada = jdbc.queryForObject("select data_retirada from pedido where id = ?", LocalDate.class, pedido);
+		retirada = jdbc.queryForObject("select data_retirada from pedido where id = ?", LocalDateTime.class, pedido);
 		brigadeiro = produto("Brigadeiro de chocolate");
 		ninho = produto("Ninho com morango");
 	}
@@ -96,7 +97,7 @@ class EdicaoPedidoTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.numero").value(1))
 			.andExpect(jsonPath("$.status").value(1))
-			.andExpect(jsonPath("$.dataRetirada").value(retirada.plusDays(1).toString()))
+			.andExpect(jsonPath("$.dataRetirada", startsWith(retirada.plusDays(1).toString())))
 			.andExpect(jsonPath("$.observacao").value(nullValue()))
 			.andExpect(jsonPath("$.itens.length()").value(2))
 			.andExpect(jsonPath("$.itens[0].produtoId").value(brigadeiro))
@@ -222,16 +223,27 @@ class EdicaoPedidoTests {
 		editar(1, pedido("Ana Exemplo", ANA, hoje().minusDays(1), List.of(item(brigadeiro, 2, Map.of()))))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.campos.dataRetirada")
-				.value("A data de retirada já passou. Escolha hoje ou um dia depois."));
+				.value("A data e o horário de retirada já passaram. Escolha um horário a partir de agora."));
+	}
+
+	@Test
+	void trocaSoOHorarioDentroDaFaixaPermitida() throws Exception {
+		editar(1, pedido("Ana Exemplo", ANA, retirada.withHour(20).withMinute(30), List.of(item(brigadeiro, 2, Map.of()))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.dataRetirada").value("Escolha um horário entre 8h e 20h, de 30 em 30 minutos."));
+
+		editar(1, pedido("Ana Exemplo", ANA, retirada.withHour(9).withMinute(30), List.of(item(brigadeiro, 2, Map.of()))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.dataRetirada", startsWith(retirada.toLocalDate() + "T09:30")));
 	}
 
 	@Test
 	void aDataQueJaPassouPodeFicarSeNaoFoiMudada() throws Exception {
-		LocalDate passada = hoje().minusDays(2);
+		LocalDateTime passada = hoje().minusDays(2).atTime(12, 0);
 		jdbc.update("update pedido set data_retirada = ? where id = ?", passada, pedido);
 		editar(1, pedido("Ana Exemplo", ANA, passada, List.of(item(brigadeiro, 3, Map.of()))))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.dataRetirada").value(passada.toString()));
+			.andExpect(jsonPath("$.dataRetirada", startsWith(passada.toString())));
 	}
 
 	@Test

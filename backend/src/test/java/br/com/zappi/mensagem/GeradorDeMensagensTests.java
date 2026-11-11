@@ -3,6 +3,7 @@ package br.com.zappi.mensagem;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.Locale;
@@ -81,9 +82,15 @@ class GeradorDeMensagensTests {
 	@Test
 	void prontoAvisaQueARetiradaEHoje() {
 		jdbc.update("update pedido set data_retirada = ? where estabelecimento_id = ? and numero = 2",
-				LocalDate.now(ZoneId.of("America/Sao_Paulo")), casaBelt);
+				LocalDate.now(ZoneId.of("America/Sao_Paulo")).atTime(12, 0), casaBelt);
 
 		assertThat(gerador.pronto(pedido(2))).contains("\nRetirada: hoje, " + data(2) + "\n");
+	}
+
+	@Test
+	void escreveAHoraCheiaEAMeiaHora() {
+		assertThat(GeradorDeMensagens.hora(LocalDateTime.of(2026, 11, 14, 15, 0))).isEqualTo("15h");
+		assertThat(GeradorDeMensagens.hora(LocalDateTime.of(2026, 11, 14, 8, 30))).isEqualTo("8h30");
 	}
 
 	@Test
@@ -96,12 +103,12 @@ class GeradorDeMensagensTests {
 		return pedidos.findByEstabelecimentoIdAndNumero(casaBelt, numero).orElseThrow();
 	}
 
-	/** "sábado, 14/11", a partir da data de retirada gravada. */
+	/** "sábado, 14/11, às 12h", a partir da data de retirada gravada. */
 	private String data(int numero) {
-		LocalDate data = jdbc.queryForObject("select data_retirada from pedido where estabelecimento_id = ? and numero = ?",
-				LocalDate.class, casaBelt, numero);
-		return "%s, %02d/%02d".formatted(data.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.forLanguageTag("pt-BR")),
-				data.getDayOfMonth(), data.getMonthValue());
+		LocalDateTime data = jdbc.queryForObject("select data_retirada from pedido where estabelecimento_id = ? and numero = ?",
+				LocalDateTime.class, casaBelt, numero);
+		return "%s, %02d/%02d, às %dh".formatted(data.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.forLanguageTag("pt-BR")),
+				data.getDayOfMonth(), data.getMonthValue(), data.getHour());
 	}
 
 }

@@ -118,6 +118,23 @@ class RestricoesDoBancoTests {
 	}
 
 	@ParameterizedTest
+	@ValueSource(strings = { "07:30", "20:30", "15:15", "15:00:30", "00:00" })
+	void recusaRetiradaForaDoHorarioPermitido(String hora) {
+		long pedido = pedidoDeExemplo();
+
+		recusaPor("ck_pedido_horario_retirada", () -> jdbc.update(
+				"update pedido set data_retirada = current_date + 7 + ?::time where id = ?", hora, pedido));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "08:00", "14:30", "20:00" })
+	void aceitaRetiradaDas8hAs20hDeMeiaEmMeiaHora(String hora) {
+		long pedido = pedidoDeExemplo();
+
+		jdbc.update("update pedido set data_retirada = current_date + 7 + ?::time where id = ?", hora, pedido);
+	}
+
+	@ParameterizedTest
 	@ValueSource(ints = { 0, 6 })
 	void recusaStatusDePedidoForaDoIntervalo(int status) {
 		long confeitaria = criarEstabelecimento("confeitaria-a");
@@ -228,7 +245,7 @@ class RestricoesDoBancoTests {
 		return jdbc.queryForObject("""
 				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, motivo_recusa,
 				                    valor_total)
-				values (?, ?, ?, ?, current_date + 7, ?, 100.00) returning id
+				values (?, ?, ?, ?, current_date + 7 + time '12:00', ?, 100.00) returning id
 				""", Long.class, estabelecimento, cliente, numero, status, motivo);
 	}
 

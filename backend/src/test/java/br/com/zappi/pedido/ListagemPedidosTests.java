@@ -65,11 +65,11 @@ class ListagemPedidosTests {
 				""", Long.class, casaBelt);
 
 		// #3 Confirmado, #4 Em produção, #5 Concluído, #6 Recusado (direto), #7 Cancelado (recusado depois de confirmado)
-		pedido(3, 2, ana, "current_date + 1", "confirmado_em = now()", null);
-		pedido(4, 3, ana, "current_date + 2", "confirmado_em = now(), producao_em = now()", null);
-		pedido(5, 4, anonimizado, "current_date", "confirmado_em = now(), producao_em = now(), concluido_em = now()", null);
-		pedido(6, 5, ana, "current_date + 4", "recusado_em = now()", "Agenda cheia nesse dia.");
-		pedido(7, 5, ana, "current_date + 4", "confirmado_em = now(), recusado_em = now()", "Cliente desistiu.");
+		pedido(3, 2, ana, "current_date + 1 + time '12:00'", "confirmado_em = now()", null);
+		pedido(4, 3, ana, "current_date + 2 + time '12:00'", "confirmado_em = now(), producao_em = now()", null);
+		pedido(5, 4, anonimizado, "current_date + time '12:00'", "confirmado_em = now(), producao_em = now(), concluido_em = now()", null);
+		pedido(6, 5, ana, "current_date + 4 + time '12:00'", "recusado_em = now()", "Agenda cheia nesse dia.");
+		pedido(7, 5, ana, "current_date + 4 + time '12:00'", "confirmado_em = now(), recusado_em = now()", "Cliente desistiu.");
 	}
 
 	@Test

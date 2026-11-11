@@ -1,6 +1,6 @@
 package br.com.zappi.pedido;
 
-import static br.com.zappi.pedido.CadastroPedidoTests.hoje;
+import static br.com.zappi.pedido.CadastroPedidoTests.amanha;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -96,7 +96,7 @@ class CadastroPedidoConcorrenciaTests {
 	@Test
 	void cadastrosAoMesmoTempoRecebemNumerosSeguidos() throws Exception {
 		int quantos = 4;
-		RequisicaoPedido requisicao = new RequisicaoPedido(new ClienteDaRequisicao("Carla Nova", CARLA), true, hoje(),
+		RequisicaoPedido requisicao = new RequisicaoPedido(new ClienteDaRequisicao("Carla Nova", CARLA), true, amanha().atTime(12, 0),
 				null, List.of(new ItemDaRequisicao(brigadeiro, BigDecimal.ONE, null, null, null)));
 		CountDownLatch largada = new CountDownLatch(1);
 		ExecutorService executor = Executors.newFixedThreadPool(quantos);
@@ -129,7 +129,7 @@ class CadastroPedidoConcorrenciaTests {
 
 		assertThatThrownBy(() -> mockMvc.perform(post("/api/pedidos").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content(json.writeValueAsString(CadastroPedidoTests.pedido("Carla Nova", CARLA, hoje(),
+			.content(json.writeValueAsString(CadastroPedidoTests.pedido("Carla Nova", CARLA, amanha(),
 					List.of(CadastroPedidoTests.item(brigadeiro, 1, Map.of())))))))
 			.hasRootCauseMessage("log fora do ar");
 
@@ -141,7 +141,8 @@ class CadastroPedidoConcorrenciaTests {
 	@Test
 	void edicaoDesfeitaSeOLogFalhar() {
 		long pedido = jdbc.queryForObject("select id from pedido where numero = 1", Long.class);
-		LocalDate retirada = jdbc.queryForObject("select data_retirada from pedido where id = ?", LocalDate.class, pedido);
+		LocalDateTime retirada = jdbc.queryForObject("select data_retirada from pedido where id = ?", LocalDateTime.class,
+				pedido);
 		doThrow(new IllegalStateException("log fora do ar")).when(auditoria).registrar(any(RegistroAuditoria.class));
 
 		assertThatThrownBy(() -> mockMvc.perform(put("/api/pedidos/1").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -151,7 +152,7 @@ class CadastroPedidoConcorrenciaTests {
 			.hasRootCauseMessage("log fora do ar");
 
 		assertThat(jdbc.queryForMap("select valor_total, data_retirada from pedido where id = ?", pedido))
-			.containsEntry("data_retirada", java.sql.Date.valueOf(retirada))
+			.containsEntry("data_retirada", java.sql.Timestamp.valueOf(retirada))
 			.satisfies(linha -> assertThat(((BigDecimal) linha.get("valor_total"))).isEqualByComparingTo("200.00"));
 		assertThat(jdbc.queryForObject("select quantidade from item_pedido where pedido_id = ?", BigDecimal.class, pedido))
 			.isEqualByComparingTo("2");

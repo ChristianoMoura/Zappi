@@ -1,8 +1,11 @@
 package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import br.com.zappi.cliente.Cliente;
 import br.com.zappi.estabelecimento.Estabelecimento;
@@ -45,8 +48,13 @@ public class Pedido {
 	@Column(name = "status", nullable = false)
 	private StatusPedido status;
 
+	/**
+	 * Horário de São Paulo, sem fuso (ZAP-127). Gravado como está, sem a conversão para UTC que
+	 * o Hibernate aplica às outras datas ({@code hibernate.jdbc.time_zone}).
+	 */
+	@JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
 	@Column(name = "data_retirada", nullable = false)
-	private LocalDate dataRetirada;
+	private LocalDateTime dataRetirada;
 
 	@Column(name = "observacao", length = 500)
 	private String observacao;
@@ -83,7 +91,7 @@ public class Pedido {
 	 * Pedido novo, no status Novo (RN03), com o número sequencial do estabelecimento (RN09). O
 	 * total começa em zero e é calculado quando os itens entram (RN11).
 	 */
-	public Pedido(Estabelecimento estabelecimento, Cliente cliente, Integer numero, LocalDate dataRetirada,
+	public Pedido(Estabelecimento estabelecimento, Cliente cliente, Integer numero, LocalDateTime dataRetirada,
 			String observacao, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.cliente = cliente;
@@ -115,7 +123,7 @@ public class Pedido {
 	}
 
 	/** Nova data de retirada e observação (ZAP-90). */
-	public void alterar(LocalDate dataRetirada, String observacao, OffsetDateTime agora) {
+	public void alterar(LocalDateTime dataRetirada, String observacao, OffsetDateTime agora) {
 		this.dataRetirada = dataRetirada;
 		this.observacao = observacao;
 		this.atualizadoEm = agora;
@@ -212,7 +220,7 @@ public class Pedido {
 		return status;
 	}
 
-	public LocalDate getDataRetirada() {
+	public LocalDateTime getDataRetirada() {
 		return dataRetirada;
 	}
 

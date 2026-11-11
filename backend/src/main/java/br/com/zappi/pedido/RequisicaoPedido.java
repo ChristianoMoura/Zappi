@@ -1,7 +1,7 @@
 package br.com.zappi.pedido;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -27,7 +27,7 @@ import jakarta.validation.constraints.Size;
 public record RequisicaoPedido(
 		@NotNull(message = "Informe o cliente.") @Valid ClienteDaRequisicao cliente,
 		@NotNull(message = CONSENTIMENTO) @AssertTrue(message = CONSENTIMENTO) Boolean consentimentoLgpd,
-		@NotNull(message = "Escolha a data de retirada.") LocalDate dataRetirada,
+		@NotNull(message = "Escolha a data e o horário de retirada.") LocalDateTime dataRetirada,
 		@Size(max = 500, message = "Use no máximo 500 caracteres.") String observacao,
 		@NotEmpty(message = "Adicione pelo menos um item.") @Size(max = 100, message = "Use no máximo 100 itens.")
 		List<@NotNull(message = "Escolha o produto.") @Valid ItemDaRequisicao> itens) {
