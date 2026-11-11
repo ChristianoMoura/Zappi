@@ -31,6 +31,14 @@ public interface PedidoRepositorio extends JpaRepository<Pedido, Long> {
 	@Query("select coalesce(max(p.numero), 0) + 1 from Pedido p where p.estabelecimento.id = :estabelecimento")
 	Integer proximoNumero(@Param("estabelecimento") Long estabelecimentoId);
 
+	/**
+	 * Todos os pedidos do cliente, com as linhas bloqueadas até o fim da transação: enquanto o
+	 * cliente é anonimizado (RN17), nenhum pedido dele muda de status.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select p from Pedido p where p.cliente.id = :cliente")
+	List<Pedido> buscarDoClienteParaAlterar(@Param("cliente") Long clienteId);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select p from Pedido p join fetch p.cliente where p.estabelecimento.id = :estabelecimento and p.numero = :numero")
 	Optional<Pedido> buscarParaAlterar(@Param("estabelecimento") Long estabelecimentoId, @Param("numero") Integer numero);

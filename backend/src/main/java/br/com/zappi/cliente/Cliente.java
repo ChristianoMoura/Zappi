@@ -21,6 +21,9 @@ import jakarta.persistence.Table;
 @Table(name = "cliente")
 public class Cliente {
 
+	/** Nome gravado no lugar do original ao anonimizar (RN17). */
+	public static final String NOME_ANONIMIZADO = "Cliente anonimizado";
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -68,6 +71,26 @@ public class Cliente {
 	public void renomear(String nome, OffsetDateTime agora) {
 		this.nome = nome;
 		this.atualizadoEm = agora;
+	}
+
+	/**
+	 * Apaga o nome e o telefone a pedido do titular (RN17, LGPD): o nome vira "Cliente
+	 * anonimizado" e o telefone, {@link #telefoneAnonimizado(Long)}. O consentimento e os
+	 * pedidos continuam, para o histórico.
+	 */
+	public void anonimizar(OffsetDateTime agora) {
+		this.nome = NOME_ANONIMIZADO;
+		this.telefoneWhatsapp = telefoneAnonimizado(id);
+		this.anonimizadoEm = agora;
+		this.atualizadoEm = agora;
+	}
+
+	/**
+	 * {@code 0} + id completado com zeros, em 13 dígitos (RN17): cabe na coluna, não repete no
+	 * estabelecimento (RN18) e nunca é um número de WhatsApp real, que começa pelo DDI.
+	 */
+	public static String telefoneAnonimizado(Long id) {
+		return "0%012d".formatted(id);
 	}
 
 	public Long getId() {

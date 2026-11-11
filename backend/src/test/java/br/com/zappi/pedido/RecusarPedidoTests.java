@@ -3,6 +3,7 @@ package br.com.zappi.pedido;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,6 +42,8 @@ import tools.jackson.databind.json.JsonMapper;
 class RecusarPedidoTests {
 
 	private static final String MOTIVO = "Agenda cheia nesse dia. Posso fazer para o dia seguinte.";
+
+	private static final String NAVEGADOR = "Navegador de teste";
 
 	private final JsonMapper json = JsonMapper.builder().build();
 
@@ -95,14 +98,33 @@ class RecusarPedidoTests {
 			.andExpect(jsonPath("$.mensagens[0].link", startsWith("https://wa.me/5511900000001?text=Ol%C3%A1%2C%20Ana.")));
 
 		assertThat(jdbc.queryForMap("""
-				select m.telefone_destino, m.conteudo from mensagem_whatsapp m join pedido p on p.id = m.pedido_id
+				select m.tipo, m.status, m.telefone_destino, m.conteudo from mensagem_whatsapp m join pedido p on p.id = m.pedido_id
 				where p.estabelecimento_id = ? and p.numero = 1
-				""", casaBelt)).containsEntry("telefone_destino", "5511900000001").containsEntry("conteudo", texto);
+				""", casaBelt)).containsEntry("telefone_destino", "5511900000001").containsEntry("conteudo", texto)
+			.satisfies(mensagem -> {
+				// RN07: tipo 2-Recusa e status 1-Pendente
+				assertThat(((Number) mensagem.get("tipo")).intValue()).isEqualTo(2);
+				assertThat(((Number) mensagem.get("status")).intValue()).isEqualTo(1);
+			});
+		assertThat(jdbc.queryForMap("select motivo_recusa, recusado_em from pedido where estabelecimento_id = ? and numero = 1",
+				casaBelt)).containsEntry("motivo_recusa", MOTIVO).extractingByKey("recusado_em").isNotNull();
 		assertThat(log(1)).containsEntry("usuario_id", lidia)
 			.containsEntry("antes", "NOVO")
 			.containsEntry("depois", "RECUSADO")
 			.containsEntry("cancelamento", "false")
-			.containsEntry("motivo", MOTIVO);
+			.containsEntry("motivo", MOTIVO)
+			.containsEntry("entidade", "pedido")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull();
+	}
+
+	@Test
+	void oPedidoRecusadoSoApareceComOFiltro() throws Exception {
+		recusar(1, MOTIVO).andExpect(status().isOk());
+
+		listar("").andExpect(jsonPath("$[?(@.numero == 1)]").isEmpty());
+		listar("?recusados=true").andExpect(jsonPath("$[?(@.numero == 1)].motivoRecusa").value(MOTIVO));
 	}
 
 	@Test
@@ -204,14 +226,20 @@ class RecusarPedidoTests {
 	private ResultActions recusar(int numero, String motivo) throws Exception {
 		return mockMvc.perform(post("/api/pedidos/" + numero + "/recusar")
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(json.writeValueAsString(Map.of("motivo", motivo))));
+	}
+
+	private ResultActions listar(String filtro) throws Exception {
+		return mockMvc.perform(get("/api/pedidos" + filtro).header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
 	}
 
 	private Map<String, Object> log(int numero) {
 		return jdbc.queryForMap("""
 				select l.usuario_id, l.detalhes ->> 'statusAntes' as antes, l.detalhes ->> 'statusDepois' as depois,
-				       l.detalhes ->> 'cancelamento' as cancelamento, l.detalhes ->> 'motivo' as motivo
+				       l.detalhes ->> 'cancelamento' as cancelamento, l.detalhes ->> 'motivo' as motivo,
+				       l.entidade, l.ip_origem, l.user_agent, l.criado_em
 				from log_auditoria l join pedido p on p.id = l.entidade_id
 				where l.acao = 'PEDIDO_RECUSADO' and p.estabelecimento_id = ? and p.numero = ?
 				""", casaBelt, numero);

@@ -38,6 +38,8 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 @Transactional
 class ConcluirPedidoTests {
 
+	private static final String NAVEGADOR = "Navegador de teste";
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -90,12 +92,25 @@ class ConcluirPedidoTests {
 			.andExpect(jsonPath("$.mensagens[0].texto").value(texto))
 			.andExpect(jsonPath("$.mensagens[0].link", startsWith("https://wa.me/5511900000002?text=Ol%C3%A1%2C%20Bruno%21")));
 
-		assertThat(jdbc.queryForObject("select telefone_destino from mensagem_whatsapp where pedido_id = ?", String.class,
-				pedido)).isEqualTo("5511900000002");
+		assertThat(jdbc.queryForMap("select tipo, status, telefone_destino from mensagem_whatsapp where pedido_id = ?", pedido))
+			.containsEntry("telefone_destino", "5511900000002")
+			.satisfies(mensagem -> {
+				// RN07: tipo 3-Pronto e status 1-Pendente
+				assertThat(((Number) mensagem.get("tipo")).intValue()).isEqualTo(3);
+				assertThat(((Number) mensagem.get("status")).intValue()).isEqualTo(1);
+			});
+		assertThat(jdbc.queryForObject("select concluido_em from pedido where id = ?", Object.class, pedido)).isNotNull();
 		assertThat(jdbc.queryForMap("""
-				select detalhes ->> 'statusAntes' as antes, detalhes ->> 'statusDepois' as depois
+				select detalhes ->> 'statusAntes' as antes, detalhes ->> 'statusDepois' as depois,
+				       entidade, ip_origem, user_agent, criado_em
 				from log_auditoria where acao = 'PEDIDO_STATUS_ALTERADO' and entidade_id = ?
-				""", pedido)).containsEntry("antes", "EM_PRODUCAO").containsEntry("depois", "CONCLUIDO");
+				""", pedido))
+			.containsEntry("antes", "EM_PRODUCAO")
+			.containsEntry("depois", "CONCLUIDO")
+			.containsEntry("entidade", "pedido")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull();
 	}
 
 	@Test
@@ -155,7 +170,8 @@ class ConcluirPedidoTests {
 	}
 
 	private ResultActions concluir() throws Exception {
-		return mockMvc.perform(post("/api/pedidos/2/concluir").header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+		return mockMvc.perform(post("/api/pedidos/2/concluir").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR));
 	}
 
 	private String dataEsperada() {

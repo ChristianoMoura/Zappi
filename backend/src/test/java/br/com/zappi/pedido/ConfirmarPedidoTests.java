@@ -43,6 +43,8 @@ class ConfirmarPedidoTests {
 
 	private static final ZoneId SAO_PAULO = ZoneId.of("America/Sao_Paulo");
 
+	private static final String NAVEGADOR = "Navegador de teste";
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -103,7 +105,12 @@ class ConfirmarPedidoTests {
 				join pedido p on p.id = m.pedido_id where p.estabelecimento_id = ? and p.numero = 1
 				""", casaBelt))
 			.containsEntry("telefone_destino", "5511900000001")
-			.containsEntry("conteudo", texto);
+			.containsEntry("conteudo", texto)
+			.satisfies(mensagem -> {
+				// RN07: tipo 1-Confirmação e status 1-Pendente
+				assertThat(((Number) mensagem.get("tipo")).intValue()).isEqualTo(1);
+				assertThat(((Number) mensagem.get("status")).intValue()).isEqualTo(1);
+			});
 	}
 
 	@Test
@@ -129,7 +136,7 @@ class ConfirmarPedidoTests {
 
 		assertThat(jdbc.queryForMap("""
 				select l.usuario_id, l.estabelecimento_id, l.entidade, l.detalhes ->> 'statusAntes' as antes,
-				       l.detalhes ->> 'statusDepois' as depois
+				       l.detalhes ->> 'statusDepois' as depois, l.ip_origem, l.user_agent, l.criado_em
 				from log_auditoria l join pedido p on p.id = l.entidade_id
 				where l.acao = 'PEDIDO_CONFIRMADO' and p.estabelecimento_id = ? and p.numero = 1
 				""", casaBelt))
@@ -137,7 +144,10 @@ class ConfirmarPedidoTests {
 			.containsEntry("estabelecimento_id", casaBelt)
 			.containsEntry("entidade", "pedido")
 			.containsEntry("antes", "NOVO")
-			.containsEntry("depois", "CONFIRMADO");
+			.containsEntry("depois", "CONFIRMADO")
+			.containsEntry("ip_origem", "127.0.0.1")
+			.containsEntry("user_agent", NAVEGADOR)
+			.extractingByKey("criado_em").isNotNull();
 	}
 
 	@Test
@@ -198,7 +208,8 @@ class ConfirmarPedidoTests {
 
 	private ResultActions confirmar(int numero) throws Exception {
 		return mockMvc.perform(post("/api/pedidos/" + numero + "/confirmar")
-			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR));
 	}
 
 	/** "sábado, 14/11, às 12h", a partir da data de retirada gravada no pedido. */
