@@ -608,13 +608,11 @@ function PerfilLoja({ loja, escuro }) {
                 )
               })}
             </ul>
-            <p>Pagamento na retirada. Não há pagamento pelo site.</p>
           </div>
         </section>
         <section aria-labelledby="perfil-retirada">
           <h2 id="perfil-retirada" className={classes.tituloBloco}>Retirada</h2>
           <div className={classes.bloco}>
-            <p>Retire no endereço abaixo, na data e no horário combinados. Não há entrega.</p>
             <MapaRetirada ponto={PONTO_RETIRADA_EXEMPLO} />
           </div>
         </section>
