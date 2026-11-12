@@ -223,6 +223,90 @@ class ProdutoTests {
 	}
 
 	@Test
+	void cadastraComGlutenEOutrosAlergenos() throws Exception {
+		Map<String, Object> dados = produto("Bolo", "Ninho sem farinha", "KG", "120");
+		dados.put("contemGluten", false);
+		dados.put("outrosAlergenos", "  leite, ovos  ");
+
+		String corpo = comToken(post(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.contemGluten").value(false))
+			.andExpect(jsonPath("$.outrosAlergenos").value("leite, ovos"))
+			.andReturn().getResponse().getContentAsString();
+		long id = ((Number) json.readValue(corpo, Map.class).get("id")).longValue();
+
+		assertThat(jdbc.queryForMap("select contem_gluten, outros_alergenos from produto where id = ?", id))
+			.containsEntry("contem_gluten", false)
+			.containsEntry("outros_alergenos", "leite, ovos");
+		assertThat(jdbc.queryForObject("select (detalhes -> 'depois' -> 'contemGluten')::text from log_auditoria "
+				+ "where acao = 'PRODUTO_CRIADO' and entidade_id = ?", String.class, id)).isEqualTo("false");
+	}
+
+	@Test
+	void guardaOutrosAlergenosVaziosComoNulo() throws Exception {
+		Map<String, Object> dados = produto("Bolo", "Sem alérgenos extras", "KG", "90");
+		dados.put("outrosAlergenos", "   ");
+
+		comToken(post(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.outrosAlergenos").value(org.hamcrest.Matchers.nullValue()));
+	}
+
+	@Test
+	void recusaProdutoSemInformarOGluten() throws Exception {
+		Map<String, Object> dados = produto("Bolo", "Sem resposta", "KG", "90");
+		dados.remove("contemGluten");
+
+		comToken(post(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.codigo").value("DADOS_INVALIDOS"))
+			.andExpect(jsonPath("$.campos.contemGluten").value("Informe se o produto contém glúten."));
+		comToken(put(ROTA + "/" + idDoSabor("Brigadeiro de chocolate")), tokenDaLidia, dados)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.contemGluten").value("Informe se o produto contém glúten."));
+	}
+
+	@Test
+	void recusaOutrosAlergenosComMaisDe300Caracteres() throws Exception {
+		Map<String, Object> dados = produto("Bolo", "Texto longo", "KG", "90");
+		dados.put("outrosAlergenos", "a".repeat(301));
+		comToken(post(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.outrosAlergenos").value("Use até 300 caracteres."));
+
+		dados.put("outrosAlergenos", "a".repeat(300));
+		comToken(post(ROTA), tokenDaLidia, dados).andExpect(status().isCreated());
+	}
+
+	@Test
+	void produtoAntigoContinuaComGlutenNaoInformadoEORegistraOAntesNaEdicao() throws Exception {
+		long id = idDoSabor("Brigadeiro de chocolate");
+
+		// Nulo, e nunca false: o sistema não diz "sem glúten" sem a Lídia ter informado
+		comToken(get(ROTA + "/" + id), tokenDaLidia)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.contemGluten").value(org.hamcrest.Matchers.nullValue()))
+			.andExpect(jsonPath("$.outrosAlergenos").value(org.hamcrest.Matchers.nullValue()));
+
+		Map<String, Object> dados = produto("Bolo", "Brigadeiro de chocolate", "KG", "100");
+		dados.put("contemGluten", true);
+		dados.put("outrosAlergenos", "leite");
+		comToken(put(ROTA + "/" + id), tokenDaLidia, dados)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.contemGluten").value(true));
+
+		Map<String, Object> registro = jdbc.queryForMap("""
+				select (detalhes -> 'antes' -> 'contemGluten')::text as gluten_antes,
+				       (detalhes -> 'depois' -> 'contemGluten')::text as gluten_depois,
+				       detalhes -> 'depois' ->> 'outrosAlergenos' as alergenos_depois
+				from log_auditoria where acao = 'PRODUTO_EDITADO' and entidade = 'produto' and entidade_id = ?
+				""", id);
+		assertThat(registro).containsEntry("gluten_antes", "null")
+			.containsEntry("gluten_depois", "true")
+			.containsEntry("alergenos_depois", "leite");
+	}
+
+	@Test
 	void exigeOToken() throws Exception {
 		mockMvc.perform(get(ROTA)).andExpect(status().isUnauthorized());
 		mockMvc.perform(post(ROTA).contentType(MediaType.APPLICATION_JSON)
@@ -239,6 +323,7 @@ class ProdutoTests {
 		dados.put("unidade", unidade);
 		dados.put("preco", new BigDecimal(preco));
 		dados.put("descricao", "Descrição de teste");
+		dados.put("contemGluten", true);
 		return dados;
 	}
 
