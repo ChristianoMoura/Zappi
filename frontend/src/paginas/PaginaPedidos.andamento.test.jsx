@@ -115,7 +115,7 @@ describe('Andamento do pedido e voltar coluna (ZAP-77, RN03)', () => {
     // Em "Todos", o Entregue fica oculto (ZAP-179): o card aparece escolhendo Entregue no filtro
     expect(screen.queryByRole('region', { name: /Entregue/ })).not.toBeInTheDocument()
     await usuario.click(within(detalhes).getByRole('button', { name: 'Fechar detalhes' }))
-    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '6')
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' }), '6')
     expect(screen.getByRole('button', { name: 'Pedido 8, Pedro Alves, entregue em 15/01 às 10:30, R$ 200,00' })).toHaveTextContent('Entregue em 15/01 às 10:30')
   })
 
@@ -138,7 +138,7 @@ describe('Andamento do pedido e voltar coluna (ZAP-77, RN03)', () => {
     expect(await within(detalhes).findByText('Pedido voltou para a coluna Concluído.')).toBeVisible()
     // Com o filtro em Entregue, o card sai da tela; em "Todos", ele está em Concluído
     await usuario.click(within(detalhes).getByRole('button', { name: 'Fechar detalhes' }))
-    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '')
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' }), '')
     const coluna = screen.getByRole('region', { name: /Concluído/ })
     expect(within(coluna).getByRole('button', { name: /Pedido 7, Lia Moraes/ })).toBeInTheDocument()
   })

@@ -59,12 +59,12 @@ describe('Recusar e cancelar pedido (ZAP-54, RF11, RN05)', () => {
     expect(await within(detalhes).findByText(/Pedido recusado e movido para a coluna Recusado/)).toBeVisible()
     expect(within(detalhes).getByText('Motivo da recusa:')).toBeVisible()
     expect(within(detalhes).getByRole('link', { name: /Enviar no WhatsApp para Ana/ })).toHaveFocus()
-    expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveValue('')
     expect(screen.queryByRole('region', { name: /Recusado/ })).not.toBeInTheDocument()
 
     // Ao fechar, o card não está mais na tela: o foco vai para a lista "Mostrar"
     await usuario.click(within(detalhes).getByRole('button', { name: 'Fechar detalhes' }))
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveFocus())
   })
 
   test('não recusa sem motivo e explica o que falta', async () => {

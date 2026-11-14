@@ -54,10 +54,10 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       expect(doze).toHaveTextContent('R$ 200,00')
     })
 
-    test('a lista "Mostrar" tem rótulo visível, "Todos" e cada status com a quantidade (ZAP-179, NBR 17225 5.3.1)', async () => {
+    test('a caixa de filtro tem nome acessível, "Todos" e cada status com a quantidade (ZAP-179)', async () => {
       await abrirQuadro()
 
-      const filtro = screen.getByRole('combobox', { name: 'Mostrar' })
+      const filtro = screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })
       expect(filtro).toHaveValue('')
       expect(within(filtro).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos', 'Novo (1)', 'Confirmado (1)', 'Em produção (1)', 'Concluído (1)', 'Entregue (0)', 'Recusado (1)'])
       expect(screen.queryByRole('switch')).not.toBeInTheDocument()
@@ -68,7 +68,7 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       const roteador = renderizarQuadro()
       await screen.findByRole('heading', { level: 1, name: 'Pedidos' })
 
-      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '5')
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' }), '5')
 
       expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Recusado1'])
       const recusados = screen.getByRole('group', { name: 'Pedidos da coluna Recusado, 1 pedido' })
@@ -81,12 +81,12 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       const usuario = userEvent.setup()
       await abrirQuadro('/pedidos?status=6')
 
-      expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveValue('6')
+      expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveValue('6')
       expect(screen.getByText('Nenhum pedido em Entregue.')).toBeVisible()
       await usuario.click(screen.getByRole('button', { name: 'Ver todos' }))
 
-      expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveValue('')
-      expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveFocus()
+      expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveValue('')
+      expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveFocus()
       expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4)
     })
 
@@ -196,7 +196,7 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       await abrirQuadro()
       expect(screen.queryByRole('tab', { name: /Recusado/ })).not.toBeInTheDocument()
 
-      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '5')
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' }), '5')
 
       expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
       expect(screen.getByRole('heading', { level: 2, name: /Recusado/ })).toBeVisible()

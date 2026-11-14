@@ -266,9 +266,11 @@ export function PaginaPedidos() {
           <h1 className={classes.titulo}>Pedidos</h1>
         </div>
         <div className={classes.acoesTopo}>
+          {/* Sem rótulo visível, a pedido do Lucas: o nome vem do aria-label, e a opção escolhida
+              ("Todos", "Confirmado (3)"...) já diz o que a caixa faz */}
           <NativeSelect
             id="filtro-status"
-            label="Mostrar"
+            aria-label="Filtrar pedidos por status"
             size="lg"
             value={filtro ? String(filtro) : ''}
             onChange={(evento) => mudarFiltro(evento.currentTarget.value)}
