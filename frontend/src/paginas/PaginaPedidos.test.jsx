@@ -119,9 +119,41 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
         expect(detalhes).toHaveTextContent(texto)
       }
     })
+
+    test('cada coluna tem a lista de cards com rolagem própria, que recebe o foco pelo Tab e tem o nome da coluna (ZAP-165)', async () => {
+      const usuario = userEvent.setup()
+      buscarPedidos.mockResolvedValue([...pedidos, pedido(13, STATUS.NOVO, 'Bruno Lima'), pedido(14, STATUS.NOVO, 'Davi Melo')])
+      await abrirQuadro()
+
+      const novo = screen.getByRole('group', { name: 'Pedidos da coluna Novo, 3 pedidos' })
+      expect(novo).toHaveAttribute('tabindex', '0')
+      expect(within(novo).getAllByRole('button')).toHaveLength(3)
+      expect(screen.getByRole('group', { name: 'Pedidos da coluna Confirmado, 1 pedido' })).toBeInTheDocument()
+
+      // O Tab passa pela lista e depois pelos cards dela, na ordem da coluna
+      screen.getByRole('link', { name: 'Novo pedido' }).focus()
+      await usuario.tab()
+      expect(novo).toHaveFocus()
+      await usuario.tab()
+      expect(within(novo).getAllByRole('button')[0]).toHaveFocus()
+    })
+
+    test('coluna sem pedidos não tem área rolável', async () => {
+      buscarPedidos.mockResolvedValue([pedido(12, STATUS.NOVO, 'Ana Souza')])
+      await abrirQuadro()
+
+      expect(screen.queryByRole('group', { name: /coluna Confirmado/ })).not.toBeInTheDocument()
+      expect(within(screen.getByRole('region', { name: /Confirmado/ })).getByText('Nenhum pedido aqui.')).toBeVisible()
+    })
   })
 
   describe('no celular', () => {
+    test('as abas continuam sem a área rolável das colunas (ZAP-165)', async () => {
+      await abrirQuadro()
+
+      expect(screen.queryByRole('group', { name: /Pedidos da coluna/ })).not.toBeInTheDocument()
+    })
+
     test('mostra uma coluna por vez, em abas', async () => {
       const usuario = userEvent.setup()
       await abrirQuadro()
