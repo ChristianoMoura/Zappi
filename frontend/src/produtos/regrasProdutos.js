@@ -1,7 +1,22 @@
 // Regras dos produtos do cardápio (ZAP-27, tabela `produto` do context.md). O backend (ZAP-39)
 // valida de novo; aqui as regras servem para avisar a Lídia antes de salvar.
 
-export const LIMITES = { nome: 100, sabor: 100, descricao: 500, textoAlternativo: 150 }
+export const LIMITES = { nome: 100, sabor: 100, descricao: 500, outrosAlergenos: 300, textoAlternativo: 150 }
+
+// Lista fixa de alérgenos (ZAP-128): os mais comuns em padaria e confeitaria. O glúten faz parte
+// da lista; sem marcar, fica entendido que o produto não contém glúten.
+export const ALERGENOS = [
+  { codigo: 'GLUTEN', nome: 'Glúten', selo: 'Contém glúten' },
+  { codigo: 'LEITE', nome: 'Leite e derivados', selo: 'Leite e derivados' },
+  { codigo: 'OVOS', nome: 'Ovos', selo: 'Ovos' },
+  { codigo: 'SOJA', nome: 'Soja', selo: 'Soja' },
+  { codigo: 'AMENDOIM', nome: 'Amendoim', selo: 'Amendoim' },
+  { codigo: 'CASTANHAS', nome: 'Castanhas e nozes', selo: 'Castanhas e nozes' },
+  { codigo: 'GERGELIM', nome: 'Gergelim', selo: 'Gergelim' },
+]
+
+// Códigos conhecidos, sem repetir e na ordem da lista (a API recebe e devolve nessa forma)
+export const ordenarAlergenos = (codigos) => ALERGENOS.map((a) => a.codigo).filter((codigo) => (codigos ?? []).includes(codigo))
 
 // Unidades de medida do seed (seção 5.3): 1-KG aceita fração, 2-UN não (RN12)
 export const UNIDADES = {
@@ -10,7 +25,7 @@ export const UNIDADES = {
 }
 
 // Ordem dos campos na tela, usada para levar o foco ao primeiro erro (NBR 17225 5.1.4)
-export const ORDEM_CAMPOS = ['nome', 'sabor', 'preco', 'descricao', 'textoAlternativo']
+export const ORDEM_CAMPOS = ['nome', 'sabor', 'preco', 'descricao', 'outrosAlergenos', 'textoAlternativo']
 
 const formatoPreco = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 export const precoParaTela = (valor) => formatoPreco.format(valor)

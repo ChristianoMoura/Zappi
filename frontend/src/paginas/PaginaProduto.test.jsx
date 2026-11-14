@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { ALERGENOS } from '../produtos/regrasProdutos'
 import { buscarProduto, buscarProdutos, salvarProduto } from '../produtos/servicoProdutos'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaProduto } from './PaginaProduto'
@@ -56,6 +57,8 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
       screen.getByRole('radio', { name: 'Quilo (kg)' }),
       campo(/^Preço por kg/),
       campo(/^Descrição/),
+      ...ALERGENOS.map((a) => screen.getByRole('checkbox', { name: a.nome })),
+      campo(/^Outros alérgenos/),
       screen.getByRole('button', { name: 'Escolher foto' }),
       screen.getByRole('button', { name: 'Cancelar' }),
       screen.getByRole('button', { name: 'Salvar produto' }),
@@ -89,9 +92,32 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     await usuario.type(campo(/^Preço por unidade/), '1,5')
     await usuario.click(screen.getByRole('button', { name: 'Salvar produto' }))
 
-    expect(salvarProduto).toHaveBeenCalledWith({ nome: 'Salgado', sabor: 'Kibe', unidade: 'UN', preco: 1.5, descricao: '', foto: '', textoAlternativo: '' })
+    expect(salvarProduto).toHaveBeenCalledWith({ nome: 'Salgado', sabor: 'Kibe', unidade: 'UN', preco: 1.5, descricao: '', foto: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' })
     expect(await screen.findByText('Salgado de kibe entrou no cardápio.')).toBeVisible()
     expect(screen.getByRole('heading', { level: 2, name: 'Kibe' })).toHaveFocus()
+  })
+
+  test('marca os alérgenos e escreve os que não estão na lista (ZAP-132)', async () => {
+    const usuario = userEvent.setup()
+    await abrir('/produtos/1')
+
+    const alergenos = screen.getByRole('group', { name: /Alérgenos/ })
+    expect(within(alergenos).getAllByRole('checkbox')).toHaveLength(7)
+    await usuario.click(screen.getByRole('checkbox', { name: 'Ovos' }))
+    await usuario.click(screen.getByRole('checkbox', { name: 'Glúten' }))
+    await usuario.type(campo(/^Outros alérgenos/), ' Canela ')
+    await usuario.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+
+    expect(salvarProduto).toHaveBeenCalledWith(expect.objectContaining({ alergenos: ['OVOS', 'GLUTEN'], outrosAlergenos: 'Canela' }))
+  })
+
+  test('ao editar, mostra os alérgenos já marcados', async () => {
+    buscarProduto.mockResolvedValue({ ...brigadeiro, alergenos: ['LEITE'], outrosAlergenos: 'Canela' })
+    await abrir('/produtos/1')
+
+    expect(screen.getByRole('checkbox', { name: 'Leite e derivados' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Glúten' })).not.toBeChecked()
+    expect(campo(/^Outros alérgenos/)).toHaveValue('Canela')
   })
 
   test('com foto, sugere a descrição da foto e não salva sem ela (RN15)', async () => {

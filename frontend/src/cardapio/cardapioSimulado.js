@@ -27,6 +27,8 @@ const CASA_BELT = {
       descricao: 'Massa de chocolate, recheio de brigadeiro e cobertura de granulado.',
       foto: bolo,
       textoAlternativo: 'Bolo de brigadeiro coberto com granulado e brigadeiros por cima',
+      alergenos: ['GLUTEN', 'LEITE', 'OVOS'],
+      outrosAlergenos: '',
     },
     {
       id: 2,
@@ -37,6 +39,8 @@ const CASA_BELT = {
       descricao: 'Recheio de leite Ninho com morango.',
       foto: ninho,
       textoAlternativo: 'Bolo branco de leite Ninho decorado com morangos e chantilly',
+      alergenos: ['GLUTEN', 'LEITE', 'OVOS'],
+      outrosAlergenos: '',
     },
     {
       id: 3,
@@ -47,6 +51,8 @@ const CASA_BELT = {
       descricao: 'Cem coxinhas de frango.',
       foto: coxinhas,
       textoAlternativo: 'Travessa branca com cerca de cem coxinhas douradas',
+      alergenos: ['GLUTEN', 'LEITE', 'OVOS'],
+      outrosAlergenos: '',
     },
     {
       id: 4,
@@ -57,6 +63,8 @@ const CASA_BELT = {
       descricao: 'Coxinha de frango, vendida por unidade.',
       foto: '',
       textoAlternativo: '',
+      alergenos: ['GLUTEN', 'LEITE', 'OVOS'],
+      outrosAlergenos: '',
     },
   ],
 }

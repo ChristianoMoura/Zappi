@@ -5,6 +5,7 @@
 // conexão ficam no clienteApi, o mesmo do Meu estabelecimento.
 
 import { chamarApi, lerArquivoTemporario, ServicoIndisponivelError } from '../autenticacao/clienteApi'
+import { ordenarAlergenos } from './regrasProdutos'
 
 export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
 export class ProdutoNaoEncontradoError extends Error {}
@@ -24,6 +25,9 @@ function paraTela(produto) {
     descricao: produto.descricao ?? '',
     foto: produto.foto ?? '',
     textoAlternativo: produto.textoAlternativo ?? '',
+    // Alérgenos da lista fixa (códigos) e o texto livre dos que não estão nela (ZAP-128, ZAP-131)
+    alergenos: ordenarAlergenos(produto.alergenos),
+    outrosAlergenos: produto.outrosAlergenos ?? '',
   }
 }
 
@@ -55,6 +59,8 @@ export async function salvarProduto(dados) {
     preco: dados.preco,
     descricao: dados.descricao,
     textoAlternativo: dados.foto ? dados.textoAlternativo : '',
+    alergenos: ordenarAlergenos(dados.alergenos),
+    outrosAlergenos: dados.outrosAlergenos ?? '',
   }
 
   if (dados.id) {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { lerPreco, nomeCompleto, precoParaTela, sugerirTextoAlternativo, validarProduto } from './regrasProdutos'
+import { lerPreco, nomeCompleto, ordenarAlergenos, precoParaTela, sugerirTextoAlternativo, validarProduto } from './regrasProdutos'
 
 const produto = (extras) => ({ nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: '100,00', descricao: '', foto: '', textoAlternativo: '', ...extras })
 
@@ -32,6 +32,12 @@ describe('regras dos produtos (ZAP-27)', () => {
   test('respeita o tamanho das colunas do banco', () => {
     expect(validarProduto(produto({ sabor: 'x'.repeat(101) })).sabor).toBe('Use no máximo 100 caracteres.')
     expect(validarProduto(produto({ descricao: 'x'.repeat(501) })).descricao).toBe('Use no máximo 500 caracteres.')
+    expect(validarProduto(produto({ outrosAlergenos: 'x'.repeat(301) })).outrosAlergenos).toBe('Use no máximo 300 caracteres.')
+  })
+
+  test('os alérgenos seguem a ordem da lista fixa e ignoram códigos desconhecidos (ZAP-132)', () => {
+    expect(ordenarAlergenos(['GERGELIM', 'GLUTEN', 'PEIXES', 'OVOS'])).toEqual(['GLUTEN', 'OVOS', 'GERGELIM'])
+    expect(ordenarAlergenos(undefined)).toEqual([])
   })
 
   test('sugere a descrição da foto com o nome e o sabor', () => {

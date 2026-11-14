@@ -32,6 +32,10 @@
   --faixa-texto: #241b15;
   --foto-vazia: #3a2e25;
   --zappi-cor-foco: #f5ece2;
+  /* Selos de alérgenos no tema escuro: #ffd7a3 no fundo #3a2a14 dá 11:1 */
+  --selo-alergeno-fundo: #3a2a14;
+  --selo-alergeno-texto: #ffd7a3;
+  --selo-alergeno-borda: #6b4a22;
 
   color-scheme: dark;
 }

@@ -87,6 +87,15 @@
   color: var(--secundario);
 }
 
+.lembrete a {
+  color: var(--destaque);
+  font-weight: 600;
+}
+
+.selos {
+  margin-top: 4px;
+}
+
 .lembrete svg {
   flex: none;
   margin-top: 2px;

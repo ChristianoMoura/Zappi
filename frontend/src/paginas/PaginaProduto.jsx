@@ -3,17 +3,23 @@ import { IconAlertCircle, IconCamera, IconCheck, IconChevronLeft, IconInfoCircle
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { TIPOS_FOTO, validarFoto } from '../comum/regrasFoto'
-import { LIMITES, lerPreco, nomeCompleto, ORDEM_CAMPOS, precoParaTela, sugerirTextoAlternativo, UNIDADES, validarProduto } from '../produtos/regrasProdutos'
+import { ALERGENOS, LIMITES, lerPreco, nomeCompleto, ORDEM_CAMPOS, precoParaTela, sugerirTextoAlternativo, UNIDADES, validarProduto } from '../produtos/regrasProdutos'
 import { buscarProduto, ProdutoNaoEncontradoError, salvarProduto } from '../produtos/servicoProdutos'
 import classes from '../produtos/Produtos.module.css'
+import { IconeAlergeno } from '../produtos/SelosAlergenos'
 import { useTituloPagina } from './useTituloPagina'
 
-const VAZIO = { nome: 'Bolo', sabor: '', unidade: 'KG', preco: '', descricao: '', foto: '', textoAlternativo: '' }
+const VAZIO = { nome: 'Bolo', sabor: '', unidade: 'KG', preco: '', descricao: '', alergenos: [], outrosAlergenos: '', foto: '', textoAlternativo: '' }
 
-const paraTela = (produto) => ({ ...produto, preco: precoParaTela(produto.preco) })
+const paraTela = (produto) => ({
+  ...produto,
+  preco: precoParaTela(produto.preco),
+  alergenos: produto.alergenos ?? [],
+  outrosAlergenos: produto.outrosAlergenos ?? '',
+})
 
 // Cadastro e edição de produto (ZAP-42, US3, RF05, RF06). Ordem dos campos: nome → sabor →
-// vendido por → preço → descrição → foto → "Salvar" (NBR 17225 5.1.4). A foto é opcional; com
+// vendido por → preço → descrição → alérgenos → foto → "Salvar" (NBR 17225 5.1.4). A foto é opcional; com
 // foto, a descrição dela é obrigatória (RN15) e já vem sugerida com o nome e o sabor.
 export function PaginaProduto() {
   const { id } = useParams()
@@ -131,6 +137,8 @@ export function PaginaProduto() {
         unidade: dados.unidade,
         preco: lerPreco(dados.preco),
         descricao: dados.descricao.trim(),
+        alergenos: dados.alergenos,
+        outrosAlergenos: dados.outrosAlergenos.trim(),
         foto: dados.foto,
         textoAlternativo: dados.textoAlternativo.trim(),
       })
@@ -231,6 +239,41 @@ export function PaginaProduto() {
               onChange={(e) => mudar('descricao', e.currentTarget.value)}
               autosize
               minRows={3}
+              classNames={{ label: classes.rotulo, input: classes.campoTexto, error: classes.erroCampo, description: classes.dica }}
+            />
+
+            {/* Alérgenos (ZAP-128): lista fixa, com o glúten junto (sem marcar = não contém), e o
+                texto livre para os que não estão na lista */}
+            <fieldset className={classes.grupo}>
+              <legend className={classes.rotulo}>
+                Alérgenos <span className={classes.marca}>opcional</span>
+              </legend>
+              <div className={classes.alergenos}>
+                {ALERGENOS.map((a) => (
+                  <label key={a.codigo} className={classes.alergeno}>
+                    <input
+                      type="checkbox"
+                      checked={dados.alergenos.includes(a.codigo)}
+                      onChange={(e) => {
+                        const marcado = e.currentTarget.checked
+                        setDados((atual) => ({
+                          ...atual,
+                          alergenos: marcado ? [...atual.alergenos, a.codigo] : atual.alergenos.filter((c) => c !== a.codigo),
+                        }))
+                      }}
+                    />
+                    <IconeAlergeno codigo={a.codigo} />
+                    <span>{a.nome}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <Textarea
+              {...propsCampo('outrosAlergenos', 'Outros alérgenos que não estão na lista')}
+              value={dados.outrosAlergenos}
+              onChange={(e) => mudar('outrosAlergenos', e.currentTarget.value)}
+              autosize
+              minRows={2}
               classNames={{ label: classes.rotulo, input: classes.campoTexto, error: classes.erroCampo, description: classes.dica }}
             />
           </section>

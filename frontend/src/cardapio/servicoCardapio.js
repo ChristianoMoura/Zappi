@@ -5,6 +5,8 @@
 // PENDENTE (ZAP-104): enquanto a rota não existir no backend, o modo de desenvolvimento mostra
 // um cardápio simulado (cardapioSimulado.js). Em produção, nunca há simulação.
 
+import { ordenarAlergenos } from '../produtos/regrasProdutos'
+
 export class CardapioNaoEncontradoError extends Error {}
 export class ServicoIndisponivelError extends Error {}
 
@@ -39,6 +41,8 @@ function paraTela({ estabelecimento, produtos }) {
       descricao: p.descricao ?? '',
       foto: p.foto ?? '',
       textoAlternativo: p.textoAlternativo ?? '',
+      alergenos: ordenarAlergenos(p.alergenos),
+      outrosAlergenos: p.outrosAlergenos ?? '',
     })),
   }
 }

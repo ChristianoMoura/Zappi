@@ -2,6 +2,7 @@ import {
   IconAlertCircle,
   IconCalendarEvent,
   IconChevronLeft,
+  IconInfoCircle,
   IconMinus,
   IconPlus,
   IconShare,
@@ -29,6 +30,7 @@ import {
   validarPedido,
 } from '../cardapio/regrasPedidoCliente'
 import { moeda } from '../pedidos/regrasPedidos'
+import { SelosAlergenos } from '../produtos/SelosAlergenos'
 import base from './PaginaCardapio.module.css'
 import { Foto, Preco, Rodape } from './partesCardapio'
 import classes from './PedidoCardapio.module.css'
@@ -151,6 +153,18 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
             <h2 id="nome-produto">{produto.sabor}</h2>
             <Preco produto={produto} className={classes.precoGrande} />
             {produto.descricao && <p className={classes.descricao}>{produto.descricao}</p>}
+            {/* Alérgenos embaixo da descrição, ao lado da foto no computador (ZAP-132) */}
+            <SelosAlergenos alergenos={produto.alergenos} outros={produto.outrosAlergenos} className={classes.selos} />
+            <p className={classes.lembrete}>
+              <IconInfoCircle size={18} aria-hidden />
+              <span>
+                Tem alergia?{' '}
+                <a href={linkWhatsapp(loja.whatsapp, `Olá! Tenho alergia e queria saber mais sobre o ${produto.sabor}.`)} target="_blank" rel="noopener noreferrer">
+                  Fale com a loja pelo WhatsApp<span className={somenteLeitor}> (abre o WhatsApp)</span>
+                </a>{' '}
+                antes de encomendar.
+              </span>
+            </p>
             <p className={classes.lembrete}>
               <IconCalendarEvent size={18} aria-hidden />
               Encomende com pelo menos 7 dias. Retirada na data combinada, sem entrega.
