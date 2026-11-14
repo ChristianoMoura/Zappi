@@ -89,10 +89,9 @@ export function validarPedido(pedido, produtos, agora = new Date()) {
 // Enquanto o envio pelo Zappi não existe (ZAP-109 e ZAP-110), o pedido segue pelo WhatsApp da loja
 export function mensagemDoPedido(loja, pedido, produtos) {
   const linhas = [`Olá! Montei um pedido no cardápio da ${loja.nome} no Zappi:`, '']
-  for (const { produto, quantidade, recheio, cobertura, observacao } of itensComProduto(pedido.itens, produtos)) {
-    linhas.push(`• ${produto.sabor} — ${quantidadeTexto(produto, quantidade)} (${moeda(subtotal(produto, quantidade))})`)
-    if (recheio) linhas.push(`  Recheio: ${recheio}`)
-    if (cobertura) linhas.push(`  Cobertura: ${cobertura}`)
+  // Só o nome do produto e a observação: recheio e cobertura saíram (ZAP-140)
+  for (const { produto, quantidade, observacao } of itensComProduto(pedido.itens, produtos)) {
+    linhas.push(`• ${produto.nome} — ${quantidadeTexto(produto, quantidade)} (${moeda(subtotal(produto, quantidade))})`)
     if (observacao) linhas.push(`  Observação: ${observacao}`)
   }
   linhas.push('', `Retirada: ${dataPorExtenso(pedido.data)}, às ${horaTexto(pedido.hora)}`)

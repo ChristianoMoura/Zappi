@@ -37,7 +37,7 @@ import classes from './PedidoCardapio.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
 // Montagem do pedido pelo cliente (ZAP-107, protótipo aprovado): o produto abre em página
-// própria, com quantidade, personalização e observação, e vai para o "Seu pedido", onde o
+// própria, com quantidade e observação, e vai para o "Seu pedido", onde o
 // cliente escolhe a data e a hora de retirada. Enquanto o envio pelo Zappi não existe (ZAP-109
 // e ZAP-110), o pedido segue pronto na mensagem do WhatsApp da loja.
 
@@ -82,12 +82,10 @@ function TopoPagina({ titulo, voltarPara, children }) {
 
 export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }) {
   const produto = produtos.find((p) => String(p.id) === idProduto)
-  useTituloPagina(produto ? `${produto.sabor} · ${loja.nome}` : 'Produto não encontrado')
+  useTituloPagina(produto ? `${produto.nome} · ${loja.nome}` : 'Produto não encontrado')
   useTopoAoAbrir()
   const navegar = useNavigate()
   const [quantidade, setQuantidade] = useState(1)
-  const [recheio, setRecheio] = useState('')
-  const [cobertura, setCobertura] = useState('')
   const [observacao, setObservacao] = useState('')
   const [aviso, setAviso] = useState('')
   const cardapio = `/cardapio/${loja.slug}`
@@ -112,7 +110,7 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
   async function compartilhar() {
     try {
       if (navigator.share) {
-        await navigator.share({ title: `${produto.sabor} · ${loja.nome}`, url: window.location.href })
+        await navigator.share({ title: `${produto.nome} · ${loja.nome}`, url: window.location.href })
         return
       }
       await navigator.clipboard.writeText(window.location.href)
@@ -126,11 +124,9 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
     montagem.adicionar({
       produtoId: produto.id,
       quantidade,
-      recheio: porKg ? recheio.trim() : '',
-      cobertura: porKg ? cobertura.trim() : '',
       observacao: observacao.trim(),
     })
-    navegar(cardapio, { state: { aviso: `${produto.sabor} adicionado ao pedido.` } })
+    navegar(cardapio, { state: { aviso: `${produto.nome} adicionado ao pedido.` } })
   }
 
   const botaoCompartilhar = (
@@ -149,8 +145,8 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
         <section className={classes.info} aria-labelledby="nome-produto">
           <Foto produto={produto} className={classes.fotoProduto} />
           <div className={classes.texto}>
-            <span className={classes.tipo}>{produto.nome}</span>
-            <h2 id="nome-produto">{produto.sabor}</h2>
+            {produto.categoria && <span className={classes.tipo}>{produto.categoria}</span>}
+            <h2 id="nome-produto">{produto.nome}</h2>
             <Preco produto={produto} className={classes.precoGrande} />
             {produto.descricao && <p className={classes.descricao}>{produto.descricao}</p>}
             {/* Alérgenos embaixo da descrição, ao lado da foto no computador (ZAP-132) */}
@@ -159,7 +155,7 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
               <IconInfoCircle size={18} aria-hidden />
               <span>
                 Tem alergia?{' '}
-                <a href={linkWhatsapp(loja.whatsapp, `Olá! Tenho alergia e queria saber mais sobre o ${produto.sabor}.`)} target="_blank" rel="noopener noreferrer">
+                <a href={linkWhatsapp(loja.whatsapp, `Olá! Tenho alergia e queria saber mais sobre o ${produto.nome}.`)} target="_blank" rel="noopener noreferrer">
                   Fale com a loja pelo WhatsApp<span className={somenteLeitor}> (abre o WhatsApp)</span>
                 </a>{' '}
                 antes de encomendar.
@@ -179,7 +175,7 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
           </header>
           <div className={classes.corpo}>
             <div className={classes.linhaQuantidade}>
-              <Quantidade produto={produto} quantidade={quantidade} aoMudar={setQuantidade} rotulo={`Quantidade de ${produto.sabor}`} />
+              <Quantidade produto={produto} quantidade={quantidade} aoMudar={setQuantidade} rotulo={`Quantidade de ${produto.nome}`} />
               <span className={classes.valor}>
                 Valor: <b>{moeda(valor)}</b>
               </span>
@@ -187,34 +183,15 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
           </div>
         </section>
 
-        {porKg && (
-          <section className={classes.cartao} aria-labelledby="titulo-personalizar">
-            <header>
-              <h3 id="titulo-personalizar">Quer personalizar o bolo?</h3>
-              <small>Opcional. A loja confirma pelo WhatsApp.</small>
-            </header>
-            <div className={classes.corpo}>
-              <label className={classes.campo}>
-                <b>Recheio</b>
-                <input value={recheio} onChange={(e) => setRecheio(e.currentTarget.value)} maxLength={LIMITES.recheio} placeholder="Ex.: brigadeiro branco" />
-              </label>
-              <label className={classes.campo}>
-                <b>Cobertura</b>
-                <input value={cobertura} onChange={(e) => setCobertura(e.currentTarget.value)} maxLength={LIMITES.cobertura} placeholder="Ex.: chantilly com morangos" />
-              </label>
-            </div>
-          </section>
-        )}
-
+        {/* Sem recheio e cobertura (ZAP-140): a personalização vai na observação, em todos os produtos */}
         <section className={classes.cartao} aria-labelledby="titulo-observacoes">
           <header>
             <h3 id="titulo-observacoes">Observações</h3>
-            <small>Opcional.</small>
           </header>
           <div className={classes.corpo}>
             <label className={classes.campo}>
               <span id="dica-observacao">
-                {porKg ? 'Quer outra massa? Escreva aqui. Também vale o tema da festa ou o que escrever no bolo.' : 'Algum detalhe sobre este item?'}
+                Algum detalhe? Ex.: tema da festa ou frase no bolo.
               </span>
               <textarea
                 value={observacao}
@@ -223,7 +200,7 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
                 rows={3}
                 aria-labelledby="titulo-observacoes"
                 aria-describedby="dica-observacao"
-                placeholder={porKg ? 'Ex.: massa branca; escrever “Feliz aniversário, Ana”' : 'Escreva aqui'}
+                placeholder="Escreva aqui"
               />
             </label>
           </div>
@@ -276,7 +253,7 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
 
   function tirar(item) {
     remover(item.chave)
-    setAviso(`${item.produto.sabor} removido do pedido.`)
+    setAviso(`${item.produto.nome} removido do pedido.`)
   }
 
   function enviar(evento) {
@@ -329,32 +306,23 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
           <ul className={classes.itens}>
             {itens.map((item) => {
               const { produto } = item
-              const detalhes = [
-                item.recheio && `Recheio: ${item.recheio}`,
-                item.cobertura && `Cobertura: ${item.cobertura}`,
-                item.observacao && `Observação: ${item.observacao}`,
-              ].filter(Boolean)
               return (
                 <li key={item.chave} className={classes.item}>
                   <Foto produto={produto} className={classes.fotoMini} decorativa />
                   <div className={classes.dados}>
-                    <h3>{produto.sabor}</h3>
+                    <h3>{produto.nome}</h3>
                     <Preco produto={produto} className={classes.precoPequeno} />
-                    {detalhes.map((texto) => (
-                      <p key={texto} className={classes.detalhe}>
-                        {texto}
-                      </p>
-                    ))}
+                    {item.observacao && <p className={classes.detalhe}>Observação: {item.observacao}</p>}
                     <div className={classes.linhaQuantidade}>
                       <Quantidade
                         produto={produto}
                         quantidade={item.quantidade}
                         aoMudar={(quantidade) => mudarItem(item.chave, { quantidade })}
-                        rotulo={`Quantidade de ${produto.sabor}`}
+                        rotulo={`Quantidade de ${produto.nome}`}
                       />
                       <b className={classes.subtotal}>{moeda(subtotal(produto, item.quantidade))}</b>
                     </div>
-                    <button type="button" className={classes.remover} onClick={() => tirar(item)} aria-label={`Remover ${produto.sabor}`}>
+                    <button type="button" className={classes.remover} onClick={() => tirar(item)} aria-label={`Remover ${produto.nome}`}>
                       <IconTrash size={18} aria-hidden />
                       Remover
                     </button>

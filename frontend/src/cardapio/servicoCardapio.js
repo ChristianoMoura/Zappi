@@ -21,9 +21,31 @@ async function lerJson(resposta) {
   }
 }
 
-// O backend manda nulo nos campos vazios; a tela trabalha com texto vazio
-function paraTela({ estabelecimento, produtos }) {
+// PENDENTE (ZAP-138): até o backend mandar as categorias, o cardápio chega no formato antigo, com
+// o tipo em `nome` (Bolo, Salgado) e o nome do produto em `sabor`. Aqui ele vira o formato novo,
+// com o tipo como categoria, na ordem em que aparece. Sai quando a ZAP-138 entrar.
+function doFormatoAntigo(produtos) {
+  const categorias = []
+  const convertidos = produtos.map((p) => {
+    const nome = p.nome ?? ''
+    let categoria = categorias.find((c) => c.nome === nome)
+    if (!categoria) {
+      categoria = { id: `antiga-${categorias.length + 1}`, nome }
+      categorias.push(categoria)
+    }
+    return { ...p, nome: p.sabor || nome, categoria }
+  })
+  return { categorias, produtos: convertidos }
+}
+
+// O backend manda nulo nos campos vazios; a tela trabalha com texto vazio. Cada produto leva o id e
+// o nome da categoria; as categorias vêm na ordem da loja, só as que têm produto (ZAP-140)
+function paraTela(resposta) {
+  const formatoAntigo = !resposta.categorias && (resposta.produtos ?? []).some((p) => 'sabor' in p)
+  const { estabelecimento } = resposta
+  const { categorias, produtos } = formatoAntigo ? doFormatoAntigo(resposta.produtos) : resposta
   return {
+    categorias: (categorias ?? []).map((c) => ({ id: c.id, nome: c.nome ?? '' })),
     estabelecimento: {
       nome: estabelecimento?.nome ?? '',
       slug: estabelecimento?.slug ?? '',
@@ -35,7 +57,8 @@ function paraTela({ estabelecimento, produtos }) {
     produtos: (produtos ?? []).map((p) => ({
       id: p.id,
       nome: p.nome ?? '',
-      sabor: p.sabor ?? '',
+      categoriaId: p.categoria?.id ?? null,
+      categoria: p.categoria?.nome ?? '',
       unidade: p.unidade,
       preco: Number(p.preco),
       descricao: p.descricao ?? '',
@@ -49,7 +72,7 @@ function paraTela({ estabelecimento, produtos }) {
 
 async function simulado(slug) {
   const { cardapioSimulado } = await import('./cardapioSimulado')
-  return cardapioSimulado(slug)
+  return paraTela(await cardapioSimulado(slug))
 }
 
 // Em desenvolvimento, sem a rota pública (o backend responde 401 por exigir login, 404 sem o

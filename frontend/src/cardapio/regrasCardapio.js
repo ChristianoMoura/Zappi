@@ -36,34 +36,25 @@ export const AVISO_ENCOMENDA ='Encomendas com pelo menos 7 dias de antecedência
 export const precoTexto = (produto) => moeda(produto.preco)
 export const unidadeTexto = (produto) => UNIDADES[produto.unidade]?.selo ?? ''
 
-// "Bolo" vira "Bolos" e "Salgado" vira "Salgados". Nomes que não terminam em vogal simples
-// ("Pão", "Pastel") ficam como estão, para não errar o plural
-export function plural(nome) {
-  const limpo = nome.trim()
-  return /[aeiou]$/i.test(limpo) && !/[ãõ][oe]$/i.test(limpo) ? `${limpo}s` : limpo
+// As seções são as categorias cadastradas no painel (ZAP-136, ZAP-140), na ordem que a loja
+// definiu, com o nome como foi cadastrado. Categoria sem produto não vira seção. Produto sem
+// categoria conhecida fica em "Outros", no fim.
+export function agruparPorCategoria(produtos, categorias = []) {
+  const grupos = categorias
+    .map((categoria) => ({ id: categoria.id, titulo: categoria.nome, produtos: produtos.filter((p) => p.categoriaId === categoria.id) }))
+    .filter((grupo) => grupo.produtos.length > 0)
+  const ids = new Set(categorias.map((categoria) => categoria.id))
+  const semCategoria = produtos.filter((p) => !ids.has(p.categoriaId))
+  return semCategoria.length ? [...grupos, { id: 'outros', titulo: 'Outros', produtos: semCategoria }] : grupos
 }
 
-// id usado na âncora da seção: "Bolo" → "bolo", "Pão de mel" → "pao-de-mel"
-export const idCategoria = (nome) =>
-  nome.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-
-// As categorias são os nomes dos produtos (Bolo, Salgado...), na ordem em que aparecem no cardápio
-export function agruparPorCategoria(produtos) {
-  const grupos = new Map()
-  for (const produto of produtos) {
-    const id = idCategoria(produto.nome) || 'outros'
-    if (!grupos.has(id)) grupos.set(id, { id, titulo: plural(produto.nome) || 'Outros', produtos: [] })
-    grupos.get(id).produtos.push(produto)
-  }
-  return [...grupos.values()]
-}
-
-// Busca na tela, sobre os produtos já carregados, sem acento e sem maiúsculas (ZAP-100)
+// Busca na tela, sobre os produtos já carregados, sem acento e sem maiúsculas (ZAP-100), pelo
+// nome do produto, pela descrição e pelo nome da categoria (ZAP-140)
 const semAcento = (texto) => String(texto ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 export function filtrarProdutos(produtos, busca) {
   const termo = semAcento(busca).trim()
   if (!termo) return produtos
-  return produtos.filter((p) => semAcento(`${p.nome} ${p.sabor} ${p.descricao}`).includes(termo))
+  return produtos.filter((p) => semAcento(`${p.nome} ${p.descricao} ${p.categoria}`).includes(termo))
 }
 
 // Telefone como a tela mostra: "(11) 90000-0000"
@@ -81,5 +72,5 @@ export const mensagemContato = (loja) => `Olá! Vi o cardápio da ${loja.nome} n
 // Mensagem do botão "Pedir pelo WhatsApp", com a observação que o cliente escreveu
 export function mensagemPedido(loja, produto, observacao = '') {
   const obs = observacao.trim()
-  return `Olá! Vi o cardápio da ${loja.nome} no Zappi e quero encomendar: ${produto.sabor} (${precoTexto(produto)} ${unidadeTexto(produto)}).${obs ? ` Observação: ${obs}` : ''}`
+  return `Olá! Vi o cardápio da ${loja.nome} no Zappi e quero encomendar: ${produto.nome} (${precoTexto(produto)} ${unidadeTexto(produto)}).${obs ? ` Observação: ${obs}` : ''}`
 }
