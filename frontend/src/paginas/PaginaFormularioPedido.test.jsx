@@ -171,6 +171,36 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     expect(campo(/^Nome do cliente/)).toHaveValue('Fernanda Costa')
   })
 
+  test('produto fora do cardápio não aparece na lista para escolher (ZAP-155)', async () => {
+    buscarProdutos.mockResolvedValue([produtos[0], { ...produtos[1], noCardapio: false }])
+    await abrirFormulario()
+
+    const opcoes = within(screen.getByRole('combobox', { name: /^Produto/ })).getAllByRole('option').map((o) => o.textContent)
+    expect(opcoes.some((texto) => texto.startsWith('Bolo de brigadeiro de chocolate'))).toBe(true)
+    expect(opcoes.some((texto) => texto.startsWith('Coxinha de frango'))).toBe(false)
+  })
+
+  test('se o produto sai do cardápio com o formulário aberto, o erro aparece junto do item, com o foco nele (ZAP-155)', async () => {
+    const usuario = userEvent.setup()
+    cadastrarPedido.mockRejectedValue(new Error('Este produto não está mais no cardápio.'))
+    await abrirFormulario()
+    await preencherCliente(usuario)
+    await usuario.selectOptions(screen.getByRole('combobox', { name: /^Produto/ }), '4')
+    await usuario.type(campo(/^Quantidade/), '50')
+    await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(3))
+    await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '10:00')
+    // Enquanto isso, a coxinha saiu do cardápio
+    buscarProdutos.mockResolvedValue([produtos[0], { ...produtos[1], noCardapio: false }])
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar pedido' }))
+
+    const produto = screen.getByRole('combobox', { name: /^Produto/ })
+    expect(await screen.findByText('Este produto não está mais no cardápio. Escolha outro.')).toBeVisible()
+    expect(produto).toHaveFocus()
+    expect(produto).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.queryByText(/Não foi possível salvar o pedido agora/)).not.toBeInTheDocument()
+  })
+
   test('cancelar volta para o quadro com o foco no botão "Novo pedido"', async () => {
     const usuario = userEvent.setup()
     await abrirFormulario()
