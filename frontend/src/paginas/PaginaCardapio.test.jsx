@@ -13,9 +13,14 @@ vi.mock('../cardapio/servicoCardapio', async (importarOriginal) => ({
 
 const CARDAPIO = {
   estabelecimento: { nome: 'Casa Belt', slug: 'casa-belt', descricao: 'Bolos e salgados artesanais sob encomenda.', whatsapp: '5511900000000', logo: 'logo.webp', capa: '' },
+  // Categorias na ordem do painel: Salgados antes de Bolos (ZAP-140)
+  categorias: [
+    { id: 2, nome: 'Salgados' },
+    { id: 1, nome: 'Bolos' },
+  ],
   produtos: [
-    { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: 'bolo.jpg', textoAlternativo: 'Bolo coberto com granulado' },
-    { id: 3, nome: 'Salgado', sabor: 'Coxinha por unidade', unidade: 'UN', preco: 1.25, descricao: 'Coxinha de frango.', foto: '', textoAlternativo: '' },
+    { id: 1, nome: 'Bolo de brigadeiro de chocolate', categoriaId: 1, categoria: 'Bolos', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: 'bolo.jpg', textoAlternativo: 'Bolo coberto com granulado' },
+    { id: 3, nome: 'Coxinha por unidade', categoriaId: 2, categoria: 'Salgados', unidade: 'UN', preco: 1.25, descricao: 'Coxinha de frango.', foto: '', textoAlternativo: '' },
   ],
 }
 
@@ -43,7 +48,7 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(screen.getByText(/pelo menos 7 dias de antecedência/)).toBeVisible()
 
     const bolos = screen.getByRole('region', { name: 'Bolos' })
-    expect(within(bolos).getByRole('heading', { name: 'Brigadeiro de chocolate' })).toBeVisible()
+    expect(within(bolos).getByRole('heading', { name: 'Bolo de brigadeiro de chocolate' })).toBeVisible()
     expect(within(bolos).getByText('R$ 100,00')).toBeVisible()
     expect(within(bolos).getByText('por kg')).toBeVisible()
     expect(within(bolos).getByRole('img', { name: 'Bolo coberto com granulado' })).toBeVisible()
@@ -89,12 +94,33 @@ describe('PaginaCardapio (ZAP-105)', () => {
     const campo = screen.getByRole('searchbox', { name: 'Buscar no cardápio' })
     await usuario.type(campo, 'coxinha')
 
-    expect(screen.queryByRole('heading', { name: 'Brigadeiro de chocolate' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Bolo de brigadeiro de chocolate' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Coxinha por unidade' })).toBeVisible()
 
     await usuario.clear(campo)
     await usuario.type(campo, 'pastel')
     expect(screen.getByText('Nenhum produto encontrado.')).toBeVisible()
+
+    // A busca também acha pelo nome da categoria (ZAP-140)
+    await usuario.clear(campo)
+    await usuario.type(campo, 'salgados')
+    expect(screen.getByRole('heading', { name: 'Coxinha por unidade' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Bolo de brigadeiro de chocolate' })).not.toBeInTheDocument()
+  })
+
+  test('seções, abas e janela "Categorias" seguem as categorias do painel, na ordem da loja (ZAP-140)', async () => {
+    const usuario = userEvent.setup()
+    abrir()
+
+    await screen.findByRole('heading', { level: 1, name: 'Casa Belt' })
+    expect(screen.getAllByRole('region').map((secao) => secao.getAttribute('aria-labelledby'))).toEqual(['titulo-2', 'titulo-1'])
+    const abas = screen.getByRole('navigation', { name: 'Categorias do cardápio' })
+    expect(within(abas).getAllByRole('button').slice(1).map((aba) => aba.textContent)).toEqual(['Salgados', 'Bolos'])
+
+    await usuario.click(within(abas).getByRole('button', { name: 'Ver todas as categorias' }))
+    const janela = await screen.findByRole('dialog', { name: 'Categorias' })
+    expect(within(janela).getByRole('button', { name: /Salgados/ })).toHaveTextContent('1 produto')
+    expect(within(janela).getByRole('button', { name: /Bolos/ })).toBeVisible()
   })
 
   test('o tema escuro alterna pelo ícone e fica guardado no navegador', async () => {
@@ -111,10 +137,11 @@ describe('PaginaCardapio (ZAP-105)', () => {
     const usuario = userEvent.setup()
     const roteador = abrir()
 
-    await usuario.click(await screen.findByRole('button', { name: /Brigadeiro de chocolate/ }))
+    await usuario.click(await screen.findByRole('button', { name: /Bolo de brigadeiro de chocolate/ }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Detalhes do produto' })).toBeVisible()
-    expect(screen.getByRole('heading', { level: 2, name: 'Brigadeiro de chocolate' })).toBeVisible()
+    expect(screen.getByRole('heading', { level: 2, name: 'Bolo de brigadeiro de chocolate' })).toBeVisible()
+    expect(screen.getByText('Bolos')).toBeVisible()
     expect(roteador.state.location.pathname).toBe('/cardapio/casa-belt/produto/1')
   })
 
