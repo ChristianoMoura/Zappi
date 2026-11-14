@@ -34,7 +34,7 @@ const doBackend = {
   observacao: null,
   valorTotal: 200,
   cliente: { nome: 'Ana Exemplo', telefone: '5511900000001', anonimizado: false },
-  itens: [{ produtoId: 7, produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, subtotal: 200, recheio: 'Brigadeiro', cobertura: null, observacao: null }],
+  itens: [{ produtoId: 7, produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, subtotal: 200, observacao: 'Tema unicórnio' }],
   criadoEm: '2026-11-09T12:30:00Z',
   confirmadoEm: '2026-11-09T13:00:00Z',
   producaoEm: null,
@@ -83,7 +83,7 @@ describe('servicoPedidos (ZAP-122)', () => {
     expect(pedido.criadoEm).toBe(local('2026-11-09T12:30:00Z'))
     expect(pedido.confirmadoEm).toBe(local('2026-11-09T13:00:00Z'))
     expect(pedido.producaoEm).toBeUndefined()
-    expect(pedido.itens[0]).toEqual({ produtoId: 7, produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, recheio: 'Brigadeiro' })
+    expect(pedido.itens[0]).toEqual({ produtoId: 7, produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, observacao: 'Tema unicórnio' })
     expect(pedido.mensagens[0]).toEqual({ id: 31, tipo: 'Confirmação', status: 'Enviada', texto: 'Olá, Ana!', link: confirmacao.link, enviadoEm: local('2026-11-09T13:05:00Z') })
     expect(pedido.mensagens[1]).toMatchObject({ id: 32, status: 'Pendente' })
     expect(pedido.mensagens[1].enviadoEm).toBeUndefined()

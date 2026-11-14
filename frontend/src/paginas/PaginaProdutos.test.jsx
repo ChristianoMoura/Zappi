@@ -12,8 +12,8 @@ vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({
   excluirProduto: vi.fn(),
 }))
 
-const bolos = { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true }
-const salgados = { id: 2, nome: 'Salgados', aceitaRecheioCobertura: false }
+const bolos = { id: 1, nome: 'Bolos' }
+const salgados = { id: 2, nome: 'Salgados' }
 const brigadeiro = { id: 1, nome: 'Bolo de brigadeiro de chocolate', categoria: bolos, unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: 'brigadeiro.jpg', textoAlternativo: 'Bolo de brigadeiro coberto com granulado', ativo: true, alergenos: ['GLUTEN', 'LEITE'], outrosAlergenos: 'Canela' }
 const coxinha = { id: 4, nome: 'Coxinha de frango', categoria: salgados, unidade: 'UN', preco: 1.2, descricao: '', foto: '', textoAlternativo: '', ativo: true }
 

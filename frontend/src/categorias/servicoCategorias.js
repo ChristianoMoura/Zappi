@@ -1,5 +1,5 @@
 // Categorias do cardápio da usuária logada, pela rota /api/categorias (ZAP-136, ZAP-138). A
-// Lídia cria, renomeia, marca se aceitam recheio e cobertura, muda a ordem arrastando e exclui as
+// Lídia cria, renomeia, muda a ordem arrastando e exclui as
 // que não têm produto. O token, o 401 e a falta de conexão ficam no clienteApi.
 
 import { chamarApi, lerJson, ServicoIndisponivelError } from '../autenticacao/clienteApi'
@@ -30,7 +30,6 @@ async function chamar(caminho, opcoes) {
 const paraTela = (categoria) => ({
   id: categoria.id,
   nome: categoria.nome,
-  aceitaRecheioCobertura: Boolean(categoria.aceitaRecheioCobertura),
 })
 
 // Na ordem definida pela Lídia
@@ -38,9 +37,9 @@ export async function buscarCategorias() {
   return (await chamar('')).map(paraTela)
 }
 
-// Sem id, cria (entra no fim da lista); com id, renomeia e muda o recheio e a cobertura
-export async function salvarCategoria({ id, nome, aceitaRecheioCobertura }) {
-  const corpo = { nome, aceitaRecheioCobertura }
+// Sem id, cria (entra no fim da lista); com id, renomeia
+export async function salvarCategoria({ id, nome }) {
+  const corpo = { nome }
   return paraTela(await chamar(id ? `/${id}` : '', { metodo: id ? 'PUT' : 'POST', json: corpo }))
 }
 

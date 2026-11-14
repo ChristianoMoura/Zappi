@@ -280,11 +280,6 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
                   <span className={classes.apoio}>
                     {quantidadeTexto(item)} × {moeda(item.precoUnitario)}/{item.unidade === 'KG' ? 'kg' : 'un'}
                   </span>
-                  {(item.recheio || item.cobertura) && (
-                    <span className={classes.apoio}>
-                      {[item.recheio && `Recheio: ${item.recheio}`, item.cobertura && `Cobertura: ${item.cobertura}`].filter(Boolean).join(' · ')}
-                    </span>
-                  )}
                   {item.observacao && <span className={classes.apoio}>Obs.: {item.observacao}</span>}
                 </li>
               ))}

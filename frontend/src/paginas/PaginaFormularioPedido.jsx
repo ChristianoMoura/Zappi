@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
 import { agruparPorCategoria } from '../categorias/regrasCategorias'
-import { aceitaRecheio, CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
+import { CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
 import { dataLocal, HORARIOS_RETIRADA, horaTexto, moeda, podeEditar, podeTrocarCliente, STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedido, cadastrarPedido, editarPedido } from '../pedidos/servicoPedidos'
 import { precoParaTela, UNIDADES } from '../produtos/regrasProdutos'
@@ -308,18 +308,17 @@ export function PaginaFormularioPedido() {
                       </>
                     ) : null}
                   </p>
-                  {/* Recheio e cobertura só nos produtos de categoria que aceita (ZAP-136) */}
-                  {aceitaRecheio(item, produtos) && (
-                  <div className={classes.duasColunas}>
-                    <TextInput {...propsCampo(`item-${item.chave}-recheio`, 'Recheio', { limite: LIMITES.recheio })} value={item.recheio} onChange={(e) => mudarItem(item.chave, 'recheio', e.currentTarget.value)} autoComplete="off" />
-                    <TextInput {...propsCampo(`item-${item.chave}-cobertura`, 'Cobertura', { limite: LIMITES.cobertura })} value={item.cobertura} onChange={(e) => mudarItem(item.chave, 'cobertura', e.currentTarget.value)} autoComplete="off" />
-                  </div>
-                  )}
-                  <TextInput
-                    {...propsCampo(`item-${item.chave}-observacao`, 'Observação do item', { limite: LIMITES.observacaoItem })}
+                  {/* Sem recheio e cobertura (ZAP-166): a personalização vai na observação, em todos os produtos */}
+                  <Textarea
+                    {...propsCampo(`item-${item.chave}-observacao`, 'Observação do item', {
+                      limite: LIMITES.observacaoItem,
+                      dica: 'Algum detalhe? Ex.: tema da festa ou frase no bolo.',
+                    })}
                     value={item.observacao}
                     onChange={(e) => mudarItem(item.chave, 'observacao', e.currentTarget.value)}
-                    autoComplete="off"
+                    autosize
+                    minRows={2}
+                    classNames={{ label: formulario.rotulo, input: formulario.campoTexto, error: formulario.erroCampo, description: formulario.dica }}
                   />
                 </li>
               )
