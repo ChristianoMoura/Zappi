@@ -15,8 +15,8 @@ vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({ ...(await 
 
 
 const produtos = [
-  { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, ativo: true },
-  { id: 4, nome: 'Salgado', sabor: 'Coxinha de frango', unidade: 'UN', preco: 1.2, ativo: true },
+  { id: 1, nome: 'Bolo de brigadeiro de chocolate', unidade: 'KG', preco: 100, ativo: true, categoria: { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true } },
+  { id: 4, nome: 'Coxinha de frango', unidade: 'UN', preco: 1.2, ativo: true, categoria: { id: 2, nome: 'Salgados', aceitaRecheioCobertura: false } },
 ]
 
 const rotas = [
@@ -101,6 +101,24 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     expect(within(screen.getByText('Total').parentElement).getByText('R$ 150,00')).toBeVisible()
   })
 
+  test('recheio e cobertura só aparecem nos produtos de categoria que aceita (ZAP-139)', async () => {
+    const usuario = userEvent.setup()
+    await abrirFormulario()
+    const produto = screen.getByRole('combobox', { name: /^Produto/ })
+    expect(within(produto).getByRole('group', { name: 'Bolos' })).toBeInTheDocument()
+    expect(within(produto).getByRole('group', { name: 'Salgados' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /^Recheio/ })).not.toBeInTheDocument()
+
+    await usuario.selectOptions(produto, '1')
+    expect(campo(/^Recheio/)).toBeVisible()
+    expect(campo(/^Cobertura/)).toBeVisible()
+
+    await usuario.selectOptions(produto, '4')
+    expect(screen.queryByRole('textbox', { name: /^Recheio/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /^Cobertura/ })).not.toBeInTheDocument()
+    expect(campo(/^Observação do item/)).toBeVisible()
+  })
+
   test('salgado vendido por unidade não aceita fração (RN12)', async () => {
     const usuario = userEvent.setup()
     await abrirFormulario()
@@ -134,7 +152,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
       consentimentoLgpd: true,
       dataRetirada: `${daqui(5)}T14:30`,
       observacao: 'Aniversário',
-      itens: [{ produtoId: 1, produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, recheio: 'Brigadeiro', observacao: 'massa branca' }],
+      itens: [{ produtoId: 1, produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100, recheio: 'Brigadeiro', observacao: 'massa branca' }],
     })
     expect(await screen.findByText('Pedido #14 de Fernanda Costa cadastrado na coluna Novo.')).toBeVisible()
     const novo = screen.getByRole('region', { name: /Novo/ })

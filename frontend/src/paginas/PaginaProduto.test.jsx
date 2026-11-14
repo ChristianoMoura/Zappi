@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { buscarCategorias } from '../categorias/servicoCategorias'
 import { ALERGENOS } from '../produtos/regrasProdutos'
 import { buscarProduto, buscarProdutos, salvarProduto } from '../produtos/servicoProdutos'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
@@ -14,8 +15,12 @@ vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({
   buscarProduto: vi.fn(),
   salvarProduto: vi.fn(),
 }))
+vi.mock('../categorias/servicoCategorias', async (importarOriginal) => ({ ...(await importarOriginal()), buscarCategorias: vi.fn() }))
 
-const brigadeiro = { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: '', foto: '', textoAlternativo: '', ativo: true }
+const bolos = { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true }
+const salgados = { id: 2, nome: 'Salgados', aceitaRecheioCobertura: false }
+
+const brigadeiro = { id: 1, nome: 'Bolo de brigadeiro de chocolate', categoria: bolos, unidade: 'KG', preco: 100, descricao: '', foto: '', textoAlternativo: '', ativo: true }
 
 const rotas = [
   { path: '/produtos', Component: PaginaProdutos },
@@ -24,6 +29,7 @@ const rotas = [
 ]
 
 const campo = (nome) => screen.getByRole('textbox', { name: nome })
+const categoria = () => screen.getByRole('combobox', { name: /^Categoria/ })
 
 async function abrir(caminho) {
   renderizarComRotas(rotas, caminho)
@@ -34,26 +40,30 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
   beforeEach(() => {
     buscarProduto.mockReset().mockResolvedValue(brigadeiro)
     salvarProduto.mockReset().mockImplementation(async (dados) => ({ id: dados.id ?? 5, ativo: true, ...dados }))
-    buscarProdutos.mockReset().mockImplementation(async () => [brigadeiro, { ...brigadeiro, id: 5, nome: 'Salgado', sabor: 'Kibe', unidade: 'UN', preco: 1.5 }])
+    buscarCategorias.mockReset().mockResolvedValue([bolos, salgados])
+    buscarProdutos.mockReset().mockImplementation(async () => [brigadeiro, { ...brigadeiro, id: 5, nome: 'Kibe', categoria: salgados, unidade: 'UN', preco: 1.5 }])
     URL.createObjectURL = vi.fn(() => 'blob:foto-nova')
   })
 
-  test('abre com o foco no título, o nome "Bolo" e a venda por quilo já escolhidos', async () => {
+  test('abre com o foco no título, sem o campo sabor e com a venda por quilo já escolhida (ZAP-139)', async () => {
     const titulo = await abrir('/produtos/novo')
 
     expect(titulo).toHaveFocus()
-    expect(campo(/^Nome/)).toHaveValue('Bolo')
+    expect(campo(/^Nome/)).toHaveValue('')
+    expect(screen.queryByRole('textbox', { name: /^Sabor/ })).not.toBeInTheDocument()
+    expect(categoria()).toHaveValue('')
+    expect(within(categoria()).getAllByRole('option').map((o) => o.textContent)).toEqual(['Escolha a categoria', 'Bolos', 'Salgados'])
     expect(screen.getByRole('radio', { name: 'Quilo (kg)' })).toBeChecked()
     expect(campo(/^Preço por kg/)).toBeInTheDocument()
   })
 
-  test('o Tab segue a ordem nome, sabor, unidade, preço, descrição, foto e salvar (NBR 17225 5.1.4)', async () => {
+  test('o Tab segue a ordem nome, categoria, unidade, preço, descrição, foto e salvar (NBR 17225 5.1.4)', async () => {
     const usuario = userEvent.setup()
     await abrir('/produtos/novo')
 
     const ordem = [
       campo(/^Nome/),
-      campo(/^Sabor/),
+      categoria(),
       screen.getByRole('radio', { name: 'Quilo (kg)' }),
       campo(/^Preço por kg/),
       campo(/^Descrição/),
@@ -76,8 +86,9 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     await usuario.click(screen.getByRole('button', { name: 'Salvar produto' }))
 
     expect(salvarProduto).not.toHaveBeenCalled()
-    expect(campo(/^Sabor/)).toHaveFocus()
-    expect(campo(/^Sabor/)).toHaveAccessibleDescription(/Escreva o sabor/)
+    expect(campo(/^Nome/)).toHaveFocus()
+    expect(campo(/^Nome/)).toHaveAccessibleDescription(/Escreva o nome do produto/)
+    expect(screen.getByText('Escolha a categoria do produto.')).toBeVisible()
     expect(screen.getByText('Escreva o preço. Ex.: 100,00.')).toBeVisible()
   })
 
@@ -85,16 +96,15 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     const usuario = userEvent.setup()
     await abrir('/produtos/novo')
 
-    await usuario.clear(campo(/^Nome/))
-    await usuario.type(campo(/^Nome/), 'Salgado')
-    await usuario.type(campo(/^Sabor/), 'Kibe')
+    await usuario.type(campo(/^Nome/), 'Kibe')
+    await usuario.selectOptions(categoria(), '2')
     await usuario.click(screen.getByRole('radio', { name: 'Unidade' }))
     await usuario.type(campo(/^Preço por unidade/), '1,5')
     await usuario.click(screen.getByRole('button', { name: 'Salvar produto' }))
 
-    expect(salvarProduto).toHaveBeenCalledWith({ nome: 'Salgado', sabor: 'Kibe', unidade: 'UN', preco: 1.5, descricao: '', foto: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' })
-    expect(await screen.findByText('Salgado de kibe entrou no cardápio.')).toBeVisible()
-    expect(screen.getByRole('heading', { level: 2, name: 'Kibe' })).toHaveFocus()
+    expect(salvarProduto).toHaveBeenCalledWith({ nome: 'Kibe', categoriaId: '2', unidade: 'UN', preco: 1.5, descricao: '', foto: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' })
+    expect(await screen.findByText('Kibe entrou no cardápio.')).toBeVisible()
+    expect(screen.getByRole('heading', { level: 3, name: 'Kibe' })).toHaveFocus()
   })
 
   test('marca os alérgenos e escreve os que não estão na lista (ZAP-132)', async () => {
@@ -123,7 +133,8 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
   test('com foto, sugere a descrição da foto e não salva sem ela (RN15)', async () => {
     const usuario = userEvent.setup()
     await abrir('/produtos/novo')
-    await usuario.type(campo(/^Sabor/), 'Ninho com morango')
+    await usuario.type(campo(/^Nome/), 'Bolo de ninho com morango')
+    await usuario.selectOptions(categoria(), '1')
     await usuario.type(campo(/^Preço por kg/), '115')
 
     await usuario.upload(screen.getByTestId('arquivo-foto'), new File(['foto'], 'bolo.jpg', { type: 'image/jpeg' }))
@@ -138,6 +149,22 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     await usuario.type(descricaoFoto, 'Bolo branco com morangos')
     await usuario.click(screen.getByRole('button', { name: 'Salvar produto' }))
     expect(salvarProduto).toHaveBeenCalledWith(expect.objectContaining({ foto: 'blob:foto-nova', textoAlternativo: 'Bolo branco com morangos', preco: 115 }))
+  })
+
+  test('ao editar, a categoria do produto já vem escolhida', async () => {
+    await abrir('/produtos/1')
+
+    expect(categoria()).toHaveValue('1')
+    expect(campo(/^Nome/)).toHaveValue('Bolo de brigadeiro de chocolate')
+  })
+
+  test('sem categoria cadastrada, mostra o caminho para criar a primeira', async () => {
+    buscarCategorias.mockResolvedValue([])
+    await abrir('/produtos/novo')
+
+    expect(screen.queryByRole('combobox', { name: /^Categoria/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/Você ainda não tem categorias/)).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Criar a primeira categoria' })).toHaveAttribute('href', '/categorias')
   })
 
   test('recusa foto em formato que não é JPG, PNG ou WebP', async () => {
@@ -174,6 +201,6 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Produtos' })).toBeVisible()
     expect(salvarProduto).not.toHaveBeenCalled()
-    expect(within(screen.getByRole('article', { name: 'Brigadeiro de chocolate' })).getByRole('heading')).toHaveFocus()
+    expect(within(screen.getByRole('article', { name: 'Bolo de brigadeiro de chocolate' })).getByRole('heading')).toHaveFocus()
   })
 })

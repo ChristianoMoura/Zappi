@@ -9,7 +9,8 @@ import {
   SessaoExpiradaError,
 } from './servicoProdutos'
 
-const doBackend = { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: null, foto: null, textoAlternativo: null, ativo: true }
+const bolos = { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true }
+const doBackend = { id: 1, nome: 'Bolo de brigadeiro de chocolate', categoria: bolos, unidade: 'KG', preco: 100, descricao: null, foto: null, textoAlternativo: null, ativo: true }
 const comFoto = { ...doBackend, foto: 'https://storage.teste/1/1-abcd1234.jpg', textoAlternativo: 'Bolo de brigadeiro' }
 
 const json = (status, corpo) => new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
@@ -52,19 +53,19 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('cadastra sem foto com um POST em JSON', async () => {
     const chamadas = simularBackend(json(201, { ...doBackend, id: 7 }))
 
-    const salvo = await salvarProduto({ nome: 'Bolo', sabor: 'Prestígio', unidade: 'KG', preco: 110, descricao: '', foto: '', textoAlternativo: 'sobra' })
+    const salvo = await salvarProduto({ nome: 'Bolo de prestígio', categoriaId: '1', unidade: 'KG', preco: 110, descricao: '', foto: '', textoAlternativo: 'sobra' })
 
     expect(salvo.id).toBe(7)
     const [[endereco, opcoes]] = chamadas()
     expect(endereco).toBe('/api/produtos')
     expect(opcoes.method).toBe('POST')
-    expect(JSON.parse(opcoes.body)).toEqual({ nome: 'Bolo', sabor: 'Prestígio', unidade: 'KG', preco: 110, descricao: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' })
+    expect(JSON.parse(opcoes.body)).toEqual({ nome: 'Bolo de prestígio', categoriaId: 1, unidade: 'KG', preco: 110, descricao: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' })
   })
 
   it('envia e recebe os alérgenos sempre na ordem da lista fixa (ZAP-132)', async () => {
     const chamadas = simularBackend(json(201, { ...doBackend, id: 7, alergenos: ['OVOS', 'GLUTEN'], outrosAlergenos: 'Canela' }))
 
-    const salvo = await salvarProduto({ nome: 'Bolo', sabor: 'Nozes', unidade: 'KG', preco: 120, descricao: '', foto: '', textoAlternativo: '', alergenos: ['CASTANHAS', 'LEITE', 'GLUTEN'], outrosAlergenos: 'Canela' })
+    const salvo = await salvarProduto({ nome: 'Bolo de nozes', categoriaId: '1', unidade: 'KG', preco: 120, descricao: '', foto: '', textoAlternativo: '', alergenos: ['CASTANHAS', 'LEITE', 'GLUTEN'], outrosAlergenos: 'Canela' })
 
     const corpo = JSON.parse(chamadas()[0][1].body)
     expect(corpo.alergenos).toEqual(['GLUTEN', 'LEITE', 'CASTANHAS'])
@@ -75,7 +76,7 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('cadastra com foto: cria o produto e depois envia o arquivo com a descrição', async () => {
     const chamadas = simularBackend(json(201, { ...doBackend, id: 7 }), json(200, { ...comFoto, id: 7 }))
 
-    const salvo = await salvarProduto({ nome: 'Bolo', sabor: 'Prestígio', unidade: 'KG', preco: 110, descricao: '', foto: 'blob:foto-nova', textoAlternativo: 'Bolo de prestígio' })
+    const salvo = await salvarProduto({ nome: 'Bolo de prestígio', categoriaId: '1', unidade: 'KG', preco: 110, descricao: '', foto: 'blob:foto-nova', textoAlternativo: 'Bolo de prestígio' })
 
     expect(salvo.foto).toBe(comFoto.foto)
     const [, [endereco, opcoes]] = chamadas()
@@ -89,7 +90,7 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('se a foto do cadastro falhar, desfaz o produto criado', async () => {
     const chamadas = simularBackend(json(201, { ...doBackend, id: 7 }), json(503, { codigo: 'FOTO_INDISPONIVEL' }), new Response(null, { status: 204 }))
 
-    await expect(salvarProduto({ nome: 'Bolo', sabor: 'Prestígio', unidade: 'KG', preco: 110, descricao: '', foto: 'blob:foto-nova', textoAlternativo: 'Bolo' }))
+    await expect(salvarProduto({ nome: 'Bolo de prestígio', categoriaId: '1', unidade: 'KG', preco: 110, descricao: '', foto: 'blob:foto-nova', textoAlternativo: 'Bolo' }))
       .rejects.toBeInstanceOf(ServicoIndisponivelError)
     const [, , [endereco, opcoes]] = chamadas()
     expect(endereco).toBe('/api/produtos/7')
@@ -99,7 +100,7 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('edita mantendo a foto: só um PUT', async () => {
     const chamadas = simularBackend(json(200, comFoto))
 
-    await salvarProduto({ id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 105, descricao: '', foto: comFoto.foto, textoAlternativo: 'Bolo de brigadeiro' })
+    await salvarProduto({ id: 1, nome: 'Bolo de brigadeiro de chocolate', categoriaId: '1', unidade: 'KG', preco: 105, descricao: '', foto: comFoto.foto, textoAlternativo: 'Bolo de brigadeiro' })
 
     expect(chamadas().map(([endereco, opcoes]) => `${opcoes.method} ${endereco}`)).toEqual(['PUT /api/produtos/1'])
   })
@@ -107,7 +108,7 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('edita removendo a foto: tira a foto antes do PUT', async () => {
     const chamadas = simularBackend(json(200, doBackend), json(200, doBackend))
 
-    await salvarProduto({ id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: '', foto: '', textoAlternativo: '' })
+    await salvarProduto({ id: 1, nome: 'Bolo de brigadeiro de chocolate', categoriaId: '1', unidade: 'KG', preco: 100, descricao: '', foto: '', textoAlternativo: '' })
 
     expect(chamadas().map(([endereco, opcoes]) => `${opcoes.method} ${endereco}`)).toEqual(['DELETE /api/produtos/1/foto', 'PUT /api/produtos/1'])
   })
@@ -115,7 +116,7 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('edita trocando a foto: PUT e depois o envio da foto nova', async () => {
     const chamadas = simularBackend(json(200, comFoto), json(200, comFoto))
 
-    await salvarProduto({ id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: '', foto: 'blob:foto-nova', textoAlternativo: 'Bolo novo' })
+    await salvarProduto({ id: 1, nome: 'Bolo de brigadeiro de chocolate', categoriaId: '1', unidade: 'KG', preco: 100, descricao: '', foto: 'blob:foto-nova', textoAlternativo: 'Bolo novo' })
 
     expect(chamadas().map(([endereco, opcoes]) => `${opcoes.method} ${endereco}`)).toEqual(['PUT /api/produtos/1', 'POST /api/produtos/1/foto'])
   })

@@ -22,8 +22,8 @@ const pedido = (extras) => ({
   status: STATUS.NOVO,
   dataRetirada: '2026-11-14',
   itens: [
-    { produto: 'Bolo', sabor: 'Ninho com morango', unidade: 'KG', quantidade: 1.5, precoUnitario: 115 },
-    { produto: 'Salgado', sabor: 'Coxinha de frango', unidade: 'UN', quantidade: 100, precoUnitario: 1.2 },
+    { produto: 'Bolo de ninho com morango', unidade: 'KG', quantidade: 1.5, precoUnitario: 115 },
+    { produto: 'Coxinha de frango', unidade: 'UN', quantidade: 100, precoUnitario: 1.2 },
   ],
   ...extras,
 })

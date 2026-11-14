@@ -12,8 +12,10 @@ vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({
   excluirProduto: vi.fn(),
 }))
 
-const brigadeiro = { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: 'brigadeiro.jpg', textoAlternativo: 'Bolo de brigadeiro coberto com granulado', ativo: true, alergenos: ['GLUTEN', 'LEITE'], outrosAlergenos: 'Canela' }
-const coxinha = { id: 4, nome: 'Salgado', sabor: 'Coxinha de frango', unidade: 'UN', preco: 1.2, descricao: '', foto: '', textoAlternativo: '', ativo: true }
+const bolos = { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true }
+const salgados = { id: 2, nome: 'Salgados', aceitaRecheioCobertura: false }
+const brigadeiro = { id: 1, nome: 'Bolo de brigadeiro de chocolate', categoria: bolos, unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: 'brigadeiro.jpg', textoAlternativo: 'Bolo de brigadeiro coberto com granulado', ativo: true, alergenos: ['GLUTEN', 'LEITE'], outrosAlergenos: 'Canela' }
+const coxinha = { id: 4, nome: 'Coxinha de frango', categoria: salgados, unidade: 'UN', preco: 1.2, descricao: '', foto: '', textoAlternativo: '', ativo: true }
 
 async function abrirLista() {
   renderizarComRotas([{ path: '/produtos', Component: PaginaProdutos }], '/produtos')
@@ -26,25 +28,35 @@ describe('Lista de produtos (ZAP-41, RF05, RF06)', () => {
     excluirProduto.mockReset().mockResolvedValue(undefined)
   })
 
-  test('mostra foto com texto alternativo, sabor, preço e unidade (NBR 17225 5.9.1)', async () => {
+  test('mostra uma seção por categoria, na ordem da API, e o botão Categorias (ZAP-139)', async () => {
     await abrirLista()
 
-    expect(screen.getByText('2 produtos no cardápio')).toBeVisible()
-    const cartao = screen.getByRole('article', { name: 'Brigadeiro de chocolate' })
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Bolos 1 produto', 'Salgados 1 produto'])
+    const secaoBolos = screen.getByRole('region', { name: /Bolos/ })
+    expect(within(secaoBolos).getByRole('heading', { level: 3, name: 'Bolo de brigadeiro de chocolate' })).toBeInTheDocument()
+    expect(within(secaoBolos).queryByRole('article', { name: 'Coxinha de frango' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Categorias' })).toHaveAttribute('href', '/categorias')
+  })
+
+  test('mostra foto com texto alternativo, nome, preço e unidade (NBR 17225 5.9.1)', async () => {
+    await abrirLista()
+
+    expect(screen.getByText('2 produtos no cardápio, em 2 categorias')).toBeVisible()
+    const cartao = screen.getByRole('article', { name: 'Bolo de brigadeiro de chocolate' })
     expect(within(cartao).getByRole('img', { name: 'Bolo de brigadeiro coberto com granulado' })).toBeInTheDocument()
     expect(within(cartao).getByText('R$ 100,00')).toBeVisible()
     expect(within(cartao).getByText('por kg')).toBeVisible()
     const semFoto = screen.getByRole('article', { name: 'Coxinha de frango' })
     expect(within(semFoto).getByText('Sem foto')).toBeVisible()
     expect(within(semFoto).getByText('por unidade')).toBeVisible()
-    expect(within(semFoto).getByRole('link', { name: 'Editar Salgado de coxinha de frango' })).toHaveAttribute('href', '/produtos/4')
+    expect(within(semFoto).getByRole('link', { name: 'Editar Coxinha de frango' })).toHaveAttribute('href', '/produtos/4')
     expect(screen.getByRole('link', { name: 'Cadastrar produto' })).toHaveAttribute('href', '/produtos/novo')
   })
 
   test('mostra os selos de alérgenos só nos produtos que têm (ZAP-132)', async () => {
     await abrirLista()
 
-    const selos = within(screen.getByRole('article', { name: 'Brigadeiro de chocolate' })).getByRole('list', { name: 'Alérgenos' })
+    const selos = within(screen.getByRole('article', { name: 'Bolo de brigadeiro de chocolate' })).getByRole('list', { name: 'Alérgenos' })
     expect(within(selos).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Contém glúten', 'Leite e derivados', 'Canela'])
     expect(within(screen.getByRole('article', { name: 'Coxinha de frango' })).queryByRole('list', { name: 'Alérgenos' })).not.toBeInTheDocument()
   })
@@ -54,12 +66,12 @@ describe('Lista de produtos (ZAP-41, RF05, RF06)', () => {
     await abrirLista()
 
     await usuario.click(screen.getByRole('button', { name: 'Excluir Bolo de brigadeiro de chocolate' }))
-    const janela = await screen.findByRole('dialog', { name: 'Excluir bolo de brigadeiro de chocolate?' })
+    const janela = await screen.findByRole('dialog', { name: 'Excluir Bolo de brigadeiro de chocolate?' })
     expect(within(janela).getByText(/Os pedidos que já têm este produto continuam como estão/)).toBeVisible()
     await usuario.click(within(janela).getByRole('button', { name: 'Manter produto' }))
 
     expect(excluirProduto).not.toHaveBeenCalled()
-    expect(screen.getByRole('article', { name: 'Brigadeiro de chocolate' })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: 'Bolo de brigadeiro de chocolate' })).toBeInTheDocument()
   })
 
   test('exclui o produto do cardápio depois de confirmar (RN14)', async () => {
@@ -67,13 +79,13 @@ describe('Lista de produtos (ZAP-41, RF05, RF06)', () => {
     await abrirLista()
 
     await usuario.click(screen.getByRole('button', { name: 'Excluir Bolo de brigadeiro de chocolate' }))
-    const janela = await screen.findByRole('dialog', { name: /Excluir bolo de brigadeiro/ })
+    const janela = await screen.findByRole('dialog', { name: /Excluir Bolo de brigadeiro/ })
     await usuario.click(within(janela).getByRole('button', { name: 'Excluir do cardápio' }))
 
     expect(excluirProduto).toHaveBeenCalledWith(1)
     expect(await screen.findByText('Bolo de brigadeiro de chocolate saiu do cardápio.')).toBeVisible()
-    await waitFor(() => expect(screen.queryByRole('article', { name: 'Brigadeiro de chocolate' })).not.toBeInTheDocument())
-    expect(screen.getByText('1 produto no cardápio')).toBeVisible()
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Bolo de brigadeiro de chocolate' })).not.toBeInTheDocument())
+    expect(screen.getByText('1 produto no cardápio, em 1 categoria')).toBeVisible()
   })
 
   test('avisa quando não consegue excluir e mantém o produto', async () => {
@@ -82,11 +94,11 @@ describe('Lista de produtos (ZAP-41, RF05, RF06)', () => {
     await abrirLista()
 
     await usuario.click(screen.getByRole('button', { name: 'Excluir Bolo de brigadeiro de chocolate' }))
-    const janela = await screen.findByRole('dialog', { name: /Excluir bolo de brigadeiro/ })
+    const janela = await screen.findByRole('dialog', { name: /Excluir Bolo de brigadeiro/ })
     await usuario.click(within(janela).getByRole('button', { name: 'Excluir do cardápio' }))
 
     expect(await within(janela).findByRole('alert')).toHaveTextContent('Não foi possível excluir agora')
-    expect(screen.getByRole('article', { name: 'Brigadeiro de chocolate' })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: 'Bolo de brigadeiro de chocolate' })).toBeInTheDocument()
   })
 
   test('cardápio vazio mostra como começar', async () => {
