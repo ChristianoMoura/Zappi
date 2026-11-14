@@ -532,10 +532,60 @@
   background: #fef3f2;
 }
 
+/* ZAP-139: botões "Categorias" e "Cadastrar produto" e as seções por categoria */
+.botoesCabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.secaoCategoria {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tituloCategoria {
+  margin: 0;
+  font-size: 1.35rem;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  & small {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--mantine-color-dimmed);
+  }
+}
+
+.avisoCategoria {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff4e5;
+  border: 1px solid #f2c48d;
+  color: #7a3e00;
+
+  & a {
+    color: #7a3e00;
+    font-weight: 700;
+  }
+}
+
 @media (max-width: 48em) {
   .cabecalho {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .botoesCabecalho {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .grade {

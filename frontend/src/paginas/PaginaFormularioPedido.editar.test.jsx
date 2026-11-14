@@ -16,8 +16,8 @@ vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({ ...(await 
 
 // O cardápio já subiu o brigadeiro para R$ 120; o pedido foi feito a R$ 100
 const produtos = [
-  { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 120, ativo: true },
-  { id: 2, nome: 'Bolo', sabor: 'Ninho com morango', unidade: 'KG', preco: 115, ativo: true },
+  { id: 1, nome: 'Bolo de brigadeiro de chocolate', unidade: 'KG', preco: 120, ativo: true, categoria: { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true } },
+  { id: 2, nome: 'Bolo de ninho com morango', unidade: 'KG', preco: 115, ativo: true, categoria: { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true } },
 ]
 
 const comCliente = (numero, status, extras) => pedidoDeTeste(numero, status, 'Ana Souza', { cliente: { nome: 'Ana Souza', telefone: '5511987650012' }, ...extras })

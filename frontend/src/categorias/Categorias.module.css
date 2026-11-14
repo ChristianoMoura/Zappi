@@ -1,0 +1,171 @@
+/* Categorias do cardápio (ZAP-139): segue o protótipo aprovado. A base (título, janelas, avisos)
+   vem de Produtos.module.css; aqui ficam a lista e a alça de arrastar. */
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  /* Os botões vão para o lado conforme o espaço da lista, não da janela: com o menu lateral
+     aberto, a área do conteúdo é bem menor que a tela */
+  container-type: inline-size;
+}
+
+.arrastando {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.categoria {
+  background: #fff;
+  border: 2px solid #e7ddd2;
+  border-radius: 14px;
+  padding: 12px 14px 12px 6px;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: center;
+}
+
+.pega {
+  border-color: var(--mantine-color-zappi-7);
+  background: #f4fbfb;
+  box-shadow: 0 10px 24px rgb(61 43 31 / 0.22);
+  position: relative;
+  z-index: 1;
+}
+
+.alca {
+  grid-row: span 2;
+  width: 44px;
+  min-height: 56px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8c8178;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  /* No celular, o dedo arrasta a categoria em vez de rolar a página */
+  touch-action: none;
+
+  &:hover {
+    background: #f3e8d8;
+    color: var(--mantine-color-text);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--zappi-cor-foco);
+    outline-offset: 2px;
+  }
+}
+
+.pega .alca {
+  cursor: grabbing;
+  background: var(--mantine-color-zappi-7);
+  color: #fff;
+}
+
+.posicao {
+  grid-row: span 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e6f4f4;
+  color: #005a5a;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.nome {
+  margin: 0;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+
+.detalhes {
+  margin: 0;
+  color: var(--mantine-color-dimmed);
+  font-size: 0.95rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+
+  & span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.botoes {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  padding-left: 6px;
+}
+
+.excluir {
+  margin-left: auto;
+}
+
+.dica {
+  margin: -12px 0 0;
+  color: var(--mantine-color-dimmed);
+
+  & svg {
+    vertical-align: -3px;
+  }
+}
+
+.somenteLeitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.caixaRecheio {
+  border: 2px solid #e7ddd2;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.caixaRecheio:has(input:checked) {
+  border-color: var(--mantine-color-zappi-7);
+  background: #e6f4f4;
+}
+
+.rotuloRecheio {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+@container (min-width: 620px) {
+  .categoria {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+  }
+
+  .botoes {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+    margin-top: 0;
+    padding-left: 0;
+  }
+
+  .excluir {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .categoria {
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+}

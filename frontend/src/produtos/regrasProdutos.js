@@ -1,7 +1,9 @@
 // Regras dos produtos do cardápio (ZAP-27, tabela `produto` do context.md). O backend (ZAP-39)
 // valida de novo; aqui as regras servem para avisar a Lídia antes de salvar.
 
-export const LIMITES = { nome: 100, sabor: 100, descricao: 500, outrosAlergenos: 300, textoAlternativo: 150 }
+// O nome é o nome completo do produto, sem o campo sabor (ZAP-136): 150 caracteres cabem o nome e o
+// sabor antigos juntos, como a migração da ZAP-137 monta
+export const LIMITES = { nome: 150, descricao: 500, outrosAlergenos: 300, textoAlternativo: 150 }
 
 // Lista fixa de alérgenos (ZAP-128): os mais comuns em padaria e confeitaria. O glúten faz parte
 // da lista; sem marcar, fica entendido que o produto não contém glúten.
@@ -25,7 +27,7 @@ export const UNIDADES = {
 }
 
 // Ordem dos campos na tela, usada para levar o foco ao primeiro erro (NBR 17225 5.1.4)
-export const ORDEM_CAMPOS = ['nome', 'sabor', 'preco', 'descricao', 'outrosAlergenos', 'textoAlternativo']
+export const ORDEM_CAMPOS = ['nome', 'categoriaId', 'preco', 'descricao', 'outrosAlergenos', 'textoAlternativo']
 
 const formatoPreco = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 export const precoParaTela = (valor) => formatoPreco.format(valor)
@@ -42,21 +44,15 @@ export function lerPreco(texto) {
   return Math.round(Number(limpo) * 100) / 100
 }
 
-// Nome da tela: "Bolo de brigadeiro de chocolate", "Salgado de coxinha de frango"
-export const nomeCompleto = ({ nome, sabor }) => `${nome.trim()} de ${sabor.trim().charAt(0).toLowerCase()}${sabor.trim().slice(1)}`
-
-// Sugestão para a descrição da foto, que a Lídia pode melhorar (RN15)
-export function sugerirTextoAlternativo({ nome, sabor }) {
-  if (!sabor.trim()) return nome.trim()
-  if (!nome.trim()) return sabor.trim()
-  return nomeCompleto({ nome, sabor })
-}
+// Sugestão para a descrição da foto, que a Lídia pode melhorar (RN15): o nome do produto
+export const sugerirTextoAlternativo = ({ nome }) => nome.trim()
 
 // Recebe os dados como a tela os mostra e devolve { campo: mensagem }
 export function validarProduto(dados) {
   const erros = {}
-  if (!dados.nome.trim()) erros.nome = 'Escreva o nome do produto. Ex.: Bolo ou Salgado.'
-  if (!dados.sabor.trim()) erros.sabor = 'Escreva o sabor. Ex.: Brigadeiro de chocolate ou Coxinha de frango.'
+  if (!dados.nome.trim()) erros.nome = 'Escreva o nome do produto. Ex.: Bolo de brigadeiro de chocolate.'
+  // Todo produto pertence a uma categoria da loja (ZAP-136)
+  if (!dados.categoriaId) erros.categoriaId = 'Escolha a categoria do produto.'
 
   const preco = lerPreco(dados.preco)
   if (preco === null) erros.preco = 'Escreva o preço. Ex.: 100,00.'

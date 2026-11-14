@@ -30,9 +30,8 @@ export const moeda = (valor) => formatoMoeda.format(valor).replace(/ /g, ' ')
 export const quantidadeTexto = (item) =>
   item.unidade === 'KG' ? `${item.quantidade.toLocaleString('pt-BR')} kg` : `${item.quantidade} un`
 
-export const nomeItem = (item) => (item.produto === 'Bolo' ? `Bolo de ${item.sabor.toLowerCase()}` : item.sabor)
-
-export const resumoItens = (pedido) => pedido.itens.map((item) => `${nomeItem(item)} · ${quantidadeTexto(item)}`).join(' + ')
+// O item aparece pelo nome do produto (ZAP-139): "Bolo de brigadeiro de chocolate · 2 kg"
+export const resumoItens = (pedido) => pedido.itens.map((item) => `${item.produto} · ${quantidadeTexto(item)}`).join(' + ')
 
 // Datas no formato AAAA-MM-DD, comparadas no fuso de quem usa o painel
 export const dataLocal = (data) =>

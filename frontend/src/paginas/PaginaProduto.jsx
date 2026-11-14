@@ -1,26 +1,29 @@
-import { Alert, Button, Loader, SegmentedControl, Textarea, TextInput } from '@mantine/core'
+import { Alert, Button, Loader, NativeSelect, SegmentedControl, Textarea, TextInput } from '@mantine/core'
 import { IconAlertCircle, IconCamera, IconCheck, IconChevronLeft, IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { TIPOS_FOTO, validarFoto } from '../comum/regrasFoto'
-import { ALERGENOS, LIMITES, lerPreco, nomeCompleto, ORDEM_CAMPOS, precoParaTela, sugerirTextoAlternativo, UNIDADES, validarProduto } from '../produtos/regrasProdutos'
+import { buscarCategorias } from '../categorias/servicoCategorias'
+import { ALERGENOS, LIMITES, lerPreco, ORDEM_CAMPOS, precoParaTela, sugerirTextoAlternativo, UNIDADES, validarProduto } from '../produtos/regrasProdutos'
 import { buscarProduto, ProdutoNaoEncontradoError, salvarProduto } from '../produtos/servicoProdutos'
 import classes from '../produtos/Produtos.module.css'
 import { IconeAlergeno } from '../produtos/SelosAlergenos'
 import { useTituloPagina } from './useTituloPagina'
 
-const VAZIO = { nome: 'Bolo', sabor: '', unidade: 'KG', preco: '', descricao: '', alergenos: [], outrosAlergenos: '', foto: '', textoAlternativo: '' }
+const VAZIO = { nome: '', categoriaId: '', unidade: 'KG', preco: '', descricao: '', alergenos: [], outrosAlergenos: '', foto: '', textoAlternativo: '' }
 
 const paraTela = (produto) => ({
   ...produto,
   preco: precoParaTela(produto.preco),
+  categoriaId: produto.categoria ? String(produto.categoria.id) : '',
   alergenos: produto.alergenos ?? [],
   outrosAlergenos: produto.outrosAlergenos ?? '',
 })
 
-// Cadastro e edição de produto (ZAP-42, US3, RF05, RF06). Ordem dos campos: nome → sabor →
-// vendido por → preço → descrição → alérgenos → foto → "Salvar" (NBR 17225 5.1.4). A foto é opcional; com
-// foto, a descrição dela é obrigatória (RN15) e já vem sugerida com o nome e o sabor.
+// Cadastro e edição de produto (ZAP-42, US3, RF05, RF06). Ordem dos campos: nome → categoria →
+// vendido por → preço → descrição → alérgenos → foto → "Salvar" (NBR 17225 5.1.4). O nome é o
+// nome completo, sem o campo sabor, e a categoria é escolhida entre as da loja (ZAP-139). A foto
+// é opcional; com foto, a descrição dela é obrigatória (RN15) e já vem sugerida com o nome.
 export function PaginaProduto() {
   const { id } = useParams()
   const editando = id !== undefined
@@ -28,8 +31,9 @@ export function PaginaProduto() {
   const navegar = useNavigate()
   const [original, setOriginal] = useState(null)
   const [dados, setDados] = useState(editando ? null : VAZIO)
+  const [categorias, setCategorias] = useState([])
   const [erros, setErros] = useState({})
-  const [carregando, setCarregando] = useState(editando)
+  const [carregando, setCarregando] = useState(true)
   const [erroCarregar, setErroCarregar] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [aviso, setAviso] = useState(null)
@@ -39,11 +43,12 @@ export function PaginaProduto() {
   const botaoFoto = useRef(null)
 
   useEffect(() => {
-    if (!editando) return undefined
     let ativo = true
-    buscarProduto(Number(id))
-      .then((produto) => {
+    Promise.all([buscarCategorias(), editando ? buscarProduto(Number(id)) : null])
+      .then(([lista, produto]) => {
         if (!ativo) return
+        setCategorias(lista)
+        if (!produto) return
         setOriginal(produto)
         setDados(paraTela(produto))
       })
@@ -133,7 +138,7 @@ export function PaginaProduto() {
       const salvo = await salvarProduto({
         ...(editando ? { id: Number(id) } : {}),
         nome: dados.nome.trim(),
-        sabor: dados.sabor.trim(),
+        categoriaId: dados.categoriaId,
         unidade: dados.unidade,
         preco: lerPreco(dados.preco),
         descricao: dados.descricao.trim(),
@@ -142,7 +147,7 @@ export function PaginaProduto() {
         foto: dados.foto,
         textoAlternativo: dados.textoAlternativo.trim(),
       })
-      navegar('/produtos', { state: { salvo: { id: salvo.id, novo: !editando, nome: nomeCompleto(salvo) } } })
+      navegar('/produtos', { state: { salvo: { id: salvo.id, novo: !editando, nome: salvo.nome } } })
     } catch {
       setSalvando(false)
       setAviso({ tipo: 'erro', texto: 'Não foi possível salvar agora. Tente novamente em alguns minutos.' })
@@ -180,7 +185,7 @@ export function PaginaProduto() {
           Produtos
         </Button>
         <h1 ref={titulo} className={classes.titulo} tabIndex={-1}>
-          {editando ? `Editar ${nomeCompleto(original)}` : 'Cadastrar produto'}
+          {editando ? `Editar ${original.nome}` : 'Cadastrar produto'}
         </h1>
       </div>
 
@@ -195,8 +200,33 @@ export function PaginaProduto() {
         <div className={classes.formGrade}>
           <section className={classes.caixa} aria-labelledby="secao-produto">
             <h2 id="secao-produto" className={classes.tituloCaixa}>Sobre o produto</h2>
-            <TextInput {...propsCampo('nome', 'Nome', { obrigatorio: true })} value={dados.nome} onChange={(e) => mudar('nome', e.currentTarget.value)} autoComplete="off" />
-            <TextInput {...propsCampo('sabor', 'Sabor', { obrigatorio: true })} value={dados.sabor} onChange={(e) => mudar('sabor', e.currentTarget.value)} autoComplete="off" />
+            <TextInput {...propsCampo('nome', 'Nome', { obrigatorio: true })} value={dados.nome} onChange={(e) => mudar('nome', e.currentTarget.value)} autoComplete="off" placeholder="Ex.: Bolo de brigadeiro de chocolate" />
+            {categorias.length > 0 ? (
+              <NativeSelect
+                {...propsCampo('categoriaId', 'Categoria', { obrigatorio: true })}
+                value={dados.categoriaId}
+                onChange={(e) => mudar('categoriaId', e.currentTarget.value)}
+                data={[{ value: '', label: 'Escolha a categoria' }, ...categorias.map((c) => ({ value: String(c.id), label: c.nome }))]}
+              />
+            ) : (
+              // Sem categoria cadastrada, o caminho para criar a primeira (ZAP-139)
+              <div className={classes.grupo}>
+                <span className={classes.rotulo}>
+                  Categoria <span className={classes.marca}>obrigatório</span>
+                </span>
+                <p className={classes.avisoCategoria}>
+                  <IconInfoCircle size={22} aria-hidden />
+                  <span>
+                    Você ainda não tem categorias. <Link to="/categorias">Criar a primeira categoria</Link>
+                  </span>
+                </p>
+                {erros.categoriaId && (
+                  <p className={classes.erroFoto} role="alert" ref={(el) => { refs.current.categoriaId = el }} tabIndex={-1}>
+                    <IconAlertCircle size={20} aria-hidden /> {erros.categoriaId}
+                  </p>
+                )}
+              </div>
+            )}
             <fieldset className={classes.grupo}>
               <legend className={classes.rotulo}>
                 Vendido por <span className={classes.marca}>obrigatório</span>

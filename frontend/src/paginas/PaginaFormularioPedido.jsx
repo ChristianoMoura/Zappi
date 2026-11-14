@@ -3,10 +3,11 @@ import { IconAlertCircle, IconAlertTriangle, IconCheck, IconChevronLeft, IconPlu
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
-import { CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
+import { agruparPorCategoria } from '../categorias/regrasCategorias'
+import { aceitaRecheio, CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
 import { dataLocal, HORARIOS_RETIRADA, horaTexto, moeda, podeEditar, podeTrocarCliente, STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedido, cadastrarPedido, editarPedido } from '../pedidos/servicoPedidos'
-import { nomeCompleto, precoParaTela, UNIDADES } from '../produtos/regrasProdutos'
+import { precoParaTela, UNIDADES } from '../produtos/regrasProdutos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
 import formulario from '../produtos/Produtos.module.css'
 import classes from '../pedidos/NovoPedido.module.css'
@@ -152,16 +153,20 @@ export function PaginaFormularioPedido() {
     limparErro('clienteWhatsapp')
   }
 
-  const rotuloOpcao = (p, sufixo = '') => `${nomeCompleto(p)} · R$ ${precoParaTela(p.preco)} ${UNIDADES[p.unidade].selo}${sufixo}`
+  const rotuloOpcao = (p, sufixo = '') => `${p.nome} · R$ ${precoParaTela(p.preco)} ${UNIDADES[p.unidade].selo}${sufixo}`
 
   // Item que já estava no pedido: a primeira opção é ele, com o preço da época (RN10). Escolher
-  // outro produto da lista faz o item valer como novo, com o preço atual.
+  // outro produto da lista faz o item valer como novo, com o preço atual. Os produtos aparecem
+  // separados por categoria, na ordem definida pela Lídia (ZAP-139).
   function opcoesDoItem(item) {
     const fixo = item.congelado && produtoDoItem({ ...item, produtoId: CONGELADO }, produtos)
-    const mesmo = (p) => fixo && p.nome === fixo.nome && p.sabor === fixo.sabor && p.unidade === fixo.unidade
+    const outros = produtos.filter((p) => !(fixo && p.id === fixo.id && p.unidade === fixo.unidade))
     return [
       fixo ? { value: CONGELADO, label: rotuloOpcao(fixo, ' (preço do pedido)') } : { value: '', label: 'Escolha o produto' },
-      ...produtos.filter((p) => !mesmo(p)).map((p) => ({ value: String(p.id), label: rotuloOpcao(p) })),
+      ...agruparPorCategoria(outros).map(({ categoria, produtos: daCategoria }) => ({
+        group: categoria.nome,
+        items: daCategoria.map((p) => ({ value: String(p.id), label: rotuloOpcao(p) })),
+      })),
     ]
   }
 
@@ -303,10 +308,13 @@ export function PaginaFormularioPedido() {
                       </>
                     ) : null}
                   </p>
+                  {/* Recheio e cobertura só nos produtos de categoria que aceita (ZAP-136) */}
+                  {aceitaRecheio(item, produtos) && (
                   <div className={classes.duasColunas}>
                     <TextInput {...propsCampo(`item-${item.chave}-recheio`, 'Recheio', { limite: LIMITES.recheio })} value={item.recheio} onChange={(e) => mudarItem(item.chave, 'recheio', e.currentTarget.value)} autoComplete="off" />
                     <TextInput {...propsCampo(`item-${item.chave}-cobertura`, 'Cobertura', { limite: LIMITES.cobertura })} value={item.cobertura} onChange={(e) => mudarItem(item.chave, 'cobertura', e.currentTarget.value)} autoComplete="off" />
                   </div>
+                  )}
                   <TextInput
                     {...propsCampo(`item-${item.chave}-observacao`, 'Observação do item', { limite: LIMITES.observacaoItem })}
                     value={item.observacao}

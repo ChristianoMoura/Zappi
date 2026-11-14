@@ -25,13 +25,24 @@ export function lerQuantidade(texto) {
 // Valor do campo Produto para um item que já estava no pedido: ele mantém o preço da época (RN10)
 export const CONGELADO = 'congelado'
 
-// Produto do item: o congelado no pedido ou o escolhido agora do cardápio, com o preço atual
+// Produto do item: o congelado no pedido ou o escolhido agora do cardápio, com o preço atual. O
+// congelado leva a categoria atual do produto, se ele ainda estiver no cardápio.
 export function produtoDoItem(item, produtos) {
   if (item.produtoId === CONGELADO) {
-    const { produtoId, produto, sabor, unidade, precoUnitario } = item.congelado
-    return { id: produtoId, nome: produto, sabor, unidade, preco: precoUnitario }
+    const { produtoId, produto, unidade, precoUnitario } = item.congelado
+    const atual = produtos.find((p) => p.id === produtoId)
+    return { id: produtoId, nome: produto, unidade, preco: precoUnitario, categoria: atual?.categoria ?? null }
   }
   return produtos.find((p) => String(p.id) === String(item.produtoId))
+}
+
+// Recheio e cobertura só nos produtos de categoria que aceita (ZAP-136). Item antigo de um produto
+// que saiu do cardápio mantém os campos se já tinha recheio ou cobertura, para não sumir com eles.
+export function aceitaRecheio(item, produtos) {
+  const produto = produtoDoItem(item, produtos)
+  if (!produto) return false
+  if (produto.categoria) return Boolean(produto.categoria.aceitaRecheioCobertura)
+  return Boolean(item.recheio || item.cobertura)
 }
 
 // Preenche o formulário de edição com o pedido salvo (ZAP-91)
@@ -134,15 +145,15 @@ export function montarPedido(dados, produtos) {
     observacao: dados.observacao.trim(),
     itens: dados.itens.map((item) => {
       const produto = produtoDoItem(item, produtos)
+      const recheioCobertura = aceitaRecheio(item, produtos)
       return {
         produtoId: produto.id,
         produto: produto.nome,
-        sabor: produto.sabor,
         unidade: produto.unidade,
         quantidade: lerQuantidade(item.quantidade),
         precoUnitario: produto.preco,
-        ...(item.recheio.trim() ? { recheio: item.recheio.trim() } : {}),
-        ...(item.cobertura.trim() ? { cobertura: item.cobertura.trim() } : {}),
+        ...(recheioCobertura && item.recheio.trim() ? { recheio: item.recheio.trim() } : {}),
+        ...(recheioCobertura && item.cobertura.trim() ? { cobertura: item.cobertura.trim() } : {}),
         ...(item.observacao.trim() ? { observacao: item.observacao.trim() } : {}),
       }
     }),

@@ -19,7 +19,7 @@ export const pedidoDeTeste = (numero, status, nome, extras = {}) => ({
   dataRetirada: '2030-01-15T15:00',
   criadoEm: '2030-01-10T10:00',
   cliente: { nome, telefone: '5511987650000' },
-  itens: [{ produto: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100 }],
+  itens: [{ produtoId: 1, produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 2, precoUnitario: 100 }],
   mensagens: [],
   ...extras,
 })

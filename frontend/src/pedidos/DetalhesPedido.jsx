@@ -271,7 +271,7 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
               {pedido.itens.map((item, i) => (
                 <li key={i} className={classes.item}>
                   <span className={classes.itemLinha}>
-                    <span>{item.produto} · {item.sabor}</span>
+                    <span>{item.produto}</span>
                     <span>{moeda(subtotal(item))}</span>
                   </span>
                   <span className={classes.apoio}>
