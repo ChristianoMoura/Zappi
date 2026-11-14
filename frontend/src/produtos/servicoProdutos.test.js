@@ -9,7 +9,7 @@ import {
   SessaoExpiradaError,
 } from './servicoProdutos'
 
-const bolos = { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true }
+const bolos = { id: 1, nome: 'Bolos' }
 const doBackend = { id: 1, nome: 'Bolo de brigadeiro de chocolate', categoria: bolos, unidade: 'KG', preco: 100, descricao: null, foto: null, textoAlternativo: null, ativo: true }
 const comFoto = { ...doBackend, foto: 'https://storage.teste/1/1-abcd1234.jpg', textoAlternativo: 'Bolo de brigadeiro' }
 
