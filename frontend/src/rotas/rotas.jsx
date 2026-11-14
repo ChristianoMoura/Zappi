@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { LayoutPrincipal } from '../layout/LayoutPrincipal'
 import { PaginaCardapio } from '../paginas/PaginaCardapio'
+import { PaginaCategorias } from '../paginas/PaginaCategorias'
 import { PaginaEstabelecimento } from '../paginas/PaginaEstabelecimento'
 import { PaginaLogin } from '../paginas/PaginaLogin'
 import { PaginaNaoEncontrada } from '../paginas/PaginaNaoEncontrada'
@@ -28,6 +29,7 @@ export const rotas = createBrowserRouter([
           { path: '/produtos', Component: PaginaProdutos },
           { path: '/produtos/novo', Component: PaginaProduto },
           { path: '/produtos/:id', Component: PaginaProduto },
+          { path: '/categorias', Component: PaginaCategorias },
           { path: '/estabelecimento', Component: PaginaEstabelecimento },
         ],
       },

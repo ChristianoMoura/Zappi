@@ -224,3 +224,34 @@
     transform: scale(1.06);
   }
 }
+
+/* Grupo do menu lateral (ZAP-139): Produtos com Produtos e Categorias dentro */
+.grupoMenu[data-na-pagina] {
+  color: var(--mantine-color-zappi-7);
+}
+
+.grupoMenu :global(.mantine-NavLink-chevron) {
+  width: 20px;
+  height: 20px;
+}
+
+.subitemMenu {
+  border-left: 3px solid #ead9c2;
+  border-radius: 0 var(--mantine-radius-md) var(--mantine-radius-md) 0;
+  margin-top: 4px;
+  min-height: 44px;
+  font-weight: 500;
+
+  &[data-active] {
+    border-left-color: var(--mantine-color-zappi-7);
+    background: #e6f4f4;
+    color: #005a5a;
+    font-weight: 700;
+  }
+}
+
+.itemFlutuante[data-atual] {
+  background: #e6f4f4;
+  color: #005a5a;
+  font-weight: 700;
+}

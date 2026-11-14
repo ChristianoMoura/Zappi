@@ -1,14 +1,15 @@
 import { Button } from '@mantine/core'
 import { IconPencil, IconPhotoOff, IconTrash } from '@tabler/icons-react'
 import { Link } from 'react-router'
-import { nomeCompleto, precoParaTela, UNIDADES } from './regrasProdutos'
+import { precoParaTela, UNIDADES } from './regrasProdutos'
 import classes from './Produtos.module.css'
 import { SelosAlergenos } from './SelosAlergenos'
 
-// Cartão de um produto do cardápio (ZAP-41): foto com texto alternativo (NBR 17225 5.9.1),
-// tipo, sabor em destaque, preço com a unidade, os alérgenos (ZAP-132) e as ações de editar e excluir.
+// Cartão de um produto do cardápio (ZAP-41): foto com texto alternativo (NBR 17225 5.9.1), o nome
+// do produto (ZAP-139, sem o sabor), preço com a unidade, os alérgenos (ZAP-132) e as ações de
+// editar e excluir. Fica dentro da seção da categoria, por isso o nome é um título de nível 3.
 export function CartaoProduto({ produto, destaque, aoExcluir }) {
-  const nome = nomeCompleto(produto)
+  const nome = produto.nome
   return (
     <article className={`${classes.produto} ${destaque ? classes.chegou : ''}`} aria-labelledby={`produto-${produto.id}`}>
       {produto.foto ? (
@@ -22,10 +23,9 @@ export function CartaoProduto({ produto, destaque, aoExcluir }) {
         </div>
       )}
       <div className={classes.info}>
-        <span className={classes.tipo}>{produto.nome}</span>
-        <h2 id={`produto-${produto.id}`} className={classes.sabor} tabIndex={-1}>
-          {produto.sabor}
-        </h2>
+        <h3 id={`produto-${produto.id}`} className={classes.sabor} tabIndex={-1}>
+          {nome}
+        </h3>
         {produto.descricao ? <p className={classes.descricao}>{produto.descricao}</p> : null}
         <p className={classes.preco}>
           <strong>R$ {precoParaTela(produto.preco)}</strong>

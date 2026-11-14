@@ -1,9 +1,9 @@
 import { Alert, Button, Loader, Modal } from '@mantine/core'
-import { IconAlertCircle, IconCheck, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconAlertCircle, IconCategory, IconCheck, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
+import { agruparPorCategoria, quantidadeTexto } from '../categorias/regrasCategorias'
 import { CartaoProduto } from '../produtos/CartaoProduto'
-import { nomeCompleto } from '../produtos/regrasProdutos'
 import { buscarProdutos, excluirProduto } from '../produtos/servicoProdutos'
 import classes from '../produtos/Produtos.module.css'
 import { useTituloPagina } from './useTituloPagina'
@@ -76,6 +76,8 @@ export function PaginaProdutos() {
     )
   }
 
+  const grupos = agruparPorCategoria(produtos)
+
   function pedirExclusao(produto) {
     origemExclusao.current = document.activeElement
     setErroExcluir('')
@@ -93,7 +95,7 @@ export function PaginaProdutos() {
     try {
       await excluirProduto(paraExcluir.id)
       setProdutos((atuais) => atuais.filter((p) => p.id !== paraExcluir.id))
-      setAviso(`${nomeCompleto(paraExcluir)} saiu do cardápio.`)
+      setAviso(`${paraExcluir.nome} saiu do cardápio.`)
       origemExclusao.current = titulo.current
       setParaExcluir(null)
     } catch {
@@ -111,21 +113,34 @@ export function PaginaProdutos() {
             Produtos
           </h1>
         </div>
-        <Button component={Link} to="/produtos/novo" id="cadastrar" size="lg" leftSection={<IconPlus size={22} aria-hidden />} className={classes.cadastrar}>
-          Cadastrar produto
-        </Button>
+        <div className={classes.botoesCabecalho}>
+          <Button component={Link} to="/categorias" variant="outline" size="lg" leftSection={<IconCategory size={22} aria-hidden />} className={classes.cadastrar}>
+            Categorias
+          </Button>
+          <Button component={Link} to="/produtos/novo" id="cadastrar" size="lg" leftSection={<IconPlus size={22} aria-hidden />} className={classes.cadastrar}>
+            Cadastrar produto
+          </Button>
+        </div>
       </div>
 
       {produtos.length > 0 ? (
         <>
           <p className={classes.contagem}>
-            {produtos.length} {produtos.length === 1 ? 'produto' : 'produtos'} no cardápio
+            {quantidadeTexto(produtos.length)} no cardápio, em {grupos.length} {grupos.length === 1 ? 'categoria' : 'categorias'}
           </p>
-          <div className={classes.grade}>
-            {produtos.map((produto) => (
-              <CartaoProduto key={produto.id} produto={produto} destaque={destaque === produto.id} aoExcluir={pedirExclusao} />
-            ))}
-          </div>
+          {/* Uma seção por categoria, na ordem definida pela Lídia (ZAP-139) */}
+          {grupos.map(({ categoria, produtos: daCategoria }) => (
+            <section key={categoria.id} className={classes.secaoCategoria} aria-labelledby={`categoria-${categoria.id}`}>
+              <h2 id={`categoria-${categoria.id}`} className={classes.tituloCategoria}>
+                {categoria.nome} <small>{quantidadeTexto(daCategoria.length)}</small>
+              </h2>
+              <div className={classes.grade}>
+                {daCategoria.map((produto) => (
+                  <CartaoProduto key={produto.id} produto={produto} destaque={destaque === produto.id} aoExcluir={pedirExclusao} />
+                ))}
+              </div>
+            </section>
+          ))}
         </>
       ) : (
         <div className={classes.vazio}>
@@ -137,7 +152,7 @@ export function PaginaProdutos() {
       <Modal
         opened={paraExcluir !== null}
         onClose={fecharExclusao}
-        title={paraExcluir ? `Excluir ${nomeCompleto(paraExcluir).toLowerCase()}?` : ''}
+        title={paraExcluir ? `Excluir ${paraExcluir.nome}?` : ''}
         centered
         size="lg"
         returnFocus={false}

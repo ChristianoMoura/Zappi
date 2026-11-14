@@ -28,6 +28,8 @@ function paraTela(produto) {
     // Alérgenos da lista fixa (códigos) e o texto livre dos que não estão nela (ZAP-128, ZAP-131)
     alergenos: ordenarAlergenos(produto.alergenos),
     outrosAlergenos: produto.outrosAlergenos ?? '',
+    // Categoria do produto (ZAP-136): id, nome e se aceita recheio e cobertura
+    categoria: produto.categoria ?? null,
   }
 }
 
@@ -40,7 +42,7 @@ async function enviarFoto(id, enderecoTemporario, textoAlternativo) {
   return chamar(`/${id}/foto`, { metodo: 'POST', formulario })
 }
 
-// Só os ativos: os excluídos saem do cardápio (RN14)
+// Só os ativos (RN14), na ordem das categorias definida pela Lídia e, dentro delas, por nome
 export async function buscarProdutos() {
   return (await chamar('')).map(paraTela)
 }
@@ -54,7 +56,7 @@ export async function salvarProduto(dados) {
   const temFotoNova = String(dados.foto ?? '').startsWith('blob:')
   const corpo = {
     nome: dados.nome,
-    sabor: dados.sabor,
+    categoriaId: Number(dados.categoriaId),
     unidade: dados.unidade,
     preco: dados.preco,
     descricao: dados.descricao,

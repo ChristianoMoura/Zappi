@@ -45,7 +45,6 @@ function itemParaTela(item) {
   return {
     produtoId: item.produtoId,
     produto: item.produto,
-    sabor: item.sabor,
     unidade: item.unidade,
     quantidade: item.quantidade,
     precoUnitario: item.precoUnitario,
