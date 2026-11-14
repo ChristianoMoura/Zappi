@@ -128,7 +128,8 @@ const ICONE_AVANCO = {
   [STATUS.ENTREGUE]: <IconPackage size={22} aria-hidden />,
 }
 
-export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoAvancar, aoVoltar, aoAnonimizar, aoEnviarMensagem, enviando, acabouDe, erroAcao }) {
+// `busca`: o filtro do quadro (?status=3), que vai e volta com a edição do pedido (ZAP-179)
+export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoAvancar, aoVoltar, aoAnonimizar, aoEnviarMensagem, enviando, acabouDe, erroAcao, busca = '' }) {
   const coluna = pedido && COLUNAS.find((c) => c.status === pedido.status)
   const botaoEnviarRef = useRef(null)
   const sucessoRef = useRef(null)
@@ -189,7 +190,7 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
             <span className={`${classes.selo} ${pedido.status === STATUS.RECUSADO ? classes.seloRecusado : classes.seloStatus}`}>{coluna.nome}</span>
             {retiraHoje(pedido) && <span className={`${classes.selo} ${classes.seloHoje}`}>Retira hoje</span>}
             {podeEditar(pedido.status) && (
-              <Button component={Link} to={`/pedidos/${pedido.numero}/editar`} variant="subtle" size="md" leftSection={<IconPencil size={20} aria-hidden />} className={classes.editarPedido}>
+              <Button component={Link} to={`/pedidos/${pedido.numero}/editar${busca}`} variant="subtle" size="md" leftSection={<IconPencil size={20} aria-hidden />} className={classes.editarPedido}>
                 Editar pedido
               </Button>
             )}
