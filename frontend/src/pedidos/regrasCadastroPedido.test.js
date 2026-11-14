@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'vitest'
-import { aceitaRecheio, CONGELADO, formularioDoPedido, lerQuantidade, montarPedido, ordemDosCampos, totalDoFormulario, validarPedido } from './regrasCadastroPedido'
+import { formularioDoPedido, lerQuantidade, montarPedido, ordemDosCampos, totalDoFormulario, validarPedido } from './regrasCadastroPedido'
 
 // Domingo, 08/11/2026, às 10h15
 const hoje = new Date(2026, 10, 8, 10, 15)
 const produtos = [
-  { id: 1, nome: 'Bolo de brigadeiro de chocolate', unidade: 'KG', preco: 100, categoria: { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true } },
-  { id: 4, nome: 'Coxinha de frango', unidade: 'UN', preco: 1.2, categoria: { id: 2, nome: 'Salgados', aceitaRecheioCobertura: false } },
+  { id: 1, nome: 'Bolo de brigadeiro de chocolate', unidade: 'KG', preco: 100, categoria: { id: 1, nome: 'Bolos' } },
+  { id: 4, nome: 'Coxinha de frango', unidade: 'UN', preco: 1.2, categoria: { id: 2, nome: 'Salgados' } },
 ]
-const item = (extras) => ({ chave: 1, produtoId: '1', quantidade: '1,5', recheio: '', cobertura: '', observacao: '', ...extras })
+const item = (extras) => ({ chave: 1, produtoId: '1', quantidade: '1,5', observacao: '', ...extras })
 const dados = (extras) => ({
   clienteNome: 'Ana Souza',
   clienteWhatsapp: '11987650012',
@@ -82,23 +82,12 @@ describe('regras do cadastro de pedido (ZAP-89, RF13)', () => {
     expect(pedido.itens[1].observacao).toBe('massa branca')
   })
 
-  test('recheio e cobertura só valem na categoria que aceita (ZAP-139)', () => {
-    expect(aceitaRecheio(item(), produtos)).toBe(true)
-    expect(aceitaRecheio(item({ produtoId: '4' }), produtos)).toBe(false)
-    expect(aceitaRecheio(item({ produtoId: '' }), produtos)).toBe(false)
-    const itens = [item({ recheio: ' Brigadeiro ' }), item({ chave: 2, produtoId: '4', quantidade: '50', recheio: 'Frango', cobertura: 'Catupiry' })]
-    const pedido = montarPedido(dados({ itens }), produtos)
-    expect(pedido.itens[0].recheio).toBe('Brigadeiro')
-    expect(pedido.itens[1]).not.toHaveProperty('recheio')
-    expect(pedido.itens[1]).not.toHaveProperty('cobertura')
-  })
-
-  test('item antigo de produto que saiu do cardápio mantém o recheio que já tinha', () => {
-    const congelado = { produtoId: 9, produto: 'Bolo de nozes', unidade: 'KG', quantidade: 2, precoUnitario: 120, recheio: 'Doce de leite' }
-    expect(aceitaRecheio(item({ produtoId: CONGELADO, congelado, recheio: 'Doce de leite' }), produtos)).toBe(true)
-    expect(aceitaRecheio(item({ produtoId: CONGELADO, congelado: { ...congelado, recheio: null } }), produtos)).toBe(false)
-    // Ainda no cardápio: vale a categoria atual do produto
-    expect(aceitaRecheio(item({ produtoId: CONGELADO, congelado: { ...congelado, produtoId: 4 }, recheio: 'x' }), produtos)).toBe(false)
+  test('o item vai só com a observação, sem recheio e cobertura (ZAP-166)', () => {
+    const pedido = montarPedido(dados({ itens: [item({ observacao: ' Tema unicórnio ' })] }), produtos)
+    expect(pedido.itens[0]).toEqual({ produtoId: 1, produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 1.5, precoUnitario: 100, observacao: 'Tema unicórnio' })
+    const formulario = formularioDoPedido({ cliente: { nome: 'Ana', telefone: '5511987650012' }, dataRetirada: '2026-11-14T08:30', itens: [{ produtoId: 1, produto: 'Bolo', unidade: 'KG', quantidade: 2, precoUnitario: 100, observacao: 'Recheio: brigadeiro.' }] })
+    expect(formulario.itens[0]).not.toHaveProperty('recheio')
+    expect(formulario.itens[0].observacao).toBe('Recheio: brigadeiro.')
   })
 
   test('a ordem dos campos segue cliente, itens, retirada e observações (NBR 17225 5.1.4)', () => {

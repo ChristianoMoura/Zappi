@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buscarCategorias, CategoriaRecusadaError, excluirCategoria, reordenarCategorias, salvarCategoria, ServicoIndisponivelError } from './servicoCategorias'
 
 const json = (status, corpo) => new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
-const bolos = { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true }
-const salgados = { id: 2, nome: 'Salgados', aceitaRecheioCobertura: false }
+const bolos = { id: 1, nome: 'Bolos' }
+const salgados = { id: 2, nome: 'Salgados' }
 
 function simularBackend(...respostas) {
   const buscar = vi.fn(async () => respostas.shift() ?? json(500, {}))
@@ -31,13 +31,13 @@ describe('servicoCategorias (ZAP-139)', () => {
   })
 
   it('cria com POST e renomeia com PUT', async () => {
-    const buscar = simularBackend(json(201, { id: 3, nome: 'Doces finos', aceitaRecheioCobertura: false }), json(200, { ...bolos, nome: 'Bolos de festa' }))
+    const buscar = simularBackend(json(201, { id: 3, nome: 'Doces finos' }), json(200, { ...bolos, nome: 'Bolos de festa' }))
 
-    await salvarCategoria({ nome: 'Doces finos', aceitaRecheioCobertura: false })
-    await salvarCategoria({ id: 1, nome: 'Bolos de festa', aceitaRecheioCobertura: true })
+    await salvarCategoria({ nome: 'Doces finos' })
+    await salvarCategoria({ id: 1, nome: 'Bolos de festa' })
 
     expect(buscar.mock.calls.map(([endereco, opcoes]) => `${opcoes.method} ${endereco}`)).toEqual(['POST /api/categorias', 'PUT /api/categorias/1'])
-    expect(JSON.parse(buscar.mock.calls[0][1].body)).toEqual({ nome: 'Doces finos', aceitaRecheioCobertura: false })
+    expect(JSON.parse(buscar.mock.calls[0][1].body)).toEqual({ nome: 'Doces finos' })
   })
 
   it('manda a nova ordem com todos os ids', async () => {

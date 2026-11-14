@@ -16,9 +16,9 @@ vi.mock('../categorias/servicoCategorias', async (importarOriginal) => ({
 }))
 vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarProdutos: vi.fn() }))
 
-const bolos = { id: 1, nome: 'Bolos', aceitaRecheioCobertura: true }
-const salgados = { id: 2, nome: 'Salgados', aceitaRecheioCobertura: false }
-const doces = { id: 3, nome: 'Doces finos', aceitaRecheioCobertura: false }
+const bolos = { id: 1, nome: 'Bolos' }
+const salgados = { id: 2, nome: 'Salgados' }
+const doces = { id: 3, nome: 'Doces finos' }
 
 const nomes = () => screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
 const anuncio = () => screen.getAllByRole('status').find((s) => s.getAttribute('aria-live') === 'polite')
@@ -42,18 +42,18 @@ describe('Categorias do cardápio (ZAP-139, US3, RF05)', () => {
       { id: 12, nome: 'Cento de coxinha', categoria: salgados },
     ])
     reordenarCategorias.mockReset().mockImplementation(async (ids) => ids.map((id) => [bolos, salgados, doces].find((c) => c.id === id)))
-    salvarCategoria.mockReset().mockImplementation(async (dados) => ({ id: dados.id ?? 9, nome: dados.nome, aceitaRecheioCobertura: dados.aceitaRecheioCobertura }))
+    salvarCategoria.mockReset().mockImplementation(async (dados) => ({ id: dados.id ?? 9, nome: dados.nome }))
     excluirCategoria.mockReset().mockResolvedValue(undefined)
   })
 
-  test('lista as categorias na ordem da Lídia, com os produtos e o recheio de cada uma', async () => {
+  test('lista as categorias na ordem da Lídia, com os produtos de cada uma', async () => {
     const titulo = await abrir()
 
     expect(titulo).toHaveFocus()
     expect(nomes()).toEqual(['Bolos', 'Salgados', 'Doces finos'])
     const primeira = screen.getByRole('listitem', { name: 'Bolos' })
     expect(within(primeira).getByText('2 produtos')).toBeVisible()
-    expect(within(primeira).getByText(/Aceita recheio e cobertura/)).toBeVisible()
+    expect(within(primeira).queryByText(/recheio/i)).not.toBeInTheDocument()
     expect(within(screen.getByRole('listitem', { name: 'Doces finos' })).getByText('0 produtos')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Mover Bolos, posição 1 de 3' })).toHaveAccessibleDescription(/Espaço para pegar/)
   })
@@ -123,7 +123,7 @@ describe('Categorias do cardápio (ZAP-139, US3, RF05)', () => {
     expect(nomes()).toEqual(['Bolos', 'Salgados', 'Doces finos'])
   })
 
-  test('cria uma categoria no fim da lista, com recheio e cobertura, e não aceita nome repetido', async () => {
+  test('cria uma categoria no fim da lista só com o nome, e não aceita nome repetido (ZAP-166)', async () => {
     const usuario = userEvent.setup()
     await abrir()
 
@@ -138,10 +138,10 @@ describe('Categorias do cardápio (ZAP-139, US3, RF05)', () => {
 
     await usuario.clear(nome)
     await usuario.type(nome, 'Tortas')
-    await usuario.click(within(janela).getByRole('checkbox', { name: /aceitam recheio e cobertura/ }))
+    expect(within(janela).queryByRole('checkbox')).not.toBeInTheDocument()
     await usuario.click(within(janela).getByRole('button', { name: 'Salvar categoria' }))
 
-    expect(salvarCategoria).toHaveBeenCalledWith({ id: undefined, nome: 'Tortas', aceitaRecheioCobertura: true })
+    expect(salvarCategoria).toHaveBeenCalledWith({ id: undefined, nome: 'Tortas' })
     expect(await screen.findByText('Categoria Tortas criada no fim da lista.')).toBeVisible()
     expect(nomes()).toEqual(['Bolos', 'Salgados', 'Doces finos', 'Tortas'])
   })
@@ -159,7 +159,7 @@ describe('Categorias do cardápio (ZAP-139, US3, RF05)', () => {
     await usuario.type(nome, 'Pães')
     await usuario.click(within(janela).getByRole('button', { name: 'Salvar categoria' }))
 
-    expect(salvarCategoria).toHaveBeenCalledWith({ id: 2, nome: 'Pães', aceitaRecheioCobertura: false })
+    expect(salvarCategoria).toHaveBeenCalledWith({ id: 2, nome: 'Pães' })
     expect(await within(janela).findByText('Já existe a categoria "Pães".')).toBeVisible()
   })
 

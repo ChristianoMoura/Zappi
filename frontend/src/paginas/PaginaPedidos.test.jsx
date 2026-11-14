@@ -90,7 +90,7 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
           producaoEm: '2030-01-12T08:30',
           concluidoEm: '2030-01-14T17:45',
           itens: [
-            { produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 1.5, precoUnitario: 100, recheio: 'Brigadeiro', cobertura: 'Granulado', observacao: 'Massa branca' },
+            { produto: 'Bolo de brigadeiro de chocolate', unidade: 'KG', quantidade: 1.5, precoUnitario: 100, observacao: 'Recheio: brigadeiro. Cobertura: granulado.' },
             { produto: 'Cento de coxinha', unidade: 'UN', quantidade: 1, precoUnitario: 120 },
           ],
         }),
@@ -106,8 +106,7 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
         'Bolo de brigadeiro de chocolate',
         'R$ 150,00',
         '1,5 kg × R$ 100,00/kg',
-        'Recheio: Brigadeiro · Cobertura: Granulado',
-        'Obs.: Massa branca',
+        'Obs.: Recheio: brigadeiro. Cobertura: granulado.',
         'Cento de coxinha',
         'R$ 120,00',
         'TotalR$ 270,00',
