@@ -1,11 +1,12 @@
 import { Alert, Button, Loader, NativeSelect, SegmentedControl, Textarea, TextInput } from '@mantine/core'
-import { IconAlertCircle, IconCamera, IconCheck, IconChevronLeft, IconInfoCircle, IconTrash } from '@tabler/icons-react'
+import { IconAlertCircle, IconCamera, IconCheck, IconChevronLeft, IconEye, IconEyeOff, IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { TIPOS_FOTO, validarFoto } from '../comum/regrasFoto'
 import { buscarCategorias } from '../categorias/servicoCategorias'
 import { ALERGENOS, LIMITES, lerPreco, ORDEM_CAMPOS, precoParaTela, sugerirTextoAlternativo, UNIDADES, validarProduto } from '../produtos/regrasProdutos'
-import { buscarProduto, ProdutoNaoEncontradoError, salvarProduto } from '../produtos/servicoProdutos'
+import { JanelaTirarDoCardapio } from '../produtos/JanelaTirarDoCardapio'
+import { buscarProduto, ProdutoNaoEncontradoError, salvarProduto, tirarDoCardapio, voltarAoCardapio } from '../produtos/servicoProdutos'
 import classes from '../produtos/Produtos.module.css'
 import { IconeAlergeno } from '../produtos/SelosAlergenos'
 import { useTituloPagina } from './useTituloPagina'
@@ -41,6 +42,11 @@ export function PaginaProduto() {
   const titulo = useRef(null)
   const arquivo = useRef(null)
   const botaoFoto = useRef(null)
+  const botaoEstado = useRef(null)
+  // Tirar do cardápio e voltar (ZAP-155): valem na hora, sem precisar salvar o formulário
+  const [confirmarTirar, setConfirmarTirar] = useState(false)
+  const [trocandoEstado, setTrocandoEstado] = useState(false)
+  const [erroTirar, setErroTirar] = useState('')
 
   useEffect(() => {
     let ativo = true
@@ -178,6 +184,35 @@ export function PaginaProduto() {
     classNames: { label: classes.rotulo, input: classes.campo, error: classes.erroCampo, description: classes.dica },
   })
 
+  async function tirar() {
+    setTrocandoEstado(true)
+    setErroTirar('')
+    try {
+      const atualizado = await tirarDoCardapio(original.id)
+      setOriginal((atual) => ({ ...atual, noCardapio: atualizado.noCardapio }))
+      setConfirmarTirar(false)
+      setAviso({ tipo: 'ok', texto: `${original.nome} saiu do cardápio. Ele continua na lista de produtos.` })
+    } catch {
+      setErroTirar('Não foi possível tirar do cardápio agora. Tente novamente em alguns minutos.')
+    } finally {
+      setTrocandoEstado(false)
+    }
+  }
+
+  async function voltarAoCardapioAgora() {
+    setTrocandoEstado(true)
+    try {
+      const atualizado = await voltarAoCardapio(original.id)
+      setOriginal((atual) => ({ ...atual, noCardapio: atualizado.noCardapio }))
+      setAviso({ tipo: 'ok', texto: `${original.nome} voltou ao cardápio.` })
+      setTimeout(() => botaoEstado.current?.focus())
+    } catch {
+      setAviso({ tipo: 'erro', texto: 'Não foi possível voltar ao cardápio agora. Tente novamente em alguns minutos.' })
+    } finally {
+      setTrocandoEstado(false)
+    }
+  }
+
   return (
     <div className={classes.pagina}>
       <div className={classes.formTopo}>
@@ -188,6 +223,31 @@ export function PaginaProduto() {
           {editando ? `Editar ${original.nome}` : 'Cadastrar produto'}
         </h1>
       </div>
+
+      {/* Se o produto está no cardápio, com o botão de trocar (ZAP-155) */}
+      {editando && (
+        <div className={classes.situacao}>
+          <b>{original.noCardapio !== false ? 'No cardápio' : 'Fora do cardápio'}</b>
+          {original.noCardapio !== false ? (
+            <Button ref={botaoEstado} variant="outline" color="#5c5048" size="md" onClick={() => { setErroTirar(''); setConfirmarTirar(true) }} leftSection={<IconEyeOff size={22} aria-hidden />}>
+              Tirar do cardápio
+            </Button>
+          ) : (
+            <Button ref={botaoEstado} size="md" onClick={voltarAoCardapioAgora} loading={trocandoEstado} loaderProps={{ type: 'dots' }} leftSection={<IconEye size={22} aria-hidden />}>
+              Voltar ao cardápio
+            </Button>
+          )}
+        </div>
+      )}
+
+      <JanelaTirarDoCardapio
+        produto={editando && confirmarTirar ? original : null}
+        aoFechar={() => !trocandoEstado && setConfirmarTirar(false)}
+        aoConfirmar={tirar}
+        enviando={trocandoEstado}
+        erro={erroTirar}
+        aoTerminarDeFechar={() => botaoEstado.current?.focus()}
+      />
 
       <form
         className={classes.formulario}
