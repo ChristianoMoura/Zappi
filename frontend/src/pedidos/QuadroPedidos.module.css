@@ -668,3 +668,61 @@
   margin-left: auto;
   padding-inline: 8px;
 }
+
+/* ZAP-165: no computador, o quadro ocupa a altura que sobra da tela e cada coluna rola sozinha,
+   só na lista de cards. O título da página, o filtro, o "Novo pedido" e o título de cada coluna
+   ficam sempre à vista. No celular nada muda: abas, com a página rolando. */
+@media (min-width: 48em) {
+  .paginaQuadro {
+    /* Altura da tela menos o topo do painel e o espaço em volta do conteúdo (AppShell) */
+    height: calc(100dvh - var(--app-shell-header-offset, 68px) - 2 * var(--mantine-spacing-md));
+    /* Numa tela muito baixa, a página volta a rolar em vez de espremer as colunas */
+    min-height: 420px;
+  }
+
+  .paginaQuadro .quadro {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .paginaQuadro .coluna {
+    max-height: 100%;
+    min-height: 0;
+  }
+
+  .cartoes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    /* A barra fica na borda da coluna, e o foco tem espaço por dentro */
+    margin: 0 -12px -12px;
+    padding: 4px 12px 12px;
+    overflow-y: auto;
+    /* No fim da coluna, a rolagem não passa para a página */
+    overscroll-behavior: contain;
+    border-radius: 0 0 14px 14px;
+    /* Barra sempre visível quando sobram cards, em cinza escuro (3,9:1 sobre o fundo da coluna) */
+    scrollbar-width: thin;
+    scrollbar-color: #8c8178 transparent;
+
+    &::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #8c8178;
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+
+    /* O foco da lista aparece por dentro, para a coluna não cortar o contorno */
+    &:focus-visible {
+      outline: 3px solid var(--zappi-cor-foco);
+      outline-offset: -3px;
+    }
+  }
+}

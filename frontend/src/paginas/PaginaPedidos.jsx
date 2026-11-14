@@ -10,7 +10,9 @@ import { AcaoNaoPermitidaError, anonimizarCliente, avancarPedido, buscarPedidos,
 import classes from '../pedidos/QuadroPedidos.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
-function ListaDaColuna({ coluna, pedidos, semPedidos, aoAbrir }) {
+// `rolavel`: no computador, os cards ficam numa área com rolagem própria (ZAP-165), que recebe o
+// foco pelo Tab para rolar com as setas, com o nome da coluna como rótulo (NBR 17225 5.1.1)
+function ListaDaColuna({ coluna, pedidos, semPedidos, aoAbrir, rolavel = false }) {
   if (pedidos.length === 0) {
     return (
       <p className={classes.vazio}>
@@ -18,7 +20,21 @@ function ListaDaColuna({ coluna, pedidos, semPedidos, aoAbrir }) {
       </p>
     )
   }
-  return pedidos.map((pedido) => <CartaoPedido key={pedido.numero} pedido={pedido} aoAbrir={aoAbrir} />)
+  const cartoes = pedidos.map((pedido) => <CartaoPedido key={pedido.numero} pedido={pedido} aoAbrir={aoAbrir} />)
+  if (!rolavel) return cartoes
+  return (
+    <div role="group" tabIndex={0} className={classes.cartoes} aria-label={`Pedidos da coluna ${coluna.nome}, ${quantidadeDePedidos(pedidos.length)}`}>
+      {cartoes}
+    </div>
+  )
+}
+
+const quantidadeDePedidos = (n) => `${n} ${n === 1 ? 'pedido' : 'pedidos'}`
+
+// O card aparece dentro da sua coluna (que rola sozinha no computador) e recebe o foco
+function focarCartao(cartao, bloco = 'nearest') {
+  cartao?.scrollIntoView?.({ block: bloco })
+  cartao?.focus({ preventScroll: true })
 }
 
 // Quadro de pedidos (US4, RF07, RF08): no computador, uma coluna por status; no celular,
@@ -72,8 +88,7 @@ export function PaginaPedidos() {
   useEffect(() => {
     if (carregando || (!novo && !focoAoVoltar)) return
     const alvo = novo ? document.querySelector(`[data-numero-pedido="${novo.numero}"]`) : document.getElementById(focoAoVoltar)
-    alvo?.focus()
-    alvo?.scrollIntoView?.({ block: 'center' })
+    focarCartao(alvo, 'center')
   }, [carregando, novo, focoAoVoltar])
 
   useEffect(() => {
@@ -123,7 +138,7 @@ export function PaginaPedidos() {
     // Depois de confirmar ou recusar, o card mudou de coluna: o foco volta para ele no lugar novo
     const numero = aberto?.numero
     const cartao = numero && document.querySelector(`[data-numero-pedido="${numero}"]`)
-    ;(cartao ?? origemFoco.current)?.focus()
+    focarCartao(cartao || origemFoco.current)
   }
 
   function atualizar(pedido) {
@@ -189,7 +204,7 @@ export function PaginaPedidos() {
   }
 
   return (
-    <div className={classes.pagina}>
+    <div className={`${classes.pagina} ${telaGrande ? classes.paginaQuadro : ''}`}>
       <div className={classes.cabecalho}>
         <div>
           <h1 className={classes.titulo}>Pedidos</h1>
@@ -222,7 +237,7 @@ export function PaginaPedidos() {
                     {daColuna.length}
                   </span>
                 </h2>
-                <ListaDaColuna coluna={coluna} pedidos={daColuna} semPedidos={semPedidos} aoAbrir={abrir} />
+                <ListaDaColuna coluna={coluna} pedidos={daColuna} semPedidos={semPedidos} aoAbrir={abrir} rolavel />
               </section>
             )
           })}
