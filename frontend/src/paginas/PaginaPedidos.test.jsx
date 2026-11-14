@@ -54,14 +54,40 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       expect(doze).toHaveTextContent('R$ 200,00')
     })
 
-    test('o filtro com rótulo visível mostra a coluna dos recusados (NBR 17225 5.3.1)', async () => {
-      const usuario = userEvent.setup()
+    test('a lista "Mostrar" tem rótulo visível, "Todos" e cada status com a quantidade (ZAP-179, NBR 17225 5.3.1)', async () => {
       await abrirQuadro()
 
-      await usuario.click(screen.getByRole('switch', { name: 'Mostrar recusados' }))
+      const filtro = screen.getByRole('combobox', { name: 'Mostrar' })
+      expect(filtro).toHaveValue('')
+      expect(within(filtro).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos', 'Novo (1)', 'Confirmado (1)', 'Em produção (1)', 'Concluído (1)', 'Entregue (0)', 'Recusado (1)'])
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    })
 
-      const recusados = screen.getByRole('region', { name: /Recusado/ })
+    test('escolhendo um status, mostra só a coluna dele, em grade, guarda no endereço e anuncia o resultado', async () => {
+      const usuario = userEvent.setup()
+      const roteador = renderizarQuadro()
+      await screen.findByRole('heading', { level: 1, name: 'Pedidos' })
+
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '5')
+
+      expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Recusado1'])
+      const recusados = screen.getByRole('group', { name: 'Pedidos da coluna Recusado, 1 pedido' })
       expect(within(recusados).getByRole('button', { name: /Pedido 7, Rita Gomes/ })).toBeVisible()
+      expect(roteador.state.location.search).toBe('?status=5')
+      expect(screen.getByText('Mostrando 1 pedido em Recusado.')).toBeInTheDocument()
+    })
+
+    test('abre já filtrado pelo endereço e mostra "Ver todos" quando não há pedidos no status', async () => {
+      const usuario = userEvent.setup()
+      await abrirQuadro('/pedidos?status=6')
+
+      expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveValue('6')
+      expect(screen.getByText('Nenhum pedido em Entregue.')).toBeVisible()
+      await usuario.click(screen.getByRole('button', { name: 'Ver todos' }))
+
+      expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveValue('')
+      expect(screen.getByRole('combobox', { name: 'Mostrar' })).toHaveFocus()
+      expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4)
     })
 
     test('abre os detalhes do pedido e devolve o foco ao card ao fechar (RF08)', async () => {
@@ -165,13 +191,15 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       expect(screen.getByRole('button', { name: /Pedido 10, Carla Dias/ })).toBeVisible()
     })
 
-    test('ligar o filtro abre a aba dos recusados', async () => {
+    test('com um status no filtro, mostra a lista dele, sem as abas (ZAP-179)', async () => {
       const usuario = userEvent.setup()
       await abrirQuadro()
+      expect(screen.queryByRole('tab', { name: /Recusado/ })).not.toBeInTheDocument()
 
-      await usuario.click(screen.getByRole('switch', { name: 'Mostrar recusados' }))
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '5')
 
-      expect(screen.getByRole('tab', { name: 'Recusado 1', selected: true })).toBeVisible()
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: /Recusado/ })).toBeVisible()
       expect(screen.getByRole('button', { name: /Pedido 7, Rita Gomes/ })).toBeVisible()
     })
   })

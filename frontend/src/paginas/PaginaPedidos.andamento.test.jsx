@@ -112,13 +112,16 @@ describe('Andamento do pedido e voltar coluna (ZAP-77, RN03)', () => {
     expect(detalhes).toHaveTextContent('Entregue15/01 às 10:30')
     expect(within(detalhes).getByRole('button', { name: 'Voltar para concluído' })).toBeVisible()
     expect(within(detalhes).queryByRole('button', { name: 'Marcar como entregue' })).not.toBeInTheDocument()
-    const coluna = screen.getByRole('region', { name: /Entregue/ })
-    expect(within(coluna).getByRole('button', { name: 'Pedido 8, Pedro Alves, entregue em 15/01 às 10:30, R$ 200,00' })).toHaveTextContent('Entregue em 15/01 às 10:30')
+    // Em "Todos", o Entregue fica oculto (ZAP-179): o card aparece escolhendo Entregue no filtro
+    expect(screen.queryByRole('region', { name: /Entregue/ })).not.toBeInTheDocument()
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Fechar detalhes' }))
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '6')
+    expect(screen.getByRole('button', { name: 'Pedido 8, Pedro Alves, entregue em 15/01 às 10:30, R$ 200,00' })).toHaveTextContent('Entregue em 15/01 às 10:30')
   })
 
   test('volta um Entregue para Concluído com confirmação, sem o lembrete do aviso de pronto (ZAP-169)', async () => {
     const usuario = userEvent.setup()
-    const detalhes = await abrirPedido(usuario, 7)
+    const detalhes = await abrirPedido(usuario, 7, '/pedidos?status=6')
 
     expect(within(detalhes).queryByRole('button', { name: /Marcar como/ })).not.toBeInTheDocument()
     expect(within(detalhes).queryByRole('link', { name: 'Editar pedido' })).not.toBeInTheDocument()
@@ -133,6 +136,9 @@ describe('Andamento do pedido e voltar coluna (ZAP-77, RN03)', () => {
 
     expect(voltarPedido).toHaveBeenCalledWith(7)
     expect(await within(detalhes).findByText('Pedido voltou para a coluna Concluído.')).toBeVisible()
+    // Com o filtro em Entregue, o card sai da tela; em "Todos", ele está em Concluído
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Fechar detalhes' }))
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Mostrar' }), '')
     const coluna = screen.getByRole('region', { name: /Concluído/ })
     expect(within(coluna).getByRole('button', { name: /Pedido 7, Lia Moraes/ })).toBeInTheDocument()
   })
