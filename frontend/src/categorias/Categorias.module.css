@@ -131,22 +131,6 @@
   white-space: nowrap;
 }
 
-.caixaRecheio {
-  border: 2px solid #e7ddd2;
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-
-.caixaRecheio:has(input:checked) {
-  border-color: var(--mantine-color-zappi-7);
-  background: #e6f4f4;
-}
-
-.rotuloRecheio {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
 @container (min-width: 620px) {
   .categoria {
     grid-template-columns: auto auto minmax(0, 1fr) auto;

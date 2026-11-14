@@ -9,10 +9,11 @@ import { dataLocal, HORARIOS_RETIRADA, partesDaRetirada, subtotal } from './regr
 const horaLocal = (data) =>
   `${dataLocal(data)}T${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`
 
-export const LIMITES = { clienteNome: 100, observacao: 500, recheio: 100, cobertura: 100, observacaoItem: 300 }
+// Recheio e cobertura saíram do sistema (ZAP-166): a personalização vai na observação do item
+export const LIMITES = { clienteNome: 100, observacao: 500, observacaoItem: 300 }
 
 let proximaChave = 0
-export const itemVazio = () => ({ chave: ++proximaChave, produtoId: '', quantidade: '', recheio: '', cobertura: '', observacao: '' })
+export const itemVazio = () => ({ chave: ++proximaChave, produtoId: '', quantidade: '', observacao: '' })
 
 // Lê a quantidade como a Lídia digita: "2", "1,5" ou "1.5". Null se vazia, NaN se não for número.
 export function lerQuantidade(texto) {
@@ -36,15 +37,6 @@ export function produtoDoItem(item, produtos) {
   return produtos.find((p) => String(p.id) === String(item.produtoId))
 }
 
-// Recheio e cobertura só nos produtos de categoria que aceita (ZAP-136). Item antigo de um produto
-// que saiu do cardápio mantém os campos se já tinha recheio ou cobertura, para não sumir com eles.
-export function aceitaRecheio(item, produtos) {
-  const produto = produtoDoItem(item, produtos)
-  if (!produto) return false
-  if (produto.categoria) return Boolean(produto.categoria.aceitaRecheioCobertura)
-  return Boolean(item.recheio || item.cobertura)
-}
-
 // Preenche o formulário de edição com o pedido salvo (ZAP-91)
 export function formularioDoPedido(pedido) {
   return {
@@ -59,8 +51,6 @@ export function formularioDoPedido(pedido) {
       produtoId: CONGELADO,
       congelado: item,
       quantidade: String(item.quantidade).replace('.', ','),
-      recheio: item.recheio ?? '',
-      cobertura: item.cobertura ?? '',
       observacao: item.observacao ?? '',
     })),
   }
@@ -145,15 +135,12 @@ export function montarPedido(dados, produtos) {
     observacao: dados.observacao.trim(),
     itens: dados.itens.map((item) => {
       const produto = produtoDoItem(item, produtos)
-      const recheioCobertura = aceitaRecheio(item, produtos)
       return {
         produtoId: produto.id,
         produto: produto.nome,
         unidade: produto.unidade,
         quantidade: lerQuantidade(item.quantidade),
         precoUnitario: produto.preco,
-        ...(recheioCobertura && item.recheio.trim() ? { recheio: item.recheio.trim() } : {}),
-        ...(recheioCobertura && item.cobertura.trim() ? { cobertura: item.cobertura.trim() } : {}),
         ...(item.observacao.trim() ? { observacao: item.observacao.trim() } : {}),
       }
     }),

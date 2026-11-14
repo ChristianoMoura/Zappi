@@ -1,5 +1,5 @@
-import { Alert, Button, Checkbox, Loader, Modal, TextInput } from '@mantine/core'
-import { IconAlertCircle, IconCake, IconCheck, IconChevronLeft, IconGripVertical, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { Alert, Button, Loader, Modal, TextInput } from '@mantine/core'
+import { IconAlertCircle, IconCheck, IconChevronLeft, IconGripVertical, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { LIMITE_NOME, moverNaLista, quantidadeTexto, validarNomeCategoria } from '../categorias/regrasCategorias'
@@ -241,7 +241,7 @@ export function PaginaCategorias() {
 
   async function salvarJanela(evento) {
     evento.preventDefault()
-    const { categoria, nome, aceita } = janela
+    const { categoria, nome } = janela
     const erro = validarNomeCategoria(nome, categorias, categoria?.id ?? null)
     if (erro) {
       setJanela({ ...janela, erro })
@@ -250,7 +250,7 @@ export function PaginaCategorias() {
     }
     setJanela({ ...janela, erro: '', salvando: true })
     try {
-      const salva = await salvarCategoria({ id: categoria?.id, nome: nome.trim(), aceitaRecheioCobertura: aceita })
+      const salva = await salvarCategoria({ id: categoria?.id, nome: nome.trim() })
       setCategorias((lista) => (categoria ? lista.map((c) => (c.id === salva.id ? salva : c)) : [...lista, salva]))
       setAviso({ tipo: 'ok', texto: categoria ? 'Alterações salvas.' : `Categoria ${salva.nome} criada no fim da lista.` })
       focoDepois.current = () => document.getElementById(`editar-${salva.id}`)
@@ -297,7 +297,7 @@ export function PaginaCategorias() {
             size="lg"
             leftSection={<IconPlus size={22} aria-hidden />}
             className={produtos.cadastrar}
-            onClick={(e) => abrirJanela({ tipo: 'formulario', categoria: null, nome: '', aceita: false, erro: '' }, e.currentTarget)}
+            onClick={(e) => abrirJanela({ tipo: 'formulario', categoria: null, nome: '', erro: '' }, e.currentTarget)}
           >
             Nova categoria
           </Button>
@@ -345,15 +345,6 @@ export function PaginaCategorias() {
                   </h2>
                   <p className={classes.detalhes}>
                     <span>{quantidadeTexto(contagem[categoria.id] ?? 0)}</span>
-                    <span>
-                      {categoria.aceitaRecheioCobertura ? (
-                        <>
-                          <IconCake size={18} aria-hidden /> Aceita recheio e cobertura
-                        </>
-                      ) : (
-                        'Sem recheio e cobertura'
-                      )}
-                    </span>
                   </p>
                   <div className={classes.botoes}>
                     <Button
@@ -361,7 +352,7 @@ export function PaginaCategorias() {
                       variant="outline"
                       leftSection={<IconPencil size={20} aria-hidden />}
                       aria-label={`Editar ${categoria.nome}`}
-                      onClick={(e) => abrirJanela({ tipo: 'formulario', categoria, nome: categoria.nome, aceita: categoria.aceitaRecheioCobertura, erro: '' }, e.currentTarget)}
+                      onClick={(e) => abrirJanela({ tipo: 'formulario', categoria, nome: categoria.nome, erro: '' }, e.currentTarget)}
                     >
                       Editar
                     </Button>
@@ -416,14 +407,6 @@ export function PaginaCategorias() {
               maxLength={LIMITE_NOME}
               autoComplete="off"
               classNames={{ label: produtos.rotulo, input: produtos.campo, error: produtos.erroCampo }}
-            />
-            <Checkbox
-              size="md"
-              checked={janela.aceita}
-              onChange={(e) => setJanela({ ...janela, aceita: e.currentTarget.checked })}
-              label={<span className={classes.rotuloRecheio}>Os produtos desta categoria aceitam recheio e cobertura</span>}
-              description="Os campos aparecem no pedido, no painel e no cardápio."
-              className={classes.caixaRecheio}
             />
             <div className={produtos.botoesJanela}>
               <Button variant="outline" size="lg" onClick={fecharJanela} disabled={janela.salvando}>

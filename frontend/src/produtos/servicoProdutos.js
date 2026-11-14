@@ -28,7 +28,7 @@ function paraTela(produto) {
     // Alérgenos da lista fixa (códigos) e o texto livre dos que não estão nela (ZAP-128, ZAP-131)
     alergenos: ordenarAlergenos(produto.alergenos),
     outrosAlergenos: produto.outrosAlergenos ?? '',
-    // Categoria do produto (ZAP-136): id, nome e se aceita recheio e cobertura
+    // Categoria do produto (ZAP-136): id e nome
     categoria: produto.categoria ?? null,
   }
 }

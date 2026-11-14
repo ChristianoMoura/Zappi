@@ -48,8 +48,6 @@ function itemParaTela(item) {
     unidade: item.unidade,
     quantidade: item.quantidade,
     precoUnitario: item.precoUnitario,
-    recheio: opcional(item.recheio),
-    cobertura: opcional(item.cobertura),
     observacao: opcional(item.observacao),
   }
 }
