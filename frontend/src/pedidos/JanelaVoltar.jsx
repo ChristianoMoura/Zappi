@@ -1,6 +1,6 @@
 import { Alert, Button, Modal } from '@mantine/core'
 import { IconAlertCircle, IconArrowBackUp, IconBrandWhatsapp } from '@tabler/icons-react'
-import { avisoDeProntoEnviado, COLUNAS, VOLTA } from './regrasPedidos'
+import { avisoDeProntoEnviado, COLUNAS, STATUS, VOLTA } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
 // Confirmação antes de voltar o pedido uma coluna (ZAP-77, decisão da ZAP-64). Se o cliente já
@@ -22,8 +22,12 @@ export function JanelaVoltar({ pedido, aberta, aoFechar, aoConfirmar, enviando, 
     >
       {volta && (
         <div className={classes.formMotivo}>
-          <p className={classes.explicacaoMotivo}>Use só se o pedido mudou de coluna por engano. Ele volta para {destino}.</p>
-          {avisoDeProntoEnviado(pedido) && (
+          <p className={classes.explicacaoMotivo}>
+            Use só se o pedido mudou de coluna por engano. Ele volta para {destino}
+            {volta.destino === STATUS.CONCLUIDO ? ', e a data da entrega é apagada.' : '.'}
+          </p>
+          {/* O lembrete de avisar o cliente só vale quando o pedido volta para a produção */}
+          {volta.destino === STATUS.EM_PRODUCAO && avisoDeProntoEnviado(pedido) && (
             <p className={classes.lembrete}>
               <IconBrandWhatsapp size={22} aria-hidden />
               {pedido.cliente.nome.split(' ')[0]} já recebeu o aviso de que o pedido estava pronto. Depois de voltar, avise pelo WhatsApp que ainda falta um pouco.

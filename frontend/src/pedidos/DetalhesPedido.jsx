@@ -1,20 +1,14 @@
 import { Alert, Button, Drawer } from '@mantine/core'
-import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconPencil, IconSend, IconToolsKitchen2, IconUserX, IconX } from '@tabler/icons-react'
+import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconPackage, IconPencil, IconSend, IconToolsKitchen2, IconUserX, IconX } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { JanelaAnonimizar } from './JanelaAnonimizar'
 import { JanelaMotivo } from './JanelaMotivo'
 import { JanelaVoltar } from './JanelaVoltar'
-import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataRetiradaCurta, mensagensDaEtapa, moeda, podeAnonimizar, podeCancelar, podeEditar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
+import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataHoraTexto as dataHora, dataRetiradaCurta, mensagensDaEtapa, moeda, podeAnonimizar, podeCancelar, podeEditar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
 const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
-
-function dataHora(iso) {
-  const [data, hora] = iso.split('T')
-  const [, mes, dia] = data.split('-')
-  return `${dia}/${mes} às ${hora}`
-}
 
 const EtiquetaMensagem = ({ mensagem }) =>
   mensagem.status === 'Enviada' ? (
@@ -104,13 +98,15 @@ function MensagensDoPedido({ pedido, aoEnviarMensagem, botaoEnviarRef, focoInici
 // - Novo: "Confirmar pedido" e "Recusar pedido" (ZAP-51, ZAP-54);
 // - Confirmado: "Iniciar produção" e "Cancelar pedido" (ZAP-77, ZAP-54);
 // - Em produção: "Marcar como pronto", "Cancelar pedido" e "Voltar para confirmado";
-// - Concluído: "Voltar para produção". Recusado não tem ações.
+// - Concluído: "Marcar como entregue" e "Voltar para produção" (ZAP-169);
+// - Entregue: "Voltar para concluído". Recusado não tem ações.
 const SUCESSO = {
   confirmar: { texto: 'Pedido confirmado e movido para a coluna Confirmado.', enviar: true },
   recusar: { texto: 'Pedido recusado e movido para a coluna Recusado.', enviar: true },
   cancelar: { texto: 'Pedido cancelado e movido para a coluna Recusado.', enviar: true },
   iniciar: { texto: 'Pedido movido para a coluna Em produção. Quando ficar pronto, marque como pronto.' },
   pronto: { texto: 'Pedido pronto e movido para a coluna Concluído.', enviar: true },
+  entregar: { texto: 'Pedido entregue e movido para a coluna Entregue.' },
   voltar: { texto: 'Pedido voltou para a coluna' },
   editar: { texto: 'Pedido atualizado.', enviar: true },
   anonimizar: { texto: 'Dados do cliente apagados. Os pedidos continuam no histórico.' },
@@ -124,6 +120,12 @@ function textoSucesso(acabouDe, coluna, primeiroNome) {
   }
   if (acabouDe === 'voltar') return `${texto} ${coluna.nome}.`
   return enviar ? `${texto} Agora envie a mensagem para ${primeiroNome}.` : texto
+}
+
+const ICONE_AVANCO = {
+  [STATUS.EM_PRODUCAO]: <IconToolsKitchen2 size={22} aria-hidden />,
+  [STATUS.CONCLUIDO]: <IconCircleCheck size={22} aria-hidden />,
+  [STATUS.ENTREGUE]: <IconPackage size={22} aria-hidden />,
 }
 
 export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirmar, aoRecusar, aoAvancar, aoVoltar, aoAnonimizar, aoEnviarMensagem, enviando, acabouDe, erroAcao }) {
@@ -167,6 +169,7 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
         ['Em produção', pedido.producaoEm],
         [pedido.cancelado ? 'Cancelado' : 'Recusado', pedido.recusadoEm],
         ['Concluído', pedido.concluidoEm],
+        ['Entregue', pedido.entregueEm],
       ].filter(([, data]) => data)
     : []
 
@@ -324,7 +327,7 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
                   onClick={() => aoAvancar(pedido)}
                   loading={enviando && !janela}
                   loaderProps={{ type: 'dots' }}
-                  leftSection={avanco.destino === STATUS.CONCLUIDO ? <IconCircleCheck size={22} aria-hidden /> : <IconToolsKitchen2 size={22} aria-hidden />}
+                  leftSection={ICONE_AVANCO[avanco.destino]}
                 >
                   {avanco.rotulo}
                 </Button>

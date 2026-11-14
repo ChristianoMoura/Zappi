@@ -1,13 +1,16 @@
 // Regras de exibição dos pedidos no quadro (ZAP-28): colunas, valores e datas
 
 // Status do pedido (RN03). Recusado fica fora do quadro até ligar o filtro (RN04).
-export const STATUS = { NOVO: 1, CONFIRMADO: 2, EM_PRODUCAO: 3, CONCLUIDO: 4, RECUSADO: 5 }
+// Entregue (6) entrou depois (ZAP-60, ZAP-169): o Recusado continua 5, para nenhum pedido mudar de número
+export const STATUS = { NOVO: 1, CONFIRMADO: 2, EM_PRODUCAO: 3, CONCLUIDO: 4, RECUSADO: 5, ENTREGUE: 6 }
 
 export const COLUNAS = [
   { status: STATUS.NOVO, nome: 'Novo', cor: '#8a7f77' },
   { status: STATUS.CONFIRMADO, nome: 'Confirmado', cor: '#2f8f4e' },
   { status: STATUS.EM_PRODUCAO, nome: 'Em produção', cor: '#f2b134' },
   { status: STATUS.CONCLUIDO, nome: 'Concluído', cor: '#006d6d' },
+  // Azul-ardósia, 6,6:1 sobre o branco (ZAP-169)
+  { status: STATUS.ENTREGUE, nome: 'Entregue', cor: '#4c5a99' },
   { status: STATUS.RECUSADO, nome: 'Recusado', cor: '#b42318' },
 ]
 
@@ -76,9 +79,17 @@ export function dataRetiradaMensagem(iso, hoje = new Date()) {
   return data === dataLocal(hoje) ? `hoje, ${texto}` : texto
 }
 
-// O selo "Retira hoje" só faz sentido para pedido aceito que ainda não ficou pronto
+// O selo "Retira hoje" vale para o pedido aceito que ainda não foi entregue: no Concluído, ele
+// espera a retirada (ZAP-169)
 export const retiraHoje = (pedido, hoje = new Date()) =>
-  partesDaRetirada(pedido.dataRetirada).data === dataLocal(hoje) && [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(pedido.status)
+  partesDaRetirada(pedido.dataRetirada).data === dataLocal(hoje) && [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO, STATUS.CONCLUIDO].includes(pedido.status)
+
+// "14/11 às 17:30", a partir de AAAA-MM-DDTHH:MM (histórico e data da entrega)
+export function dataHoraTexto(iso) {
+  const [data, hora] = iso.split('T')
+  const [, mes, dia] = data.split('-')
+  return `${dia}/${mes} às ${hora}`
+}
 
 // Recusar vale para pedidos Novos; cancelar, para Confirmados e Em produção. Os dois levam o pedido
 // para Recusado com motivo obrigatório de até 500 caracteres (RN03, RN05, ZAP-64)
@@ -87,22 +98,25 @@ export const podeRecusar = (status) => status === STATUS.NOVO
 export const podeCancelar = (status) => status === STATUS.CONFIRMADO || status === STATUS.EM_PRODUCAO
 export const podeRecusarOuCancelar = (status) => podeRecusar(status) || podeCancelar(status)
 
-// Edição do pedido (RN21): Concluído e Recusado não mudam; depois de confirmado, o cliente não troca
+// Edição do pedido (RN21): Concluído, Entregue e Recusado não mudam; depois de confirmado, o cliente não troca
 export const podeEditar = (status) => [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(status)
 export const podeTrocarCliente = (status) => status === STATUS.NOVO
 
-// Os dados do cliente só podem ser apagados com o pedido encerrado (RN17, ZAP-116)
-export const podeAnonimizar = (status) => status === STATUS.CONCLUIDO || status === STATUS.RECUSADO
+// Os dados do cliente só podem ser apagados com o pedido encerrado (RN17, ZAP-116, ZAP-169)
+export const podeAnonimizar = (status) => [STATUS.CONCLUIDO, STATUS.ENTREGUE, STATUS.RECUSADO].includes(status)
 
 // Andamento entre as colunas (ZAP-77, RN03): cada etapa tem um só passo à frente e, pela decisão
-// da ZAP-64, só Em produção e Concluído podem voltar uma coluna
+// da ZAP-64, só Em produção, Concluído e Entregue podem voltar uma coluna. Concluído avança para
+// Entregue quando o cliente retira (ZAP-169).
 export const AVANCO = {
   [STATUS.CONFIRMADO]: { destino: STATUS.EM_PRODUCAO, rotulo: 'Iniciar produção' },
   [STATUS.EM_PRODUCAO]: { destino: STATUS.CONCLUIDO, rotulo: 'Marcar como pronto' },
+  [STATUS.CONCLUIDO]: { destino: STATUS.ENTREGUE, rotulo: 'Marcar como entregue' },
 }
 export const VOLTA = {
   [STATUS.EM_PRODUCAO]: { destino: STATUS.CONFIRMADO, rotulo: 'Voltar para confirmado' },
   [STATUS.CONCLUIDO]: { destino: STATUS.EM_PRODUCAO, rotulo: 'Voltar para produção' },
+  [STATUS.ENTREGUE]: { destino: STATUS.CONCLUIDO, rotulo: 'Voltar para concluído' },
 }
 
 // Ao voltar de Concluído, o cliente precisa ser avisado se já recebeu o aviso de pronto
