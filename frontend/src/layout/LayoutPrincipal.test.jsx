@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { usarTela } from '../testes/pedidosDeTeste'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
+import { buscarTermosVigentes } from '../autenticacao/servicoTermos'
 import { LayoutPrincipal } from './LayoutPrincipal'
+
+// A versão vigente dos termos é simulada; sem ela (nulo), a caixinha da conta fica como antes (ZAP-147)
+vi.mock('../autenticacao/servicoTermos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarTermosVigentes: vi.fn(async () => null) }))
 
 const rotas = [
   {
@@ -140,5 +144,51 @@ describe('topo com só a marca do Zappi e o logo da loja na conta (ZAP-178)', ()
     expect(within(menuConta).getByText('CB')).toBeInTheDocument()
     expect(within(menuConta).getByRole('menuitem', { name: 'Sair' })).toBeInTheDocument()
     expect(botaoConta()).toHaveAttribute('aria-expanded', 'true')
+  })
+})
+
+describe('termos no rodapé da caixinha da conta (ZAP-147)', () => {
+  beforeEach(() => {
+    sessionStorage.setItem('zappi.sessao', JSON.stringify({ token: 'jwt-de-teste', nome: 'Lídia' }))
+    vi.stubGlobal('fetch', vi.fn(async () => json(loja())))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    sessionStorage.clear()
+    buscarTermosVigentes.mockReset().mockImplementation(async () => null)
+  })
+
+  async function abrirConta(usuario) {
+    renderizarComRotas(rotas, '/pedidos')
+    await within(botaoConta()).findByText('CB')
+    await usuario.click(botaoConta())
+    return screen.findByRole('menu')
+  }
+
+  test('sem os termos no backend, a caixinha termina no Sair', async () => {
+    const menuConta = await abrirConta(userEvent.setup())
+    expect(within(menuConta).queryByRole('menuitem', { name: 'Termos de uso' })).not.toBeInTheDocument()
+  })
+
+  test('com os termos, os dois links ficam depois do Sair, chegam pelas setas e o Esc fecha', async () => {
+    const usuario = userEvent.setup()
+    buscarTermosVigentes.mockResolvedValue({ versao: 1, data: '2026-11-14' })
+    const menuConta = await abrirConta(usuario)
+
+    await within(menuConta).findByRole('menuitem', { name: 'Termos de uso' })
+    const itens = within(menuConta).getAllByRole('menuitem')
+    expect(itens.map((item) => item.textContent)).toEqual(['Sair', 'Termos de uso', 'Política de privacidade'])
+    expect(itens[1]).toHaveAttribute('href', '/termos')
+    expect(itens[2]).toHaveAttribute('href', '/privacidade')
+
+    itens[0].focus()
+    await usuario.keyboard('{ArrowDown}')
+    expect(itens[1]).toHaveFocus()
+    await usuario.keyboard('{ArrowDown}')
+    expect(itens[2]).toHaveFocus()
+
+    await usuario.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
   })
 })

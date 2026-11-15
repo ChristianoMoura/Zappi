@@ -1,7 +1,7 @@
-import { Alert, Button, Stack, Text, TextInput, Title, UnstyledButton } from '@mantine/core'
+import { Alert, Button, Checkbox, Stack, Text, TextInput, Title, UnstyledButton } from '@mantine/core'
 import { IconAlertCircle, IconEye, IconEyeOff } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import ilustracao1400 from '../assets/ilustracao-login-1400.webp'
 import ilustracao2000 from '../assets/ilustracao-login-2000.webp'
 import ilustracao2800 from '../assets/ilustracao-login-2800.webp'
@@ -10,11 +10,15 @@ import zappiNome from '../assets/zappi-nome.svg'
 import zappiSimbolo from '../assets/zappi-simbolo.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
 import { useMarcaLoja } from '../estabelecimento/useMarcaLoja'
-import { CredenciaisInvalidasError, LoginBloqueadoError } from '../autenticacao/servicoAutenticacao'
+import { CredenciaisInvalidasError, LoginBloqueadoError, TermosPendentesError } from '../autenticacao/servicoAutenticacao'
+import { guardarVersaoAceita, lerVersaoAceita } from '../autenticacao/servicoTermos'
+import { useTermosVigentes } from '../autenticacao/useTermosVigentes'
 import classes from './PaginaLogin.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const FALTA_ACEITE = 'Para entrar, marque que leu e concorda com os Termos de uso e a Política de privacidade.'
 
 // As mensagens não dizem se o erro está no e-mail ou na senha, nem se o e-mail existe
 // (critérios da ZAP-16)
@@ -43,9 +47,16 @@ export function PaginaLogin() {
   )
   const [enviando, setEnviando] = useState(false)
   const marca = useMarcaLoja()
+  // Termos de uso e política de privacidade (ZAP-143, ZAP-147): a caixa aparece quando este
+  // aparelho não tem o lembrete da versão vigente, ou quando o backend responde TERMOS_PENDENTES
+  const termos = useTermosVigentes()
+  const [pendente, setPendente] = useState(false)
+  const [aceite, setAceite] = useState(false)
+  const pedeAceite = Boolean(termos) && (pendente || lerVersaoAceita() !== termos.versao)
 
   const emailRef = useRef(null)
   const senhaRef = useRef(null)
+  const aceiteRef = useRef(null)
   const alertaRef = useRef(null)
 
   useEffect(() => {
@@ -67,17 +78,30 @@ export function PaginaLogin() {
       novosErros.email = 'E-mail inválido.'
     }
     if (!senha) novosErros.senha = 'Digite sua senha.'
+    // Sem a caixa marcada, o login nem é enviado (RN26 proposta na ZAP-143)
+    if (pedeAceite && !aceite) novosErros.aceite = FALTA_ACEITE
 
     setErros(novosErros)
     setErroGeral('')
     if (novosErros.email) return emailRef.current?.focus()
     if (novosErros.senha) return senhaRef.current?.focus()
+    if (novosErros.aceite) return aceiteRef.current?.focus()
 
     setEnviando(true)
     try {
-      await entrar(emailLimpo, senha)
+      await entrar(emailLimpo, senha, pedeAceite ? { versao: termos.versao } : null)
+      if (pedeAceite) guardarVersaoAceita(termos.versao)
       navegar(destino, { replace: true })
     } catch (erro) {
+      if (erro instanceof TermosPendentesError && termos) {
+        // Senha certa, mas falta o aceite neste aparelho ou o da versão nova: a senha continua
+        // digitada, e o foco vai para a caixa
+        setPendente(true)
+        setAceite(false)
+        setErros({ aceite: 'Os termos ainda não foram aceitos neste aparelho ou mudaram. Leia, marque a caixa e entre de novo.' })
+        setTimeout(() => aceiteRef.current?.focus())
+        return
+      }
       setSenha('')
       setErroGeral(mensagemDeErro(erro))
     } finally {
@@ -184,10 +208,41 @@ export function PaginaLogin() {
               classNames={{ label: classes.rotulo, input: classes.campo, error: classes.erroCampo }}
             />
 
+            {pedeAceite && (
+              <Checkbox
+                ref={aceiteRef}
+                id="aceite-termos"
+                size="md"
+                checked={aceite}
+                onChange={(e) => {
+                  setAceite(e.currentTarget.checked)
+                  setErros((atual) => ({ ...atual, aceite: undefined }))
+                }}
+                label={
+                  <>
+                    Li e concordo com os <Link to="/termos" className={classes.linkTermos}>Termos de uso</Link> e a{' '}
+                    <Link to="/privacidade" className={classes.linkTermos}>Política de privacidade</Link>
+                  </>
+                }
+                description={`Versão ${termos.versao}. Você só precisa aceitar de novo neste aparelho se os textos mudarem.`}
+                error={erros.aceite}
+                classNames={{ label: classes.rotuloAceite, description: classes.dicaAceite, error: classes.erroCampo }}
+              />
+            )}
+
             <Button type="submit" fullWidth loading={enviando} loaderProps={{ type: 'dots' }} className={classes.botao}>
               Entrar
             </Button>
           </form>
+
+          {/* Os textos podem ser lidos sem login (ZAP-143, ZAP-148) */}
+          {termos && (
+            <nav aria-label="Termos e privacidade" className={classes.rodapeTermos}>
+              <Link to="/termos">Termos de uso</Link>
+              <span aria-hidden="true">·</span>
+              <Link to="/privacidade">Política de privacidade</Link>
+            </nav>
+          )}
         </Stack>
       </div>
     </main>

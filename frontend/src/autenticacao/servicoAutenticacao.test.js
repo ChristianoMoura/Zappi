@@ -4,6 +4,7 @@ import {
   entrarNoServidor,
   LoginBloqueadoError,
   ServicoIndisponivelError,
+  TermosPendentesError,
 } from './servicoAutenticacao'
 
 function respostaJson(status, corpo) {
@@ -25,6 +26,19 @@ describe('entrarNoServidor', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'lidia@casabelt.com', senha: 'segredo' }),
     })
+  })
+
+  it('com o aceite dos termos, envia a versão aceita junto do login (ZAP-147)', async () => {
+    const buscar = vi.fn().mockResolvedValue(respostaJson(200, { token: 'jwt', nome: 'Lídia' }))
+    vi.stubGlobal('fetch', buscar)
+
+    await entrarNoServidor('lidia@casabelt.com', 'segredo', { versao: 2 })
+    expect(JSON.parse(buscar.mock.calls[0][1].body)).toEqual({ email: 'lidia@casabelt.com', senha: 'segredo', aceiteTermos: true, versaoTermos: 2 })
+  })
+
+  it('TERMOS_PENDENTES vira um erro próprio, para a tela pedir o aceite (ZAP-147)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(respostaJson(403, { codigo: 'TERMOS_PENDENTES', mensagem: 'Aceite os termos.' })))
+    await expect(entrarNoServidor('lidia@casabelt.com', 'segredo')).rejects.toBeInstanceOf(TermosPendentesError)
   })
 
   it.each([

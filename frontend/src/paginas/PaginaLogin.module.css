@@ -112,6 +112,50 @@
   margin-top: 6px;
 }
 
+/* Caixa de aceite dos termos (ZAP-147): rótulo com links sublinhados, no ciano dos links */
+.rotuloAceite {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.dicaAceite {
+  font-size: 0.9rem;
+  color: var(--mantine-color-dimmed);
+}
+
+.linkTermos,
+.rodapeTermos a {
+  color: var(--mantine-color-zappi-7);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: 4px;
+
+  &:focus-visible {
+    outline: 3px solid var(--zappi-cor-foco);
+    outline-offset: 2px;
+  }
+}
+
+/* Links no rodapé do login, com área de toque de 44 px de altura */
+.rodapeTermos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.95rem;
+  color: var(--mantine-color-dimmed);
+
+  & a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+  }
+}
+
 .verSenha {
   display: inline-flex;
   align-items: center;

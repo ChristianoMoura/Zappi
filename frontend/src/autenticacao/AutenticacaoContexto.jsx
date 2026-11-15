@@ -30,8 +30,9 @@ function salvarSessao(sessao) {
 export function AutenticacaoProvider({ children }) {
   const [sessao, setSessao] = useState(lerSessaoSalva)
 
-  const entrar = useCallback(async (email, senha) => {
-    const resposta = await entrarNoServidor(email, senha)
+  // `aceite`: a versão dos termos que a Lídia aceitou na tela de login (ZAP-147)
+  const entrar = useCallback(async (email, senha, aceite = null) => {
+    const resposta = await entrarNoServidor(email, senha, aceite)
     const novaSessao = { token: resposta.token, nome: resposta.nome }
     salvarSessao(novaSessao)
     setSessao(novaSessao)

@@ -7,6 +7,7 @@ import { Link, NavLink as LinkRota, Outlet, useLocation } from 'react-router'
 import nome from '../assets/zappi-nome-creme.svg'
 import simbolo from '../assets/zappi-simbolo-creme.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
+import { useTermosVigentes } from '../autenticacao/useTermosVigentes'
 import { iniciaisDaLoja, useMarcaLoja } from '../estabelecimento/useMarcaLoja'
 import { SinoNotificacoes } from '../notificacoes/SinoNotificacoes'
 import { useNotificacoes } from '../notificacoes/useNotificacoes'
@@ -23,6 +24,7 @@ export function LayoutPrincipal() {
   const [recolhido, setRecolhido] = useLocalStorage({ key: 'zappi.menu-recolhido', defaultValue: false })
   const marca = useMarcaLoja()
   const notificacoes = useNotificacoes()
+  const termos = useTermosVigentes()
   useOndaAoClicar()
 
   const ativo = (caminho) => pathname.startsWith(caminho)
@@ -80,7 +82,8 @@ export function LayoutPrincipal() {
             )}
             {/* Conta no canto superior direito, como na Referência A: o "Sair" fica no menu. O logo
                 da loja fica no botão, como uma foto de perfil (ZAP-178) */}
-            <Menu position="bottom-end" width={260} shadow="md" radius="md">
+            {/* 300 px: cabem os dois links do rodapé lado a lado (ZAP-147) */}
+            <Menu position="bottom-end" width={300} shadow="md" radius="md">
               <Menu.Target>
                 <UnstyledButton className={classes.botaoConta} aria-label="Minha conta" data-onda>
                   <AvatarLoja marca={marca} />
@@ -103,6 +106,23 @@ export function LayoutPrincipal() {
                 <Menu.Item leftSection={<IconLogout size={22} aria-hidden />} onClick={sair} className={classes.itemConta}>
                   Sair
                 </Menu.Item>
+                {/* Rodapé da caixinha, no modelo do menu da conta do Google (ZAP-147): os dois textos
+                    lado a lado, abaixo de "Sair". São itens do menu, então as setas e o Tab chegam
+                    neles e o Esc fecha. Só aparecem quando o backend tem os termos (ZAP-146). */}
+                {termos && (
+                  <>
+                    <Menu.Divider />
+                    <div className={classes.rodapeConta}>
+                      <Menu.Item component={Link} to="/termos" className={classes.linkRodapeConta}>
+                        Termos de uso
+                      </Menu.Item>
+                      <span aria-hidden="true" className={classes.pontoRodape}>·</span>
+                      <Menu.Item component={Link} to="/privacidade" className={classes.linkRodapeConta}>
+                        Política de privacidade
+                      </Menu.Item>
+                    </div>
+                  </>
+                )}
               </Menu.Dropdown>
             </Menu>
           </Group>
