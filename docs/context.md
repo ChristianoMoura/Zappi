@@ -123,7 +123,7 @@ A entrega final ataca principalmente **Gestão de pedidos** e **Atendimento e ca
 **Lídia:** recebe o pedido misturado com conversas pessoais → negocia à mão → anota no caderno → avalia a capacidade de cabeça (às vezes recusa) → compra ingredientes com a Romilda → produz (Romilda faz os recheios) → espera a retirada → recebe o pagamento.
 
 ### 4.2 Com o Zappi, visão completa (ADO #4)
-**Cliente:** descobre por indicação → acessa o link do cardápio → consulta sabores, preços/kg e fotos → monta o pedido → conclui informando a data de retirada → recebe confirmação ou recusa no WhatsApp → recebe o aviso de pedido pronto → retira e paga presencialmente.
+**Cliente:** descobre por indicação → acessa o link do cardápio → consulta sabores, preços/kg e fotos → monta o pedido → conclui informando a data e a hora de retirada → recebe confirmação ou recusa no WhatsApp → recebe o aviso de pedido pronto → retira e paga presencialmente.
 
 **Lídia:** o pedido chega no quadro Kanban → avalia disponibilidade e capacidade → confirma, ou recusa informando o motivo → o sistema prepara a mensagem ao cliente → produz com a Romilda → move o card até "Concluído" → o sistema prepara o aviso de pronto → recebe o cliente e o pagamento.
 
@@ -160,7 +160,7 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 **Portal do Cliente** (épico `ZAP-2`; requisitos e regras definidos na `ZAP-18`, seção 14, item 11)
 
 16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo e o contato da Lídia.
-17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio e cobertura (opcionais, só em produtos vendidos por KG), observações e data de retirada, com pelo menos 7 dias de antecedência (RN22).
+17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio e cobertura (opcionais, só em produtos vendidos por KG), observações e data e hora de retirada, com pelo menos 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23).
 18. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
 
 ### 5.3 Dados iniciais (seed)
@@ -200,10 +200,10 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído). **RF08** Detalhes do pedido ao selecionar um card. |
 | **US5** — Como Lídia, quero confirmar um pedido, para informar ao cliente que ele será atendido. | **RF09** Mover o pedido para "Confirmado". **RF10** Preparar a mensagem de confirmação ao cliente via WhatsApp. |
 | **US6** — Como Lídia, quero recusar um pedido informando o motivo, para que o cliente entenda. | **RF11** Motivo obrigatório ao recusar. **RF12** Preparar a mensagem de recusa com o motivo via WhatsApp. |
-| **US7** — Como Lídia, quero cadastrar e editar pedidos, para registrar as encomendas que recebo pelo WhatsApp e corrigir um pedido quando o cliente pede uma mudança. | **RF13** Cadastro de pedido com cliente (nome e WhatsApp), itens do cardápio com quantidade, data de retirada e observações. **RF14** Edição do pedido conforme o status (RN21). |
+| **US7** — Como Lídia, quero cadastrar e editar pedidos, para registrar as encomendas que recebo pelo WhatsApp e corrigir um pedido quando o cliente pede uma mudança. | **RF13** Cadastro de pedido com cliente (nome e WhatsApp), itens do cardápio com quantidade, data e hora de retirada e observações. **RF14** Edição do pedido conforme o status (RN21). |
 | **US8** — Como Lídia, quero mover o pedido para Em produção e Concluído, para acompanhar o andamento e avisar o cliente que o pedido está pronto. | **RF15** Mover o pedido para "Em produção" e "Concluído", com a volta de uma etapa para corrigir um clique errado (RN03). **RF16** Preparar a mensagem de pronto para retirada via WhatsApp. |
 | **US9** — Como cliente, quero ver o cardápio pelo link, para conhecer sabores e preços sem precisar de login. | **RF17** Cardápio público pelo `slug`, só com produtos ativos. **RF18** Exibir o contato da Lídia. |
-| **US10** — Como cliente, quero montar meu pedido, para encomendar sem depender de troca de mensagens. | **RF19** Escolher produtos, quantidade, recheio, cobertura e observações. **RF20** Escolher a data de retirada, com 7 dias de antecedência (RN22). |
+| **US10** — Como cliente, quero montar meu pedido, para encomendar sem depender de troca de mensagens. | **RF19** Escolher produtos, quantidade, recheio, cobertura e observações. **RF20** Escolher a data e a hora de retirada, com 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23). |
 | **US11** — Como cliente, quero enviar meu pedido, para que a Lídia avalie se pode atender. | **RF21** Identificar com nome e WhatsApp, com consentimento (RN16). **RF22** Registrar o pedido como Novo e avisar que ainda não está confirmado. **RF23** Limitar os envios e descartar os automáticos. |
 | **US12** — Como Lídia, quero anonimizar os dados de um cliente, para atender ao pedido de exclusão. | **RF24** Anonimizar o cliente sem apagar o histórico (RN17). |
 
@@ -239,9 +239,9 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. | LGPD |
 | RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. O cliente pede pelo WhatsApp da Lídia, e ela anonimiza no painel, o que fica bloqueado se houver pedido em aberto (Novo, Confirmado ou Em produção). O nome vira "Cliente anonimizado", o telefone vira `0` + id do cliente completado com zeros, em 13 dígitos, e nome e telefone também saem de `mensagem_whatsapp`, de `log_auditoria.detalhes` e de `pedido.motivo_recusa`, que vai para a mensagem de recusa. As observações do pedido e do item não mudam. Depois de anonimizado, o cliente nunca volta a ter pedido em aberto: o pedido Concluído dele não pode voltar para Em produção. | LGPD / ZAP-64 / ZAP-18 / ZAP-115 |
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
-| RN19 | Não há delivery: o pedido tem `data_retirada`, e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
+| RN19 | Não há delivery: o pedido tem `data_retirada`, com a data e a hora da retirada (RN23), e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
-| RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído e 5-Recusado: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 |
+| RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data e hora de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e hora de retirada e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído e 5-Recusado: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 |
 | RN22 | **Antecedência mínima.** Pelo Portal do Cliente, a data de retirada deve ser de pelo menos 7 dias corridos após o envio do pedido, contados no horário de São Paulo e validados também no backend. No Portal do Administrador, a Lídia pode escolher hoje ou uma data futura, inclusive ao editar pedidos que vieram do portal. O horário segue a RN23. | RF20 / ZAP-18 |
 | RN23 | **Horário de retirada.** A retirada tem data e hora: das 8h às 20h, de 30 em 30 minutos, no horário de São Paulo, nos dois portais. A data e hora não pode ser antes de agora; na edição, a que já estava no pedido pode ficar, se não foi mudada. Validado na tela, no backend e no banco. | ZAP-127 |
 
@@ -289,7 +289,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 |---|---|---|
 | 5.11.2 Contraste para texto | 1.4.3 (AA) | Contraste mínimo de 4,5:1, sobretudo em preços e descrições |
 | 5.1.1 Indicador de foco visível | 2.4.7 (AA) | Borda destacada nos campos ao receber foco pelo teclado (começando pelo login) |
-| 5.1.4 Ordem de foco previsível | 2.4.3 (A) | Cadastro de produto: nome → sabor → preço → foto → "Salvar" (encaixar os demais campos na mesma lógica). Cadastro de pedido: cliente → itens → data de retirada → observações → "Salvar" |
+| 5.1.4 Ordem de foco previsível | 2.4.3 (A) | Cadastro de produto: nome → sabor → preço → foto → "Salvar" (encaixar os demais campos na mesma lógica). Cadastro de pedido: cliente → itens → data de retirada → hora de retirada → observações → "Salvar" |
 | 5.9.1 Texto alternativo | 1.1.1 (A) | Toda foto de produto com texto alternativo (`foto_texto_alternativo`) |
 | 5.12.12 Nível de linguagem | 3.1.5 (AAA) | Mensagens do WhatsApp em linguagem simples, sem termos técnicos |
 | 5.3.1 Rótulos ou instruções | 3.3.2 (A) | Todo campo de formulário com rótulo visível |
