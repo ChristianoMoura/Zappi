@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { emPromocao, lerPreco, ordenarAlergenos, percentualDesconto, precoParaTela, precoVigente, sugerirTextoAlternativo, temPromocaoNaApi, textoPrecoPromocao, textoSeloPromocao, validarProduto, validarPromocao } from './regrasProdutos'
+import { emPromocao, lerPreco, ordenarAlergenos, percentualDesconto, precoParaTela, precoVigente, sugerirTextoAlternativo, temPromocaoNaApi, textoDescontoCurto, textoPrecoPromocao, validarProduto, validarPromocao } from './regrasProdutos'
 
 const produto = (extras) => ({ nome: 'Bolo de brigadeiro de chocolate', categoriaId: '1', unidade: 'KG', preco: '100,00', descricao: '', foto: '', textoAlternativo: '', ...extras })
 
@@ -76,10 +76,11 @@ describe('percentual de desconto do selo (ZAP-152, decisão de 15/11/2026)', () 
     expect(percentualDesconto({ preco: 100, precoPromocional: null })).toBe(0)
   })
 
-  test('o selo e o leitor de tela levam o percentual; com menos de 1%, só "Promoção"', () => {
-    expect(textoSeloPromocao({ preco: 115, precoPromocional: 99.9 })).toBe('Promoção · 13% de desconto')
+  test('o "-13%" e o leitor de tela levam o percentual; com menos de 1%, nada', () => {
+    expect(textoDescontoCurto({ preco: 115, precoPromocional: 99.9 })).toBe('-13%')
     expect(textoPrecoPromocao({ preco: 115, precoPromocional: 99.9 })).toBe('De R$ 115,00 por R$ 99,90, 13% de desconto')
-    expect(textoSeloPromocao({ preco: 100, precoPromocional: 99.5 })).toBe('Promoção')
+    expect(textoDescontoCurto({ preco: 100, precoPromocional: 99.5 })).toBe('')
+    expect(textoDescontoCurto({ preco: 100, precoPromocional: null })).toBe('')
     expect(textoPrecoPromocao({ preco: 100, precoPromocional: 99.5 })).toBe('De R$ 100,00 por R$ 99,50')
   })
 })

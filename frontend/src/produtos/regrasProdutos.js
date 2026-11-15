@@ -103,10 +103,11 @@ export function percentualDesconto(produto) {
   return normal > 0 ? Math.floor(((normal - desconto) * 100) / normal) : 0
 }
 
-// "Promoção · 13% de desconto"; com menos de 1%, só "Promoção"
-export function textoSeloPromocao(produto) {
+// "-13%", ao lado da unidade (ajuste de 15/11/2026, no lugar do selo "Promoção · 13% de desconto");
+// com menos de 1% de desconto, nada
+export function textoDescontoCurto(produto) {
   const percentual = percentualDesconto(produto)
-  return percentual >= 1 ? `Promoção · ${percentual}% de desconto` : 'Promoção'
+  return percentual >= 1 ? `-${percentual}%` : ''
 }
 
 // O que o leitor de tela ouve no lugar do preço riscado: "De R$ 115,00 por R$ 99,90, 13% de desconto"
