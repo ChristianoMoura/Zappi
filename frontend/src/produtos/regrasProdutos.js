@@ -69,3 +69,26 @@ export function validarProduto(dados) {
   }
   return erros
 }
+
+// Preço promocional (ZAP-152, ZAP-161). O backend só manda o campo `precoPromocional` (nulo sem
+// promoção) quando já tem a promoção (ZAP-160); sem o campo, a tela não mostra o desconto.
+export const temPromocaoNaApi = (produto) => produto?.precoPromocional !== undefined
+export const emPromocao = (produto) => produto?.precoPromocional != null
+// O preço que vale para pedido novo: o com desconto, se houver (o backend decide, RN10)
+export const precoVigente = (produto) => (emPromocao(produto) ? produto.precoPromocional : produto.preco)
+
+// Recebe os dois preços como a Lídia digitou e devolve { campo: mensagem }
+export function validarPromocao({ preco, precoPromocional }) {
+  const erros = {}
+  const antes = lerPreco(preco)
+  const desconto = lerPreco(precoPromocional)
+  if (antes === null) erros.preco = 'Escreva o preço antes da promoção. Ex.: 100,00.'
+  else if (Number.isNaN(antes)) erros.preco = 'Use só números e vírgula. Ex.: 100,00.'
+  else if (antes <= 0) erros.preco = 'O preço precisa ser maior que zero.'
+
+  if (desconto === null) erros.precoPromocional = 'Escreva o preço com desconto. Ex.: 80,00.'
+  else if (Number.isNaN(desconto)) erros.precoPromocional = 'Use só números e vírgula. Ex.: 80,00.'
+  else if (desconto <= 0) erros.precoPromocional = 'O preço com desconto precisa ser maior que zero.'
+  else if (!erros.preco && desconto >= antes) erros.precoPromocional = 'O preço com desconto precisa ser menor que o preço antes da promoção.'
+  return erros
+}

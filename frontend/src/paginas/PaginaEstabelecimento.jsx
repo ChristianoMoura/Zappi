@@ -306,6 +306,19 @@ export function PaginaEstabelecimento() {
               autoCapitalize="none"
               spellCheck={false}
             />
+            {/* Seção "Promoções" no topo do cardápio (ZAP-152, ZAP-161), ligada por padrão. Só aparece
+                quando o backend já tem a opção (ZAP-160). */}
+            {typeof dados.destacarPromocoes === 'boolean' && (
+              <Checkbox
+                id="estabelecimento-destacar-promocoes"
+                label="Mostrar promoções em destaque no cardápio"
+                description="O cardápio ganha uma seção Promoções no topo, com os produtos em desconto. Desligada, os produtos continuam com o preço riscado na categoria deles."
+                checked={dados.destacarPromocoes}
+                onChange={(e) => mudar('destacarPromocoes', e.currentTarget.checked)}
+                size="md"
+                classNames={{ label: classes.rotulo, description: classes.dica }}
+              />
+            )}
           </div>
         </section>
 

@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  aplicarPromocao,
   buscarProduto,
   buscarProdutos,
+  encerrarPromocao,
   excluirProduto,
   ProdutoNaoEncontradoError,
+  PromocaoRecusadaError,
   salvarProduto,
   ServicoIndisponivelError,
   SessaoExpiradaError,
@@ -158,5 +161,26 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
     await expect(buscarProdutos()).rejects.toBeInstanceOf(SessaoExpiradaError)
     expect(sessionStorage.getItem('zappi.sessao')).toBeNull()
     expect(irPara).toHaveBeenCalledWith('/login')
+  })
+
+  it('aplica e encerra a promoção pelas rotas combinadas com o backend (ZAP-160, ZAP-161)', async () => {
+    const chamadas = simularBackend(json(200, { ...doBackend, precoPromocional: 80 }), json(200, { ...doBackend, precoPromocional: null }))
+
+    await expect(aplicarPromocao(1, { preco: 100, precoPromocional: 80 })).resolves.toMatchObject({ id: 1, preco: 100, precoPromocional: 80 })
+    await expect(encerrarPromocao(1)).resolves.toMatchObject({ id: 1, precoPromocional: null })
+
+    const [aplicar, encerrar] = chamadas()
+    expect(aplicar[0]).toBe('/api/produtos/1/promocao')
+    expect(aplicar[1]).toMatchObject({ method: 'POST', body: JSON.stringify({ preco: 100, precoPromocional: 80 }) })
+    expect(encerrar[0]).toBe('/api/produtos/1/promocao')
+    expect(encerrar[1].method).toBe('DELETE')
+  })
+
+  it('a promoção recusada (400) traz o erro de cada campo', async () => {
+    simularBackend(json(400, { campos: { precoPromocional: 'O preço com desconto precisa ser menor que o preço antes da promoção.' } }))
+
+    const erro = await aplicarPromocao(1, { preco: 100, precoPromocional: 100 }).catch((e) => e)
+    expect(erro).toBeInstanceOf(PromocaoRecusadaError)
+    expect(erro.campos.precoPromocional).toBe('O preço com desconto precisa ser menor que o preço antes da promoção.')
   })
 })

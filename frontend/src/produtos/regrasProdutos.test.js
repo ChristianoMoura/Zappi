@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { lerPreco, ordenarAlergenos, precoParaTela, sugerirTextoAlternativo, validarProduto } from './regrasProdutos'
+import { emPromocao, lerPreco, ordenarAlergenos, precoParaTela, precoVigente, sugerirTextoAlternativo, temPromocaoNaApi, validarProduto, validarPromocao } from './regrasProdutos'
 
 const produto = (extras) => ({ nome: 'Bolo de brigadeiro de chocolate', categoriaId: '1', unidade: 'KG', preco: '100,00', descricao: '', foto: '', textoAlternativo: '', ...extras })
 
@@ -44,5 +44,24 @@ describe('regras dos produtos (ZAP-27)', () => {
 
   test('sugere a descrição da foto com o nome do produto', () => {
     expect(sugerirTextoAlternativo({ nome: ' Bolo de ninho com morango ' })).toBe('Bolo de ninho com morango')
+  })
+})
+
+describe('preço promocional (ZAP-152, ZAP-161)', () => {
+  test('o preço com desconto precisa ser maior que zero e menor que o preço antes', () => {
+    expect(validarPromocao({ preco: '100,00', precoPromocional: '80' })).toEqual({})
+    expect(validarPromocao({ preco: '100,00', precoPromocional: '100' })).toEqual({ precoPromocional: 'O preço com desconto precisa ser menor que o preço antes da promoção.' })
+    expect(validarPromocao({ preco: '100,00', precoPromocional: '0' })).toEqual({ precoPromocional: 'O preço com desconto precisa ser maior que zero.' })
+    expect(validarPromocao({ preco: '100,00', precoPromocional: '' })).toEqual({ precoPromocional: 'Escreva o preço com desconto. Ex.: 80,00.' })
+    expect(validarPromocao({ preco: '', precoPromocional: '80' })).toEqual({ preco: 'Escreva o preço antes da promoção. Ex.: 100,00.' })
+    expect(validarPromocao({ preco: '100', precoPromocional: 'oitenta' })).toEqual({ precoPromocional: 'Use só números e vírgula. Ex.: 80,00.' })
+  })
+
+  test('o preço que vale é o com desconto, se houver; sem o campo, o backend ainda não tem promoção', () => {
+    expect(precoVigente({ preco: 100, precoPromocional: 80 })).toBe(80)
+    expect(precoVigente({ preco: 100, precoPromocional: null })).toBe(100)
+    expect(emPromocao({ preco: 100, precoPromocional: null })).toBe(false)
+    expect(temPromocaoNaApi({ preco: 100, precoPromocional: null })).toBe(true)
+    expect(temPromocaoNaApi({ preco: 100 })).toBe(false)
   })
 })

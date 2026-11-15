@@ -1,7 +1,7 @@
-import { Button } from '@mantine/core'
+import { Button, VisuallyHidden } from '@mantine/core'
 import { IconEye, IconEyeOff, IconPencil, IconPhotoOff, IconTrash } from '@tabler/icons-react'
 import { Link } from 'react-router'
-import { precoParaTela, UNIDADES } from './regrasProdutos'
+import { emPromocao, precoParaTela, UNIDADES } from './regrasProdutos'
 import classes from './Produtos.module.css'
 import { SelosAlergenos } from './SelosAlergenos'
 
@@ -39,10 +39,25 @@ export function CartaoProduto({ produto, destaque, aoExcluir, aoTirar, aoVoltar,
           {nome}
         </h3>
         {produto.descricao ? <p className={classes.descricao}>{produto.descricao}</p> : null}
-        <p className={classes.preco}>
-          <strong>R$ {precoParaTela(produto.preco)}</strong>
-          <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
-        </p>
+        {emPromocao(produto) ? (
+          // Promoção (ZAP-161): o risco não é lido pelo leitor de tela, então o "De ... por ..." vai em texto
+          <p className={classes.preco}>
+            <span className={classes.seloPromocao}>Promoção</span>
+            <VisuallyHidden>
+              De R$ {precoParaTela(produto.preco)} por R$ {precoParaTela(produto.precoPromocional)}
+            </VisuallyHidden>
+            <s className={classes.precoAntigo} aria-hidden="true">
+              R$ {precoParaTela(produto.preco)}
+            </s>
+            <strong aria-hidden="true">R$ {precoParaTela(produto.precoPromocional)}</strong>
+            <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
+          </p>
+        ) : (
+          <p className={classes.preco}>
+            <strong>R$ {precoParaTela(produto.preco)}</strong>
+            <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
+          </p>
+        )}
         <SelosAlergenos alergenos={produto.alergenos} outros={produto.outrosAlergenos} className={classes.selosAlergenos} />
       </div>
       <div className={classes.acoes}>

@@ -275,3 +275,32 @@ describe('PaginaEstabelecimento (US2, RF03, RF04)', () => {
     expect(arquivoCapa).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp')
   })
 })
+
+describe('destaque das promoções no cardápio (ZAP-161)', () => {
+  beforeEach(() => {
+    salvarEstabelecimento.mockReset().mockImplementation(async (dados) => dados)
+  })
+
+  test('sem o campo no backend, a opção não aparece', async () => {
+    buscarEstabelecimento.mockReset().mockResolvedValue(casaBelt)
+    await abrirTela()
+
+    expect(screen.queryByRole('checkbox', { name: /Mostrar promoções em destaque/ })).not.toBeInTheDocument()
+  })
+
+  test('com o campo, a opção aparece ligada, com a explicação, e desligar vai junto ao salvar', async () => {
+    const usuario = userEvent.setup()
+    buscarEstabelecimento.mockReset().mockResolvedValue({ ...casaBelt, destacarPromocoes: true })
+    await abrirTela()
+
+    const opcao = screen.getByRole('checkbox', { name: 'Mostrar promoções em destaque no cardápio' })
+    expect(opcao).toBeChecked()
+    expect(opcao).toHaveAccessibleDescription(/seção Promoções no topo/)
+
+    await usuario.click(opcao)
+    await usuario.click(salvarBotao())
+
+    await waitFor(() => expect(salvarEstabelecimento).toHaveBeenCalledTimes(1))
+    expect(salvarEstabelecimento.mock.calls[0][0]).toMatchObject({ destacarPromocoes: false })
+  })
+})
