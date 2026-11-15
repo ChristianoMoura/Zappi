@@ -61,7 +61,10 @@ public class ServicoProduto {
 		this.armazenamento = armazenamento;
 	}
 
-	/** Só os ativos (RN14), na ordem das categorias da Lídia e, dentro delas, por nome (ZAP-136). */
+	/**
+	 * Todos os não excluídos (RN14), no cardápio e fora dele (ZAP-151), na ordem das categorias
+	 * da Lídia e, dentro delas, por nome (ZAP-136).
+	 */
 	@Transactional(readOnly = true)
 	public List<RespostaProduto> listar(UsuarioAutenticado usuario) {
 		return produtos.listarAtivosNaOrdem(usuario.estabelecimentoId())
@@ -97,6 +100,24 @@ public class ServicoProduto {
 
 		produto.atualizar(categoria, unidade(dados), dados.nome(), dados.descricao(), preco(dados),
 				dados.textoAlternativo(), dados.contemGluten(), dados.outrosAlergenos(), agora());
+		produtos.flush();
+
+		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
+		return resposta(produto);
+	}
+
+	/**
+	 * Tira do cardápio ou volta com o produto (ZAP-151). Os pedidos que já têm o produto não
+	 * mudam (RN10). A mudança vai para o log como {@code PRODUTO_EDITADO}, com o antes e o
+	 * depois (ISO 27002 8.16); repetir o pedido não muda nada e não grava log.
+	 */
+	@Transactional
+	public RespostaProduto colocarNoCardapio(UsuarioAutenticado usuario, Long id, boolean noCardapio) {
+		Produto produto = encontrar(usuario, id);
+		Map<String, Object> antes = retrato(produto);
+		if (!produto.colocarNoCardapio(noCardapio, agora())) {
+			return resposta(produto);
+		}
 		produtos.flush();
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
@@ -226,6 +247,7 @@ public class ServicoProduto {
 		campos.put("contemGluten", produto.getContemGluten());
 		campos.put("outrosAlergenos", produto.getOutrosAlergenos());
 		campos.put("ativo", produto.isAtivo());
+		campos.put("noCardapio", produto.isNoCardapio());
 		return campos;
 	}
 

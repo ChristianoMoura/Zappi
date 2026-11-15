@@ -211,6 +211,17 @@ class PedidoPeloPortalTests {
 	}
 
 	@Test
+	void recusaProdutoForaDoCardapioSemGravarNada() throws Exception {
+		jdbc.update("update produto set no_cardapio = false where id = ?", coxinha);
+
+		enviar(pedido("Carla", CARLA, daquiA(7), List.of(item(brigadeiro, 1, Map.of()), item(coxinha, 10, Map.of()))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.length()").value(1))
+			.andExpect(jsonPath("$.campos['itens[1].produtoId']").value("Este produto não está mais no cardápio."));
+		nadaFoiGravado();
+	}
+
+	@Test
 	void semNomeWhatsappValidoOuConsentimentoNadaEGravado() throws Exception {
 		Map<String, Object> corpo = pedido(" ", "11988887777", daquiA(7), List.of(item(brigadeiro, 1, Map.of())));
 		corpo.put("consentimentoLgpd", false);

@@ -62,6 +62,23 @@ public class ControladorProduto {
 	}
 
 	/**
+	 * Tira o produto do cardápio por um tempo, sem excluir (ZAP-151): ele continua no painel,
+	 * mas sai do cardápio público e não entra em pedido novo.
+	 */
+	@PostMapping("/{id}/tirar-do-cardapio")
+	public RespostaProduto tirarDoCardapio(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Long id) {
+		return servico.colocarNoCardapio(usuario, id, false);
+	}
+
+	/** Volta com o produto ao cardápio público e aos pedidos novos (ZAP-151). */
+	@PostMapping("/{id}/voltar-ao-cardapio")
+	public RespostaProduto voltarAoCardapio(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Long id) {
+		return servico.colocarNoCardapio(usuario, id, true);
+	}
+
+	/**
 	 * Envia ou troca a foto (ZAP-40), em {@code multipart/form-data} com os campos
 	 * {@code arquivo} e {@code textoAlternativo}.
 	 */

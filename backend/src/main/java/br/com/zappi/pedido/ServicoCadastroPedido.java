@@ -71,7 +71,11 @@ public class ServicoCadastroPedido {
 
 	private static final LocalTime ULTIMA_RETIRADA = LocalTime.of(20, 0);
 
-	private static final String PRODUTO_FORA_DO_CARDAPIO = "Escolha um produto do cardápio.";
+	/** Inexistente, excluído ou de outro estabelecimento: a resposta não revela qual (RN01). */
+	private static final String PRODUTO_INVALIDO = "Escolha um produto do cardápio.";
+
+	/** Produto da loja que a Lídia tirou do cardápio por um tempo (ZAP-151). */
+	private static final String PRODUTO_FORA_DO_CARDAPIO = "Este produto não está mais no cardápio.";
 
 	private static final String QUANTIDADE_INTEIRA = "Este produto é vendido por unidade: use um número inteiro.";
 
@@ -306,6 +310,10 @@ public class ServicoCadastroPedido {
 		return correspondentes;
 	}
 
+	/**
+	 * Produtos não excluídos da loja, no cardápio ou fora dele: {@link #conferirItem} recusa os
+	 * que estão fora, com a mensagem própria (ZAP-151).
+	 */
 	private Map<Long, Produto> produtosDoCardapio(Long estabelecimentoId, List<ItemDaRequisicao> itensDaRequisicao) {
 		List<Long> ids = itensDaRequisicao.stream().map(ItemDaRequisicao::produtoId).distinct().toList();
 		if (ids.isEmpty()) {
@@ -319,6 +327,8 @@ public class ServicoCadastroPedido {
 	/**
 	 * Produto do cardápio e, se for vendido por unidade, quantidade inteira (RN12). Item novo tem
 	 * observação de até 300 caracteres; o que já estava no pedido pode manter até 600 (ZAP-136).
+	 * Só o item novo precisa de produto no cardápio (ZAP-151): o que já estava no pedido continua
+	 * com o produto e o preço da época, mesmo fora do cardápio (RN10).
 	 */
 	private static void conferirItem(Map<String, String> erros, int indice, ItemDaRequisicao item, Produto produto,
 			boolean novo) {
@@ -326,6 +336,10 @@ public class ServicoCadastroPedido {
 			erros.put("itens[%d].observacao".formatted(indice), OBSERVACAO_LONGA);
 		}
 		if (produto == null) {
+			erros.put("itens[%d].produtoId".formatted(indice), PRODUTO_INVALIDO);
+			return;
+		}
+		if (novo && !produto.isNoCardapio()) {
 			erros.put("itens[%d].produtoId".formatted(indice), PRODUTO_FORA_DO_CARDAPIO);
 			return;
 		}

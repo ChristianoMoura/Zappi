@@ -131,6 +131,8 @@ class ProdutoTests {
 			.andExpect(jsonPath("$.unidade").value("KG"))
 			.andExpect(jsonPath("$.preco").value(95.50))
 			.andExpect(jsonPath("$.ativo").value(true))
+			// Produto novo entra no cardápio por padrão (ZAP-151)
+			.andExpect(jsonPath("$.noCardapio").value(true))
 			.andReturn().getResponse().getContentAsString();
 		long id = ((Number) json.readValue(corpo, Map.class).get("id")).longValue();
 
@@ -180,6 +182,94 @@ class ProdutoTests {
 		comToken(get(ROTA + "/" + id), tokenDaLidia).andExpect(status().isNotFound());
 		assertThat(log("PRODUTO_EXCLUIDO", id)).containsEntry("usuario_id", lidia);
 		confereOrigemDoLog("PRODUTO_EXCLUIDO", id);
+	}
+
+	@Test
+	void tiraDoCardapioSemExcluirERegistraOAntesEODepois() throws Exception {
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+
+		comToken(post(ROTA + "/" + id + "/tirar-do-cardapio"), tokenDaLidia)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(id))
+			.andExpect(jsonPath("$.ativo").value(true))
+			.andExpect(jsonPath("$.noCardapio").value(false));
+
+		assertThat(jdbc.queryForObject("select no_cardapio from produto where id = ?", Boolean.class, id)).isFalse();
+		// Continua na tela de produtos do painel, com o estado (ZAP-151)
+		comToken(get(ROTA), tokenDaLidia)
+			.andExpect(jsonPath("$.length()").value(4))
+			.andExpect(jsonPath("$[0].id").value(id))
+			.andExpect(jsonPath("$[0].noCardapio").value(false))
+			.andExpect(jsonPath("$[1].noCardapio").value(true));
+		comToken(get(ROTA + "/" + id), tokenDaLidia)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.noCardapio").value(false));
+		assertThat(noCardapioNoLog(id)).containsExactly(List.of(true, false));
+		confereOrigemDoLog("PRODUTO_EDITADO", id);
+		// O pedido #1 da V2 continua com o item e o preço congelado (RN10)
+		assertThat(jdbc.queryForObject("select preco_unitario from item_pedido where produto_id = ?", BigDecimal.class,
+				id)).isEqualByComparingTo("100.00");
+	}
+
+	@Test
+	void voltaAoCardapioERegistraOAntesEODepois() throws Exception {
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+		jdbc.update("update produto set no_cardapio = false where id = ?", id);
+
+		comToken(post(ROTA + "/" + id + "/voltar-ao-cardapio"), tokenDaLidia)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.noCardapio").value(true));
+
+		assertThat(jdbc.queryForObject("select no_cardapio from produto where id = ?", Boolean.class, id)).isTrue();
+		assertThat(noCardapioNoLog(id)).containsExactly(List.of(false, true));
+	}
+
+	@Test
+	void repetirOPedidoNaoMudaNadaNemGravaOutroLog() throws Exception {
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+
+		comToken(post(ROTA + "/" + id + "/tirar-do-cardapio"), tokenDaLidia).andExpect(status().isOk());
+		comToken(post(ROTA + "/" + id + "/tirar-do-cardapio"), tokenDaLidia)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.noCardapio").value(false));
+		long cento = idDoNome("Cento de coxinha");
+		comToken(post(ROTA + "/" + cento + "/voltar-ao-cardapio"), tokenDaLidia)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.noCardapio").value(true));
+
+		assertThat(noCardapioNoLog(id)).hasSize(1);
+		assertThat(noCardapioNoLog(cento)).isEmpty();
+	}
+
+	@Test
+	void editarProdutoForaDoCardapioNaoOTrazDeVolta() throws Exception {
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+		jdbc.update("update produto set no_cardapio = false where id = ?", id);
+
+		comToken(put(ROTA + "/" + id), tokenDaLidia, produto("Bolo de brigadeiro de chocolate", "KG", "105"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.preco").value(105))
+			.andExpect(jsonPath("$.noCardapio").value(false));
+	}
+
+	@Test
+	void naoTiraNemVoltaProdutoDeOutraLojaOuExcluido() throws Exception {
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+		long excluido = idDoNome("Bolo de ninho com morango");
+		jdbc.update("update produto set ativo = false where id = ?", excluido);
+
+		comToken(post(ROTA + "/" + id + "/tirar-do-cardapio"), tokenDeOutraLoja)
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.codigo").value("PRODUTO_NAO_ENCONTRADO"));
+		comToken(post(ROTA + "/" + id + "/voltar-ao-cardapio"), tokenDeOutraLoja).andExpect(status().isNotFound());
+		// Excluir é outra coisa (RN14): o excluído não volta ao cardápio
+		comToken(post(ROTA + "/" + excluido + "/voltar-ao-cardapio"), tokenDaLidia).andExpect(status().isNotFound());
+		comToken(post(ROTA + "/" + excluido + "/tirar-do-cardapio"), tokenDaLidia).andExpect(status().isNotFound());
+
+		assertThat(jdbc.queryForObject("select no_cardapio from produto where id = ?", Boolean.class, id)).isTrue();
+		assertThat(jdbc.queryForObject("select ativo from produto where id = ?", Boolean.class, excluido)).isFalse();
+		assertThat(noCardapioNoLog(id)).isEmpty();
+		assertThat(noCardapioNoLog(excluido)).isEmpty();
 	}
 
 	@Test
@@ -385,6 +475,9 @@ class ProdutoTests {
 		mockMvc.perform(post(ROTA).contentType(MediaType.APPLICATION_JSON)
 			.content(json.writeValueAsString(produto("Bolo de teste", "KG", "10"))))
 			.andExpect(status().isUnauthorized());
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+		mockMvc.perform(post(ROTA + "/" + id + "/tirar-do-cardapio")).andExpect(status().isUnauthorized());
+		mockMvc.perform(post(ROTA + "/" + id + "/voltar-ao-cardapio")).andExpect(status().isUnauthorized());
 	}
 
 	private static final String NAVEGADOR = "Navegador de teste";
@@ -428,6 +521,16 @@ class ProdutoTests {
 		assertThat(log(acao, produtoId)).containsEntry("ip_origem", "127.0.0.1")
 			.containsEntry("user_agent", NAVEGADOR)
 			.extractingByKey("criado_em").isNotNull();
+	}
+
+	/** {@code noCardapio} antes e depois em cada {@code PRODUTO_EDITADO} do produto, na ordem. */
+	private List<List<Boolean>> noCardapioNoLog(long produtoId) {
+		return jdbc.query("""
+				select (detalhes -> 'antes' ->> 'noCardapio')::boolean as antes,
+				       (detalhes -> 'depois' ->> 'noCardapio')::boolean as depois
+				from log_auditoria where acao = 'PRODUTO_EDITADO' and entidade = 'produto' and entidade_id = ?
+				order by id
+				""", (linha, i) -> List.of(linha.getBoolean("antes"), linha.getBoolean("depois")), produtoId);
 	}
 
 	private Map<String, Object> log(String acao, long produtoId) {

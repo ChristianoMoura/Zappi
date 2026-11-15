@@ -65,6 +65,14 @@ public class Produto {
 	@Column(name = "ativo", nullable = false)
 	private boolean ativo;
 
+	/**
+	 * Fora do cardápio por um tempo, sem excluir (ZAP-151): continua na tela de produtos do
+	 * painel, mas não aparece no cardápio público nem entra em pedido novo. Separado de
+	 * {@code ativo}, que é a exclusão (RN14).
+	 */
+	@Column(name = "no_cardapio", nullable = false)
+	private boolean noCardapio;
+
 	@Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
 	private OffsetDateTime criadoEm;
 
@@ -81,6 +89,7 @@ public class Produto {
 			String outrosAlergenos, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.ativo = true;
+		this.noCardapio = true;
 		atualizar(categoria, unidadeMedida, nome, descricao, preco, fotoTextoAlternativo, contemGluten, outrosAlergenos,
 				agora);
 	}
@@ -107,6 +116,19 @@ public class Produto {
 	public void excluir(OffsetDateTime agora) {
 		this.ativo = false;
 		this.atualizadoEm = agora;
+	}
+
+	/**
+	 * Tira do cardápio (ZAP-151) ou volta com ele. Devolve {@code false} quando o produto já
+	 * estava assim, sem mudar nada.
+	 */
+	public boolean colocarNoCardapio(boolean noCardapio, OffsetDateTime agora) {
+		if (this.noCardapio == noCardapio) {
+			return false;
+		}
+		this.noCardapio = noCardapio;
+		this.atualizadoEm = agora;
+		return true;
 	}
 
 	/** Foto nova, sempre com o texto alternativo (RN15, ZAP-40). */
@@ -175,6 +197,10 @@ public class Produto {
 
 	public boolean isAtivo() {
 		return ativo;
+	}
+
+	public boolean isNoCardapio() {
+		return noCardapio;
 	}
 
 	public OffsetDateTime getCriadoEm() {
