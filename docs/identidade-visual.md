@@ -114,12 +114,12 @@ O estilo de imagem do Zappi é **3D lúdico, com acabamento de massinha brilhant
 - Usada em WebP de 1400, 2000 e 2800 px (cerca de 100, 160 e 240 KB), com `srcset`: o navegador baixa só o tamanho que a tela precisa. Arquivos: [`ilustracao-login-1400.webp`](../frontend/src/assets/ilustracao-login-1400.webp), [`-2000`](../frontend/src/assets/ilustracao-login-2000.webp) e [`-2800`](../frontend/src/assets/ilustracao-login-2800.webp).
 - Aparece só no computador; no celular, a tela mostra apenas o formulário.
 
-**Collab com a loja (Casa Belt × Zappi):** o painel mostra que o Zappi é usado em parceria com a loja.
+**Collab com a loja (Casa Belt × Zappi):** dentro do painel, o Zappi aparece em parceria com a loja.
 
 - **Topo do painel:** fundo Cacau #3D2B1F só com o logo do Zappi (símbolo e nome) em creme #FDF6EC (contraste 12,51:1). O foco do teclado no topo fica em creme.
 - **Botão da conta (ZAP-178):** no canto direito do topo, o logo da loja num círculo de 40 px (38 px no celular) com borda creme de 2 px, como uma foto de perfil, e a seta que gira ao abrir. Sem logo, as iniciais da loja em branco sobre o ciano profundo (6,16:1); sem os dados da loja, o ícone de pessoa. O logo é decorativo: o botão se chama "Minha conta". O menu abre com o logo em 44 px, o nome da usuária e o nome da loja em #5C5048 (7,4:1), e depois o "Sair".
-- **Login:** logo da loja centralizado e, embaixo, o símbolo do Zappi com o nome ao lado. Sem logo da loja, o login mostra só a marca do Zappi com o slogan.
-- **Origem:** nome e logo vêm do Estabelecimento; ao salvar uma troca lá, o botão da conta e o login mudam juntos. Sem logo, o botão da conta usa as iniciais da loja.
+- **Login:** só a marca do Zappi com o slogan, sem o logo da loja. Sem login, o sistema não sabe qual é a loja (decisão de 15/11/2026, ZAP-83).
+- **Origem:** nome e logo vêm do Estabelecimento; ao salvar uma troca lá, o botão da conta muda na hora. Sem logo, o botão da conta usa as iniciais da loja.
 
 **Regras para novas imagens:**
 
@@ -229,6 +229,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 
 | Etapa | Decisão |
 | --- | --- |
+| Login só com o Zappi | Em 15/11/2026, o grupo decidiu que o login mostra só a marca do Zappi com o slogan, sem o logo da loja: sem login, o sistema não sabe qual é a loja, e não vale criar uma rota pública só para isso (ZAP-83). Substitui a parte do login da collab de 08/11/2026 |
 | Ilustração em alta | Ilustração do login ampliada 2× (Topaz) e servida em três tamanhos, em 08/11/2026, aprovada pelo grupo em protótipo de comparação |
 | Logo da loja na conta | Em 15/11/2026, o grupo aprovou em protótipo tirar o logo, o nome da loja e o "×" do topo, que fica só com o Zappi, e levar o logo da loja para o botão da conta, como foto de perfil (ZAP-178). O login não muda |
 | Collab Casa Belt × Zappi | Em 08/11/2026, o grupo escolheu em protótipo o topo na cor Cacau #3D2B1F com "Casa Belt × Zappi" em creme (logo e nome da loja primeiro) e, no login, o logo da loja centralizado com o Zappi embaixo, nome ao lado do símbolo. Tamanhos ajustados pelo grupo: topo 68 px, logo da loja 44, nome 24, × 20, símbolo do Zappi 44 e nome 24; no login, logo da loja 108, símbolo 40 e nome 36. O logo e o nome vêm do Meu estabelecimento |

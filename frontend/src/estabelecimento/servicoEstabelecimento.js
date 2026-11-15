@@ -109,9 +109,9 @@ export function ouvirEstabelecimento(aoMudar) {
 
 const avisar = (estabelecimento) => ouvintes.forEach((aoMudar) => aoMudar({ nome: estabelecimento.nome, logo: estabelecimento.logo }))
 
-// Nome e logo da loja, os mesmos do Estabelecimento. Sem login não há token, e a API não
-// sabe qual é a loja: devolve nulo e a tela mostra só a marca do Zappi.
-// PENDENTE: a collab no login depende de uma rota pública da loja, a combinar com o front.
+// Nome e logo da loja, os mesmos do Estabelecimento, para o botão e a caixinha da conta
+// (ZAP-178). Sem login não há token, e a API não sabe qual é a loja: devolve nulo. O login
+// mostra só a marca do Zappi (decisão de 15/11/2026, ZAP-83).
 export async function buscarMarcaLoja() {
   if (!lerToken()) return null
   const estabelecimento = await buscarEstabelecimento()
