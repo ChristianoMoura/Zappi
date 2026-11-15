@@ -12,7 +12,6 @@ import { buscarTermosVigentes } from '../autenticacao/servicoTermos'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaLogin } from './PaginaLogin'
 
-import { buscarMarcaLoja } from '../estabelecimento/servicoEstabelecimento'
 
 // O backend é simulado aqui para os testes não dependerem da ZAP-31
 vi.mock('../autenticacao/servicoAutenticacao', async (importarOriginal) => ({
@@ -24,12 +23,6 @@ vi.mock('../autenticacao/servicoAutenticacao', async (importarOriginal) => ({
 vi.mock('../autenticacao/servicoTermos', async (importarOriginal) => ({
   ...(await importarOriginal()),
   buscarTermosVigentes: vi.fn(),
-}))
-
-// A marca da loja no login ainda não vem da API (sem token, a loja não é conhecida; ZAP-118)
-vi.mock('../estabelecimento/servicoEstabelecimento', async (importarOriginal) => ({
-  ...(await importarOriginal()),
-  buscarMarcaLoja: vi.fn(),
 }))
 
 function abrirLogin() {
@@ -53,7 +46,6 @@ describe('PaginaLogin (US1, RF01, RF02)', () => {
     entrarNoServidor.mockReset()
     buscarTermosVigentes.mockReset().mockResolvedValue(null)
     localStorage.clear()
-    buscarMarcaLoja.mockReset().mockResolvedValue({ nome: 'Casa Belt', logo: 'logo.webp' })
   })
 
   test('mostra os campos com rótulo visível (NBR 17225 5.3.1)', () => {
@@ -63,19 +55,11 @@ describe('PaginaLogin (US1, RF01, RF02)', () => {
     expect(screen.getByLabelText('Senha')).toBeVisible()
   })
 
-  test('mostra o logo da loja, o mesmo do Estabelecimento, com o Zappi embaixo', async () => {
+  test('mostra só a marca do Zappi com o slogan, sem o logo da loja (decisão de 15/11/2026, ZAP-83)', () => {
     abrirLogin()
 
-    expect(await screen.findByRole('img', { name: 'Logo de Casa Belt' })).toBeVisible()
     expect(screen.getByRole('img', { name: 'Zappi' })).toBeVisible()
-  })
-
-  test('sem a marca da loja, mostra só o Zappi', async () => {
-    buscarMarcaLoja.mockResolvedValue(null)
-    abrirLogin()
-
-    await waitFor(() => expect(buscarMarcaLoja).toHaveBeenCalled())
-    expect(screen.getByRole('img', { name: 'Zappi' })).toBeVisible()
+    expect(screen.getByText('Seu cardápio, direto no zap.')).toBeVisible()
     expect(screen.queryByRole('img', { name: /Logo de/ })).not.toBeInTheDocument()
   })
 
@@ -133,7 +117,6 @@ describe('aceite dos termos no login (ZAP-143, ZAP-147)', () => {
 
   beforeEach(() => {
     entrarNoServidor.mockReset().mockResolvedValue({ token: 'token-de-teste', nome: 'Lídia' })
-    buscarMarcaLoja.mockReset().mockResolvedValue(null)
     buscarTermosVigentes.mockReset().mockResolvedValue({ versao: 1, data: '2026-11-14' })
     localStorage.clear()
     sessionStorage.clear()
