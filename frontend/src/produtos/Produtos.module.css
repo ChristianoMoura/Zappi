@@ -803,19 +803,26 @@
   }
 }
 
-/* Selo "Promoção" em texto (não só pela cor): branco sobre o vermelho do projeto, 6,13:1 */
-.seloPromocao {
-  align-self: center;
+/* A unidade e o percentual ficam sempre na mesma linha: se faltar espaço, descem juntos */
+.unidadeEDesconto {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* Percentual de desconto ("-13%"), ao lado da unidade: verde #1d6b45 sobre #eaf6ef, 6,4:1 */
+.descontoCurto {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
   border-radius: 999px;
-  background: #b42318;
-  color: #fff;
-  font-size: 0.85rem;
+  background: #eaf6ef;
+  border: 1px solid #b7dcc6;
+  color: #1d6b45;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Preço antigo no cartão da lista */

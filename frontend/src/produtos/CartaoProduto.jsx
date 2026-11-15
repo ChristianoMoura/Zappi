@@ -1,7 +1,8 @@
 import { Button, VisuallyHidden } from '@mantine/core'
 import { IconEye, IconEyeOff, IconPencil, IconPhotoOff, IconTrash } from '@tabler/icons-react'
 import { Link } from 'react-router'
-import { emPromocao, precoParaTela, textoPrecoPromocao, textoSeloPromocao, UNIDADES } from './regrasProdutos'
+import { DescontoCurto } from './DescontoCurto'
+import { emPromocao, precoParaTela, textoPrecoPromocao, UNIDADES } from './regrasProdutos'
 import classes from './Produtos.module.css'
 import { SelosAlergenos } from './SelosAlergenos'
 
@@ -42,13 +43,15 @@ export function CartaoProduto({ produto, destaque, aoExcluir, aoTirar, aoVoltar,
         {emPromocao(produto) ? (
           // Promoção (ZAP-161): o risco não é lido pelo leitor de tela, então o "De ... por ..." vai em texto
           <p className={classes.preco}>
-            <span className={classes.seloPromocao} aria-hidden="true">{textoSeloPromocao(produto)}</span>
             <VisuallyHidden>{textoPrecoPromocao(produto)}</VisuallyHidden>
             <s className={classes.precoAntigo} aria-hidden="true">
               R$ {precoParaTela(produto.preco)}
             </s>
             <strong aria-hidden="true">R$ {precoParaTela(produto.precoPromocional)}</strong>
-            <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
+            <span className={classes.unidadeEDesconto}>
+              <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
+              <DescontoCurto produto={produto} lido={false} />
+            </span>
           </p>
         ) : (
           <p className={classes.preco}>

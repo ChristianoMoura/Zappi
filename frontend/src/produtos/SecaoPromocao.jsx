@@ -1,7 +1,8 @@
 import { Alert, Button, Modal, TextInput } from '@mantine/core'
 import { IconAlertCircle, IconDiscount, IconDiscountOff } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { emPromocao, lerPreco, percentualDesconto, precoParaTela, textoSeloPromocao, UNIDADES, validarPromocao } from './regrasProdutos'
+import { DescontoCurto } from './DescontoCurto'
+import { emPromocao, lerPreco, percentualDesconto, precoParaTela, UNIDADES, validarPromocao } from './regrasProdutos'
 import { aplicarPromocao, encerrarPromocao, PromocaoRecusadaError } from './servicoProdutos'
 import classes from './Produtos.module.css'
 
@@ -127,9 +128,10 @@ export function SecaoPromocao({ produto, aoMudar, aoAvisar }) {
       {ativa ? (
         <>
           <p className={classes.precosPromocao}>
-            <span className={classes.seloPromocao}>{textoSeloPromocao(produto)}</span>
-            <span>
-              De <s>R$ {precoParaTela(produto.preco)}</s> por <strong>R$ {precoParaTela(produto.precoPromocional)}</strong> {unidade.selo}
+            De <s>R$ {precoParaTela(produto.preco)}</s> por <strong>R$ {precoParaTela(produto.precoPromocional)}</strong>{' '}
+            <span className={classes.unidadeEDesconto}>
+              {unidade.selo}
+              <DescontoCurto produto={produto} />
             </span>
           </p>
           <p className={classes.dica}>Os pedidos novos usam o preço com desconto. Os pedidos já feitos não mudam.</p>
