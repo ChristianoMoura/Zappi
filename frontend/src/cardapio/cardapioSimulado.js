@@ -1,12 +1,17 @@
 // Cardápio simulado, só para o modo de desenvolvimento, enquanto a rota pública não existe
-// (ZAP-104). Usa os produtos do seed (V2) e o logo e a capa da Casa Belt. Fica num arquivo à
-// parte e é carregado só quando preciso, para não entrar no pacote de produção.
+// (ZAP-104). Usa os produtos do seed, já com nome único e categoria (ZAP-140), e o logo e a
+// capa da Casa Belt. Fica num arquivo à parte e é carregado só quando preciso, para não entrar no
+// pacote de produção.
 import bolo from '../assets/bolo-brigadeiro.jpg'
 import ninho from '../assets/bolo-ninho.jpg'
 import capa from '../assets/capa-estabelecimento.webp'
 import coxinhas from '../assets/cento-coxinha.jpg'
 import logo from '../assets/logo-casa-belt.webp'
 import { CardapioNaoEncontradoError } from './servicoCardapio'
+
+// Categorias da loja na ordem do painel (ZAP-136, ZAP-140)
+const BOLOS = { id: 1, nome: 'Bolos' }
+const SALGADOS = { id: 2, nome: 'Salgados' }
 
 const CASA_BELT = {
   estabelecimento: {
@@ -17,11 +22,12 @@ const CASA_BELT = {
     logo,
     capa,
   },
+  categorias: [BOLOS, SALGADOS],
   produtos: [
     {
       id: 1,
-      nome: 'Bolo',
-      sabor: 'Brigadeiro de chocolate',
+      nome: 'Bolo de brigadeiro de chocolate',
+      categoria: BOLOS,
       unidade: 'KG',
       preco: 100,
       descricao: 'Massa de chocolate, recheio de brigadeiro e cobertura de granulado.',
@@ -32,8 +38,8 @@ const CASA_BELT = {
     },
     {
       id: 2,
-      nome: 'Bolo',
-      sabor: 'Ninho com morango',
+      nome: 'Bolo de ninho com morango',
+      categoria: BOLOS,
       unidade: 'KG',
       preco: 115,
       descricao: 'Recheio de leite Ninho com morango.',
@@ -44,8 +50,8 @@ const CASA_BELT = {
     },
     {
       id: 3,
-      nome: 'Salgado',
-      sabor: 'Cento de coxinha',
+      nome: 'Cento de coxinha',
+      categoria: SALGADOS,
       unidade: 'UN',
       preco: 120,
       descricao: 'Cem coxinhas de frango.',
@@ -56,8 +62,8 @@ const CASA_BELT = {
     },
     {
       id: 4,
-      nome: 'Salgado',
-      sabor: 'Coxinha por unidade',
+      nome: 'Coxinha por unidade',
+      categoria: SALGADOS,
       unidade: 'UN',
       preco: 1.25,
       descricao: 'Coxinha de frango, vendida por unidade.',

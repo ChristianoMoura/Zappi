@@ -102,7 +102,7 @@ export function PaginaCardapio() {
   } else if (pagina === 'pedido' && !idProduto) {
     conteudo = <SeuPedido loja={estado.estabelecimento} produtos={estado.produtos} montagem={montagem} escuro={escuro} />
   } else if (pagina) conteudo = <NaoEncontrado escuro={escuro} />
-  else conteudo = <Cardapio loja={estado.estabelecimento} produtos={estado.produtos} montagem={montagem} escuro={escuro} alternarTema={alternarTema} tema={tema} />
+  else conteudo = <Cardapio loja={estado.estabelecimento} categorias={estado.categorias} produtos={estado.produtos} montagem={montagem} escuro={escuro} alternarTema={alternarTema} tema={tema} />
 
   return <div className={juntar(tema, classes.pagina)}>{conteudo}</div>
 }
@@ -175,7 +175,7 @@ function RegrasEncomenda() {
 
 // ---------- Cardápio ----------
 
-function Cardapio({ loja, produtos, montagem, escuro, alternarTema, tema }) {
+function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escuro, alternarTema, tema }) {
   useTituloPagina(`Cardápio da ${loja.nome}`)
   const navegar = useNavigate()
   const { state } = useLocation()
@@ -192,8 +192,9 @@ function Cardapio({ loja, produtos, montagem, escuro, alternarTema, tema }) {
   const buscaRef = useRef(null)
 
   const visiveis = filtrarProdutos(produtos, busca)
-  const categorias = agruparPorCategoria(visiveis)
-  const todasCategorias = agruparPorCategoria(produtos)
+  // Seções e abas pelas categorias do painel, na ordem da loja (ZAP-140)
+  const categorias = agruparPorCategoria(visiveis, categoriasDaLoja)
+  const todasCategorias = agruparPorCategoria(produtos, categoriasDaLoja)
   const categoriaAtual = atual ?? categorias[0]?.id
 
   // Barra compacta depois do cabeçalho e aba da seção que está na tela
@@ -272,7 +273,7 @@ function Cardapio({ loja, produtos, montagem, escuro, alternarTema, tema }) {
 
   async function compartilhar(produto) {
     const url = window.location.href
-    const titulo = produto ? `${produto.sabor} · ${loja.nome}` : `Cardápio da ${loja.nome}`
+    const titulo = produto ? `${produto.nome} · ${loja.nome}` : `Cardápio da ${loja.nome}`
     try {
       if (navigator.share) {
         await navigator.share({ title: titulo, url })
@@ -387,7 +388,7 @@ function Cardapio({ loja, produtos, montagem, escuro, alternarTema, tema }) {
                       <li key={p.id}>
                         <button type="button" className={classes.item} onClick={() => abrirProduto(p)}>
                           <div className={classes.textoItem}>
-                            <h3>{p.sabor}</h3>
+                            <h3>{p.nome}</h3>
                             {p.descricao && <p className={classes.descricao}>{p.descricao}</p>}
                             <Preco produto={p} />
                           </div>

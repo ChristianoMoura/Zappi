@@ -14,9 +14,13 @@ vi.mock('../cardapio/servicoCardapio', async (importarOriginal) => ({
 
 const CARDAPIO = {
   estabelecimento: { nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: '' },
+  categorias: [
+    { id: 1, nome: 'Bolos' },
+    { id: 2, nome: 'Salgados' },
+  ],
   produtos: [
-    { id: 1, nome: 'Bolo', sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: '', textoAlternativo: '', alergenos: ['GLUTEN', 'OVOS'], outrosAlergenos: '' },
-    { id: 4, nome: 'Salgado', sabor: 'Coxinha por unidade', unidade: 'UN', preco: 1.25, descricao: 'Coxinha de frango.', foto: '', textoAlternativo: '' },
+    { id: 1, nome: 'Bolo de brigadeiro de chocolate', categoriaId: 1, categoria: 'Bolos', unidade: 'KG', preco: 100, descricao: 'Massa de chocolate.', foto: '', textoAlternativo: '', alergenos: ['GLUTEN', 'OVOS'], outrosAlergenos: '' },
+    { id: 4, nome: 'Coxinha por unidade', categoriaId: 2, categoria: 'Salgados', unidade: 'UN', preco: 1.25, descricao: 'Coxinha de frango.', foto: '', textoAlternativo: '' },
   ],
 }
 
@@ -37,24 +41,28 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     localStorage.clear()
   })
 
-  test('no bolo, escolhe a quantidade de 0,5 em 0,5 kg, personaliza e adiciona ao pedido', async () => {
+  test('no bolo, escolhe a quantidade de 0,5 em 0,5 kg, escreve a observação e adiciona ao pedido', async () => {
     const usuario = userEvent.setup()
     const roteador = abrir('/cardapio/casa-belt/produto/1')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Detalhes do produto' })).toBeVisible()
-    expect(screen.getByText(/Quer outra massa\? Escreva aqui/)).toBeVisible()
+    expect(screen.getByText('Bolos')).toBeVisible()
+    expect(screen.getByRole('heading', { level: 2, name: 'Bolo de brigadeiro de chocolate' })).toBeVisible()
     await usuario.click(screen.getByRole('button', { name: 'Aumentar quantidade' }))
     expect(screen.getByText('1,5 kg')).toBeVisible()
-    await usuario.type(screen.getByRole('textbox', { name: 'Recheio' }), 'brigadeiro branco')
+    const observacao = screen.getByRole('textbox', { name: 'Observações' })
+    expect(observacao).toHaveAccessibleDescription('Algum detalhe? Ex.: tema da festa ou frase no bolo.')
+    await usuario.type(observacao, 'Escrever Feliz aniversário')
 
     const adicionar = screen.getByRole('button', { name: /Adicionar ao pedido/ })
     expect(adicionar).toHaveTextContent('R$ 150,00')
     await usuario.click(adicionar)
 
     expect(roteador.state.location.pathname).toBe('/cardapio/casa-belt')
-    expect(await screen.findByText('Brigadeiro de chocolate adicionado ao pedido.')).toBeVisible()
+    expect(await screen.findByText('Bolo de brigadeiro de chocolate adicionado ao pedido.')).toBeVisible()
     expect(screen.getByRole('link', { name: /Ver pedido · 1 item/ })).toHaveTextContent('R$ 150,00')
-    expect(guardado().itens[0]).toMatchObject({ produtoId: 1, quantidade: 1.5, recheio: 'brigadeiro branco' })
+    expect(guardado().itens[0]).toMatchObject({ produtoId: 1, quantidade: 1.5, observacao: 'Escrever Feliz aniversário' })
+    expect(guardado().itens[0]).not.toHaveProperty('recheio')
   })
 
   test('o detalhe mostra os alérgenos e lembra de falar com a loja (ZAP-132)', async () => {
@@ -66,11 +74,14 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(screen.getByRole('link', { name: /Fale com a loja pelo WhatsApp/ })).toHaveAttribute('href', expect.stringContaining('wa.me/5511900000000'))
   })
 
-  test('produto por unidade não tem recheio nem cobertura', async () => {
+  test('nenhum produto tem recheio nem cobertura; a observação fica em todos (ZAP-140)', async () => {
     abrir('/cardapio/casa-belt/produto/4')
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Coxinha por unidade' })).toBeVisible()
     expect(screen.queryByRole('textbox', { name: 'Recheio' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Cobertura' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/personalizar/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Observações' })).toBeVisible()
     expect(screen.getByText('1 unidade')).toBeVisible()
   })
 
@@ -92,8 +103,8 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
       'zappi.pedido.casa-belt',
       JSON.stringify({
         itens: [
-          { chave: 1, produtoId: 1, quantidade: 1, recheio: '', cobertura: '', observacao: '' },
-          { chave: 2, produtoId: 4, quantidade: 10, recheio: '', cobertura: '', observacao: '' },
+          { chave: 1, produtoId: 1, quantidade: 1, observacao: '' },
+          { chave: 2, produtoId: 4, quantidade: 10, observacao: '' },
         ],
         data: '',
         hora: '',
@@ -146,8 +157,27 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(screen.getByText(/às 15h30/)).toBeVisible()
     const enviar = screen.getByRole('link', { name: /Enviar pelo WhatsApp/ })
     const texto = new URL(enviar.getAttribute('href')).searchParams.get('text')
-    expect(texto).toContain('• Brigadeiro de chocolate — 2 kg (R$ 200,00)')
+    expect(texto).toContain('• Bolo de brigadeiro de chocolate — 2 kg (R$ 200,00)')
     expect(texto).toContain('às 15h30')
     expect(guardado()).toMatchObject({ data, hora: '15:30' })
+  })
+
+  test('pedido guardado antes da mudança leva o recheio e a cobertura para a observação do item (ZAP-140)', async () => {
+    localStorage.setItem(
+      'zappi.pedido.casa-belt',
+      JSON.stringify({
+        itens: [{ chave: 1, produtoId: 1, quantidade: 1, recheio: 'brigadeiro branco', cobertura: 'chantilly', observacao: 'massa branca' }],
+        data: '',
+        hora: '',
+        observacao: '',
+      }),
+    )
+    abrir('/cardapio/casa-belt/pedido')
+
+    const itens = await screen.findByRole('region', { name: 'Itens' })
+    expect(within(itens).getByText('Observação: Recheio: brigadeiro branco. Cobertura: chantilly. massa branca')).toBeVisible()
+    expect(within(itens).queryByText(/^Recheio:/)).not.toBeInTheDocument()
+    expect(guardado().itens[0]).not.toHaveProperty('recheio')
+    expect(guardado().itens[0]).not.toHaveProperty('cobertura')
   })
 })

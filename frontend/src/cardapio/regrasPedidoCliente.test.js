@@ -13,16 +13,16 @@ import {
   validarPedido,
 } from './regrasPedidoCliente'
 
-const bolo = { id: 1, sabor: 'Brigadeiro de chocolate', unidade: 'KG', preco: 100 }
-const coxinha = { id: 4, sabor: 'Coxinha por unidade', unidade: 'UN', preco: 1.25 }
+const bolo = { id: 1, nome: 'Bolo de brigadeiro de chocolate', unidade: 'KG', preco: 100 }
+const coxinha = { id: 4, nome: 'Coxinha por unidade', unidade: 'UN', preco: 1.25 }
 const produtos = [bolo, coxinha]
 // 10/11/2026 às 23h30 em São Paulo (02h30 do dia 11 em UTC)
 const agora = new Date('2026-11-11T02:30:00Z')
 
 const pedido = (mudancas = {}) => ({
   itens: [
-    { chave: 1, produtoId: 1, quantidade: 1.5, recheio: 'brigadeiro branco', cobertura: '', observacao: 'massa branca' },
-    { chave: 2, produtoId: 4, quantidade: 20, recheio: '', cobertura: '', observacao: '' },
+    { chave: 1, produtoId: 1, quantidade: 1.5, observacao: 'massa branca' },
+    { chave: 2, produtoId: 4, quantidade: 20, observacao: '' },
   ],
   data: '2026-11-17',
   hora: '15:30',
@@ -70,11 +70,11 @@ describe('regras da montagem do pedido pelo cliente (ZAP-107)', () => {
     expect(validarPedido(pedido({ hora: '03:00' }), produtos, agora)).toHaveProperty('hora')
   })
 
-  test('a mensagem do WhatsApp leva os itens, a personalização, a data e a hora e o total', () => {
+  test('a mensagem do WhatsApp leva o nome do produto, a observação, a data e a hora e o total', () => {
     const texto = mensagemDoPedido({ nome: 'Casa Belt' }, pedido(), produtos)
 
-    expect(texto).toContain('• Brigadeiro de chocolate — 1,5 kg (R$ 150,00)')
-    expect(texto).toContain('  Recheio: brigadeiro branco')
+    expect(texto).toContain('• Bolo de brigadeiro de chocolate — 1,5 kg (R$ 150,00)')
+    expect(texto).not.toMatch(/Recheio|Cobertura/)
     expect(texto).toContain('  Observação: massa branca')
     expect(texto).toContain('• Coxinha por unidade — 20 unidades (R$ 25,00)')
     expect(texto).toContain('Retirada: terça-feira, 17/11, às 15h30')
