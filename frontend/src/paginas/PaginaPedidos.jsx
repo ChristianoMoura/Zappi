@@ -1,18 +1,18 @@
-import { Alert, Button, Loader, Switch, Tabs } from '@mantine/core'
+import { Alert, Button, Loader, NativeSelect, Tabs } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { IconAlertCircle, IconCheck, IconPlus } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { CartaoPedido } from '../pedidos/CartaoPedido'
 import { DetalhesPedido } from '../pedidos/DetalhesPedido'
-import { colunasVisiveis, pedidosDaColuna, STATUS } from '../pedidos/regrasPedidos'
+import { COLUNAS, colunasVisiveis, OCULTOS_EM_TODOS, pedidosDaColuna, STATUS, statusDoFiltro } from '../pedidos/regrasPedidos'
 import { AcaoNaoPermitidaError, anonimizarCliente, avancarPedido, buscarPedidos, confirmarPedido, marcarMensagemEnviada, recusarPedido, voltarPedido } from '../pedidos/servicoPedidos'
 import classes from '../pedidos/QuadroPedidos.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
 // `rolavel`: no computador, os cards ficam numa área com rolagem própria (ZAP-165), que recebe o
 // foco pelo Tab para rolar com as setas, com o nome da coluna como rótulo (NBR 17225 5.1.1)
-function ListaDaColuna({ coluna, pedidos, semPedidos, aoAbrir, rolavel = false }) {
+function ListaDaColuna({ coluna, pedidos, semPedidos, aoAbrir, rolavel = false, grade = false }) {
   if (pedidos.length === 0) {
     return (
       <p className={classes.vazio}>
@@ -23,7 +23,7 @@ function ListaDaColuna({ coluna, pedidos, semPedidos, aoAbrir, rolavel = false }
   const cartoes = pedidos.map((pedido) => <CartaoPedido key={pedido.numero} pedido={pedido} aoAbrir={aoAbrir} />)
   if (!rolavel) return cartoes
   return (
-    <div role="group" tabIndex={0} className={classes.cartoes} aria-label={`Pedidos da coluna ${coluna.nome}, ${quantidadeDePedidos(pedidos.length)}`}>
+    <div role="group" tabIndex={0} className={`${classes.cartoes} ${grade ? classes.gradeFiltro : ''}`} aria-label={`Pedidos da coluna ${coluna.nome}, ${quantidadeDePedidos(pedidos.length)}`}>
       {cartoes}
     </div>
   )
@@ -37,19 +37,54 @@ function focarCartao(cartao, bloco = 'nearest') {
   cartao?.focus({ preventScroll: true })
 }
 
+// Um status escolhido no filtro (ZAP-179): no computador, a coluna dele ocupa a largura da tela,
+// com os cards em grade; no celular, a lista, sem as abas. Sem pedidos, o atalho "Ver todos".
+function QuadroFiltrado({ coluna, pedidos, telaGrande, aoAbrir, aoVerTodos }) {
+  return (
+    <section
+      className={`${classes.coluna} ${classes.colunaFiltrada}`}
+      style={{ '--cor-coluna': coluna.cor }}
+      data-recusado={coluna.status === STATUS.RECUSADO || undefined}
+      aria-labelledby={`coluna-${coluna.status}`}
+    >
+      <h2 id={`coluna-${coluna.status}`} className={classes.tituloColuna}>
+        <span className={classes.ponto} style={{ background: coluna.cor }} aria-hidden />
+        {coluna.nome}
+        <span className={classes.contagem} aria-label={quantidadeDePedidos(pedidos.length)}>
+          {pedidos.length}
+        </span>
+      </h2>
+      {pedidos.length > 0 ? (
+        <ListaDaColuna coluna={coluna} pedidos={pedidos} aoAbrir={aoAbrir} rolavel={telaGrande} grade={telaGrande} />
+      ) : (
+        <div className={classes.semResultado}>
+          <p>Nenhum pedido em {coluna.nome}.</p>
+          <Button variant="subtle" onClick={aoVerTodos}>
+            Ver todos
+          </Button>
+        </div>
+      )}
+    </section>
+  )
+}
+
 // Quadro de pedidos (US4, RF07, RF08): no computador, uma coluna por status; no celular,
-// uma aba por coluna. Os recusados ficam escondidos até ligar "Mostrar recusados" (RN04).
+// uma aba por coluna. A lista "Mostrar" (ZAP-179) filtra por status: em "Todos", Entregue e
+// Recusado ficam ocultos (RN04); escolhendo um status, só os pedidos dele aparecem, em grade no
+// computador e em lista no celular. O filtro fica no endereço (?status=3).
 export function PaginaPedidos() {
   useTituloPagina('Pedidos')
   const telaGrande = useMediaQuery('(min-width: 48em)', false, { getInitialValueInEffect: false })
   const [pedidos, setPedidos] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erroCarregar, setErroCarregar] = useState(false)
-  const [mostrarRecusados, setMostrarRecusados] = useState(false)
+  const [parametros, setParametros] = useSearchParams()
+  const filtro = statusDoFiltro(parametros.get('status'))
+  const [anuncio, setAnuncio] = useState('')
   const [abaAtiva, setAbaAtiva] = useState(String(STATUS.NOVO))
   const [aberto, setAberto] = useState(null)
   const [enviando, setEnviando] = useState(false)
-  const { state } = useLocation()
+  const { state, search } = useLocation()
   // Voltando da edição (ZAP-91), o painel do pedido abre de novo; depois de salvar, com o aviso
   const [acabouDe, setAcabouDe] = useState(state?.editado ? 'editar' : null)
   const [erroAcao, setErroAcao] = useState('')
@@ -71,7 +106,8 @@ export function PaginaPedidos() {
         const pedido = resposta.find((p) => p.numero === abrirAoVoltar)
         if (pedido) {
           setAberto(pedido)
-          setAbaAtiva(String(pedido.status))
+          // No celular, a aba acompanha o pedido, se a coluna dele aparece em "Todos"
+          if (!OCULTOS_EM_TODOS.includes(pedido.status)) setAbaAtiva(String(pedido.status))
         }
       })
       .catch(() => {
@@ -114,14 +150,26 @@ export function PaginaPedidos() {
     )
   }
 
-  const colunas = colunasVisiveis(mostrarRecusados)
+  const colunas = colunasVisiveis(filtro)
   const semPedidos = pedidos.length === 0
+  const colunaDoFiltro = filtro && colunas[0]
 
-  function mudarFiltro(ligado) {
-    setMostrarRecusados(ligado)
-    // No celular, ligar o filtro já mostra a aba dos recusados; desligar volta para Novo
-    if (!telaGrande) setAbaAtiva(String(ligado ? STATUS.RECUSADO : STATUS.NOVO))
-    else if (!ligado && abaAtiva === String(STATUS.RECUSADO)) setAbaAtiva(String(STATUS.NOVO))
+  // Troca o filtro no endereço e anuncia o resultado de forma discreta (NBR 17225 5.1.1)
+  function mudarFiltro(valor) {
+    const status = statusDoFiltro(valor)
+    setParametros(status ? { status: String(status) } : {})
+    if (status) {
+      const coluna = COLUNAS.find((c) => c.status === status)
+      setAnuncio(`Mostrando ${quantidadeDePedidos(pedidosDaColuna(pedidos, status).length)} em ${coluna.nome}.`)
+    } else {
+      setAnuncio('Mostrando todos os pedidos, menos os entregues e os recusados.')
+      setAbaAtiva(String(STATUS.NOVO))
+    }
+  }
+
+  function verTodos() {
+    mudarFiltro('')
+    document.getElementById('filtro-status')?.focus()
   }
 
   function abrir(pedido, origem) {
@@ -137,8 +185,11 @@ export function PaginaPedidos() {
     setErroAcao('')
     // Depois de confirmar ou recusar, o card mudou de coluna: o foco volta para ele no lugar novo
     const numero = aberto?.numero
+    // Se o pedido saiu do que está na tela (mudou para um status fora do filtro), o foco volta
+    // para a lista "Mostrar" (ZAP-179)
     const cartao = numero && document.querySelector(`[data-numero-pedido="${numero}"]`)
-    focarCartao(cartao || origemFoco.current)
+    if (cartao) focarCartao(cartao)
+    else document.getElementById('filtro-status')?.focus()
   }
 
   function atualizar(pedido) {
@@ -156,8 +207,8 @@ export function PaginaPedidos() {
       const pedido = await chamada()
       atualizar(pedido)
       setAcabouDe(acao)
-      if (pedido.status === STATUS.RECUSADO) setMostrarRecusados(true)
-      if (!telaGrande) setAbaAtiva(String(pedido.status))
+      // No celular, a aba acompanha o pedido, se a coluna dele estiver na tela
+      if (!telaGrande && colunas.some((c) => c.status === pedido.status)) setAbaAtiva(String(pedido.status))
       return true
     } catch (erro) {
       const motivo = motivoDaApi && erro instanceof AcaoNaoPermitidaError && erro.message
@@ -170,8 +221,8 @@ export function PaginaPedidos() {
 
   const confirmar = (pedido) => agir('confirmar', () => confirmarPedido(pedido.numero), 'confirmar o pedido')
 
-  // Recusar (Novo) e cancelar (Confirmado ou Em produção) levam o pedido para Recusado. O filtro
-  // "Mostrar recusados" liga sozinho, para a Lídia continuar vendo o pedido e enviar a mensagem.
+  // Recusar (Novo) e cancelar (Confirmado ou Em produção) levam o pedido para Recusado. O filtro não
+  // muda sozinho: o painel continua aberto, com o aviso de para onde o pedido foi.
   function recusar(pedido, motivo) {
     const acao = pedido.status === STATUS.NOVO ? 'recusar' : 'cancelar'
     return agir(acao, () => recusarPedido(pedido.numero, motivo), `${acao} o pedido`)
@@ -215,21 +266,26 @@ export function PaginaPedidos() {
           <h1 className={classes.titulo}>Pedidos</h1>
         </div>
         <div className={classes.acoesTopo}>
-          <Switch
-            id="mostrar-recusados"
-            label="Mostrar recusados"
+          {/* Sem rótulo visível, a pedido do Lucas: o nome vem do aria-label, e a opção escolhida
+              ("Todos", "Confirmado (3)"...) já diz o que a caixa faz */}
+          <NativeSelect
+            id="filtro-status"
+            aria-label="Filtrar pedidos por status"
             size="lg"
-            checked={mostrarRecusados}
-            onChange={(evento) => mudarFiltro(evento.currentTarget.checked)}
-            classNames={{ label: classes.rotuloFiltro }}
+            value={filtro ? String(filtro) : ''}
+            onChange={(evento) => mudarFiltro(evento.currentTarget.value)}
+            data={[{ value: '', label: 'Todos' }, ...COLUNAS.map((c) => ({ value: String(c.status), label: `${c.nome} (${pedidosDaColuna(pedidos, c.status).length})` }))]}
+            classNames={{ root: classes.filtro, label: classes.rotuloFiltro, input: classes.campoFiltro }}
           />
-          <Button component={Link} to="/pedidos/novo" id="novo-pedido" size="lg" leftSection={<IconPlus size={22} aria-hidden />} className={classes.novoPedido}>
+          <Button component={Link} to={`/pedidos/novo${search}`} id="novo-pedido" size="lg" leftSection={<IconPlus size={22} aria-hidden />} className={classes.novoPedido}>
             Novo pedido
           </Button>
         </div>
       </div>
 
-      {telaGrande ? (
+      {colunaDoFiltro ? (
+        <QuadroFiltrado coluna={colunaDoFiltro} pedidos={pedidosDaColuna(pedidos, colunaDoFiltro.status)} telaGrande={telaGrande} aoAbrir={abrir} aoVerTodos={verTodos} />
+      ) : telaGrande ? (
         <div className={classes.quadro} style={{ '--colunas': colunas.length }}>
           {colunas.map((coluna) => {
             const daColuna = pedidosDaColuna(pedidos, coluna.status)
@@ -278,7 +334,12 @@ export function PaginaPedidos() {
         enviando={enviando}
         acabouDe={acabouDe}
         erroAcao={erroAcao}
+        busca={search}
       />
+
+      <p className={classes.somenteLeitor} role="status" aria-live="polite">
+        {anuncio}
+      </p>
 
       {aviso && (
         <div className={classes.aviso} role="status">
