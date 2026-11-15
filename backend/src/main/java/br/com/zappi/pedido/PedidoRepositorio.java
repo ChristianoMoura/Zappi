@@ -1,5 +1,6 @@
 package br.com.zappi.pedido;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +19,13 @@ public interface PedidoRepositorio extends JpaRepository<Pedido, Long> {
 
 	@EntityGraph(attributePaths = "cliente")
 	List<Pedido> findByEstabelecimentoIdAndStatusIn(Long estabelecimentoId, Collection<StatusPedido> status, Sort ordem);
+
+	/**
+	 * Pedidos com esses status e a retirada entre {@code depoisDe} e {@code antesDe}, sem incluir
+	 * os extremos: candidatos aos avisos de retirada próxima (ZAP-172).
+	 */
+	List<Pedido> findByEstabelecimentoIdAndStatusInAndDataRetiradaAfterAndDataRetiradaBefore(Long estabelecimentoId,
+			Collection<StatusPedido> status, LocalDateTime depoisDe, LocalDateTime antesDe);
 
 	/** O número ({@code #1}) é único por estabelecimento (RN09). */
 	@EntityGraph(attributePaths = "cliente")

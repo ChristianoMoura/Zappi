@@ -31,6 +31,7 @@ import br.com.zappi.estabelecimento.Estabelecimento;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
 import br.com.zappi.estabelecimento.EstabelecimentoRepositorio;
 import br.com.zappi.mensagem.MensagemWhatsapp;
+import br.com.zappi.notificacao.ServicoNotificacao;
 import br.com.zappi.pedido.RequisicaoPedido.ItemDaRequisicao;
 import br.com.zappi.produto.Produto;
 import br.com.zappi.produto.ProdutoRepositorio;
@@ -102,9 +103,13 @@ public class ServicoCadastroPedido {
 
 	private final ServicoTermos termos;
 
+	private final ServicoNotificacao notificacoes;
+
 	public ServicoCadastroPedido(PedidoRepositorio pedidos, ItemPedidoRepositorio itens, ClienteRepositorio clientes,
 			ProdutoRepositorio produtos, EstabelecimentoRepositorio estabelecimentos, ServicoAuditoria auditoria,
-			ServicoAcoesPedido acoes, ServicoPedido consulta, EntityManager entityManager, ServicoTermos termos) {
+			ServicoAcoesPedido acoes, ServicoPedido consulta, EntityManager entityManager, ServicoTermos termos,
+			ServicoNotificacao notificacoes) {
+		this.notificacoes = notificacoes;
 		this.pedidos = pedidos;
 		this.itens = itens;
 		this.clientes = clientes;
@@ -138,7 +143,11 @@ public class ServicoCadastroPedido {
 	public Integer cadastrarPeloPortal(String slug, RequisicaoPedido requisicao) {
 		Estabelecimento loja = estabelecimentos.findBySlugAndAtivoTrue(slug)
 			.orElseThrow(EstabelecimentoNaoEncontradoException::new);
-		return criar(loja.getId(), null, requisicao, true).getNumero();
+		Pedido pedido = criar(loja.getId(), null, requisicao, true);
+		// Aviso no sino da Lídia, na mesma transação do pedido (ZAP-172). O cadastro pelo painel
+		// não avisa: foi ela mesma quem cadastrou.
+		notificacoes.novoPedido(pedido);
+		return pedido.getNumero();
 	}
 
 	/**
