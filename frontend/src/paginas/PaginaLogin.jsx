@@ -112,7 +112,7 @@ export function PaginaLogin() {
 
       <div className={classes.ladoFormulario}>
         <Stack className={classes.cartao}>
-          {/* Collab: logo da loja (o mesmo do Meu estabelecimento) e, embaixo, o Zappi com o nome
+          {/* Collab: logo da loja (o mesmo do Estabelecimento) e, embaixo, o Zappi com o nome
               ao lado do símbolo. Sem logo da loja, fica só a marca do Zappi com o slogan. */}
           {marca?.logo ? (
             <div className={`${classes.marca} ${classes.marcaCollab}`}>

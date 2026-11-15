@@ -3,7 +3,7 @@ package br.com.zappi.estabelecimento;
 import br.com.zappi.armazenamento.ArmazenamentoDoEstabelecimento;
 
 /**
- * Estabelecimento como a tela "Meu estabelecimento" usa, com os nomes de campo dela (ZAP-37).
+ * Estabelecimento como a tela "Estabelecimento" usa, com os nomes de campo dela (ZAP-37).
  * {@code logo} e {@code capa} são os endereços públicos das fotos no Storage (ZAP-119), ou
  * nulos sem foto.
  */

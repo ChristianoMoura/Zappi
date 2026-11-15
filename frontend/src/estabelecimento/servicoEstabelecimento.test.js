@@ -201,7 +201,7 @@ describe('servicoEstabelecimento (ZAP-118 e ZAP-120)', () => {
   })
 
   describe('marca da loja', () => {
-    it('usa o nome e o logo do Meu estabelecimento', async () => {
+    it('usa o nome e o logo do Estabelecimento', async () => {
       simularBackend(json(200, { ...doBackend, logo: LOGO }))
 
       await expect(buscarMarcaLoja()).resolves.toEqual({ nome: 'Casa Belt', logo: LOGO })

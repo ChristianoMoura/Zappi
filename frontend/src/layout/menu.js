@@ -14,7 +14,7 @@ export const itensMenu = [
       { caminho: '/categorias', rotulo: 'Categorias', Icone: IconCategory },
     ],
   },
-  { caminho: '/estabelecimento', rotulo: 'Meu estabelecimento', Icone: IconBuildingStore },
+  { caminho: '/estabelecimento', rotulo: 'Estabelecimento', Icone: IconBuildingStore },
 ]
 
 // O item (ou grupo) está ativo quando a página aberta é ele ou um dos filhos

@@ -40,7 +40,7 @@
   gap: 2px;
   padding: 4px;
   color: var(--mantine-color-dimmed);
-  font-size: 0.8rem; /* menor para "Meu estabelecimento" caber em telas de 360 px */
+  font-size: 0.8rem; /* "Estabelecimento" ocupa 106 dos 112 px de cada botão em 360 px; maior que isto, quebra a linha */
   font-weight: 600;
   text-align: center;
   line-height: 1.2;

@@ -1,4 +1,4 @@
-// Endereço pelo CEP no "Meu estabelecimento" (ZAP-121). O navegador consulta a ViaCEP e, se ela
+// Endereço pelo CEP no "Estabelecimento" (ZAP-121). O navegador consulta a ViaCEP e, se ela
 // falhar ou não conhecer o CEP, a BrasilAPI. Só o CEP do estabelecimento sai do sistema, sem
 // token e sem dado de cliente (seção 12.1 do context.md). Sem resposta, a Lídia preenche à mão.
 

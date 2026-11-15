@@ -84,7 +84,7 @@ public class Estabelecimento {
 	}
 
 	/**
-	 * Troca os dados que a Lídia edita na tela "Meu estabelecimento" (RF04). {@code ativo} e
+	 * Troca os dados que a Lídia edita na tela "Estabelecimento" (RF04). {@code ativo} e
 	 * {@code criado_em} não mudam por aqui.
 	 */
 	void atualizar(RequisicaoEstabelecimento dados, OffsetDateTime agora) {
