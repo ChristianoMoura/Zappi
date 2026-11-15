@@ -97,8 +97,7 @@ describe('Apagar os dados do cliente (ZAP-116, RN17)', () => {
 
   test('um pedido Recusado também pode ter os dados apagados', async () => {
     const usuario = userEvent.setup()
-    renderizarQuadro()
-    await usuario.click(await screen.findByRole('switch', { name: 'Mostrar recusados' }))
+    renderizarQuadro('/pedidos?status=5')
     await usuario.click(await screen.findByRole('button', { name: /Pedido 4,/ }))
     const detalhes = await screen.findByRole('dialog', { name: 'Pedido #4' })
     await usuario.click(within(detalhes).getByRole('button', { name: BOTAO }))

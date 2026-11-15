@@ -5,6 +5,7 @@ import {
   dataHoraTexto,
   podeAnonimizar,
   podeEditar,
+  statusDoFiltro,
   VOLTA,
   dataRetiradaCurta,
   dataRetiradaMensagem,
@@ -34,9 +35,16 @@ const pedido = (extras) => ({
 })
 
 describe('regras do quadro de pedidos (ZAP-28)', () => {
-  test('esconde a coluna Recusado até ligar o filtro (RN04)', () => {
-    expect(colunasVisiveis(false).map((c) => c.nome)).toEqual(['Novo', 'Confirmado', 'Em produção', 'Concluído', 'Entregue'])
-    expect(colunasVisiveis(true).map((c) => c.nome)).toEqual(['Novo', 'Confirmado', 'Em produção', 'Concluído', 'Entregue', 'Recusado'])
+  test('em "Todos", esconde Entregue e Recusado; com um status no filtro, só a coluna dele (RN04, ZAP-179)', () => {
+    expect(colunasVisiveis().map((c) => c.nome)).toEqual(['Novo', 'Confirmado', 'Em produção', 'Concluído'])
+    expect(colunasVisiveis(STATUS.ENTREGUE).map((c) => c.nome)).toEqual(['Entregue'])
+    expect(colunasVisiveis(STATUS.RECUSADO).map((c) => c.nome)).toEqual(['Recusado'])
+  })
+
+  test('lê o status do filtro no endereço; o que não é status vale como "Todos"', () => {
+    expect(statusDoFiltro('3')).toBe(STATUS.EM_PRODUCAO)
+    expect(statusDoFiltro('6')).toBe(STATUS.ENTREGUE)
+    for (const valor of [null, '', '9', 'abc']) expect(statusDoFiltro(valor)).toBeNull()
   })
 
   test('soma os subtotais com o preço congelado (RN10, RN11)', () => {

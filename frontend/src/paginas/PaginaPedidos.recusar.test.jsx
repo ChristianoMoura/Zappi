@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
@@ -46,7 +46,7 @@ describe('Recusar e cancelar pedido (ZAP-54, RF11, RN05)', () => {
 
   afterEach(() => usarTela(false))
 
-  test('recusa o pedido Novo com motivo, mostra os recusados e leva o foco para enviar a mensagem', async () => {
+  test('recusa o pedido Novo com motivo e leva o foco para enviar a mensagem; o filtro não muda sozinho (ZAP-179)', async () => {
     const usuario = userEvent.setup()
     const detalhes = await abrirPedido(usuario, 12)
     const janela = await abrirJanela(usuario, detalhes, 'Recusar pedido', 'Recusar pedido #12')
@@ -59,9 +59,12 @@ describe('Recusar e cancelar pedido (ZAP-54, RF11, RN05)', () => {
     expect(await within(detalhes).findByText(/Pedido recusado e movido para a coluna Recusado/)).toBeVisible()
     expect(within(detalhes).getByText('Motivo da recusa:')).toBeVisible()
     expect(within(detalhes).getByRole('link', { name: /Enviar no WhatsApp para Ana/ })).toHaveFocus()
-    expect(screen.getByRole('switch', { name: 'Mostrar recusados' })).toBeChecked()
-    const coluna = screen.getByRole('region', { name: /Recusado/ })
-    expect(within(coluna).getByRole('button', { name: /Pedido 12, Ana Souza/ })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveValue('')
+    expect(screen.queryByRole('region', { name: /Recusado/ })).not.toBeInTheDocument()
+
+    // Ao fechar, o card não está mais na tela: o foco vai para a lista "Mostrar"
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Fechar detalhes' }))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveFocus())
   })
 
   test('não recusa sem motivo e explica o que falta', async () => {

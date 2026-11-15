@@ -1,7 +1,7 @@
 import { Alert, Button, Checkbox, Loader, NativeSelect, Textarea, TextInput } from '@mantine/core'
 import { IconAlertCircle, IconAlertTriangle, IconCheck, IconChevronLeft, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
 import { agruparPorCategoria } from '../categorias/regrasCategorias'
 import { CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
@@ -30,6 +30,8 @@ export function PaginaFormularioPedido() {
   const editando = numero !== undefined
   useTituloPagina(editando ? 'Editar pedido' : 'Novo pedido')
   const navegar = useNavigate()
+  // O filtro do quadro (?status=3) volta junto para os pedidos (ZAP-179)
+  const { search } = useLocation()
   const [produtos, setProdutos] = useState([])
   const [pedido, setPedido] = useState(null)
   const [carregando, setCarregando] = useState(true)
@@ -81,7 +83,7 @@ export function PaginaFormularioPedido() {
     )
   }
 
-  const voltar = () => navegar('/pedidos', { state: editando ? { abrir: Number(numero) } : { foco: 'novo-pedido' } })
+  const voltar = () => navegar(`/pedidos${search}`, { state: editando ? { abrir: Number(numero) } : { foco: 'novo-pedido' } })
 
   if (erroCarregar || (!editando && produtos.length === 0)) {
     return (
@@ -136,10 +138,12 @@ export function PaginaFormularioPedido() {
     try {
       if (editando) {
         await editarPedido(Number(numero), montarPedido(dados, produtos))
-        navegar('/pedidos', { state: { abrir: Number(numero), editado: true } })
+        navegar(`/pedidos${search}`, { state: { abrir: Number(numero), editado: true } })
       } else {
         const salvo = await cadastrarPedido(montarPedido(dados, produtos))
-        navegar('/pedidos', { state: { novo: { numero: salvo.numero, cliente: salvo.cliente.nome } } })
+        // O pedido novo entra na coluna Novo: com outro status no filtro, volta para Todos, para o card aparecer
+        const filtroNovo = new URLSearchParams(search).get('status') === String(STATUS.NOVO)
+        navegar(`/pedidos${filtroNovo ? search : ''}`, { state: { novo: { numero: salvo.numero, cliente: salvo.cliente.nome } } })
       }
     } catch {
       setSalvando(false)
