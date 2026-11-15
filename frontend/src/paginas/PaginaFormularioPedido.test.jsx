@@ -171,6 +171,15 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     expect(campo(/^Nome do cliente/)).toHaveValue('Fernanda Costa')
   })
 
+  test('produto em promoção aparece com o preço com desconto, o mesmo que o backend grava (ZAP-161)', async () => {
+    buscarProdutos.mockResolvedValue([{ ...produtos[0], precoPromocional: 80 }, produtos[1]])
+    await abrirFormulario()
+
+    const opcoes = within(screen.getByRole('combobox', { name: /^Produto/ })).getAllByRole('option').map((o) => o.textContent)
+    expect(opcoes).toContain('Bolo de brigadeiro de chocolate · R$ 80,00 por kg (promoção)')
+    expect(opcoes).toContain('Coxinha de frango · R$ 1,20 por unidade')
+  })
+
   test('produto fora do cardápio não aparece na lista para escolher (ZAP-155)', async () => {
     buscarProdutos.mockResolvedValue([produtos[0], { ...produtos[1], noCardapio: false }])
     await abrirFormulario()

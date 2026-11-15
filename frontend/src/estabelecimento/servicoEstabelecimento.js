@@ -65,7 +65,11 @@ async function chamar(caminho = '', opcoes) {
 // O backend manda nulo nos campos vazios; a tela trabalha com texto vazio. `logo` e `capa` são
 // os endereços públicos das fotos no Storage.
 function paraTela(estabelecimento) {
-  return Object.fromEntries([...CAMPOS, ...FOTOS].map((campo) => [campo, estabelecimento?.[campo] ?? '']))
+  const tela = Object.fromEntries([...CAMPOS, ...FOTOS].map((campo) => [campo, estabelecimento?.[campo] ?? '']))
+  // Destaque das promoções no cardápio (ZAP-152, ZAP-161): só existe quando o backend já manda o
+  // campo (ZAP-160); sem ele, a tela não mostra a opção
+  if (typeof estabelecimento?.destacarPromocoes === 'boolean') tela.destacarPromocoes = estabelecimento.destacarPromocoes
+  return tela
 }
 
 // A foto escolhida na tela é um endereço temporário (blob:); o arquivo vai para o backend, que
@@ -117,6 +121,7 @@ export async function buscarEstabelecimento() {
 // vão primeiro: se uma foto falhar, eles já estão guardados (FotoNaoEnviadaError).
 export async function salvarEstabelecimento(dados) {
   const corpo = Object.fromEntries(CAMPOS.map((campo) => [campo, dados[campo] ?? '']))
+  if (typeof dados.destacarPromocoes === 'boolean') corpo.destacarPromocoes = dados.destacarPromocoes
   let salvo = paraTela(await chamar('', { metodo: 'PUT', json: corpo }))
 
   for (const foto of FOTOS) {

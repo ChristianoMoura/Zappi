@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { TIPOS_FOTO, validarFoto } from '../comum/regrasFoto'
 import { buscarCategorias } from '../categorias/servicoCategorias'
-import { ALERGENOS, LIMITES, lerPreco, ORDEM_CAMPOS, precoParaTela, sugerirTextoAlternativo, UNIDADES, validarProduto } from '../produtos/regrasProdutos'
+import { ALERGENOS, emPromocao, LIMITES, lerPreco, ORDEM_CAMPOS, precoParaTela, sugerirTextoAlternativo, temPromocaoNaApi, UNIDADES, validarProduto } from '../produtos/regrasProdutos'
 import { JanelaTirarDoCardapio } from '../produtos/JanelaTirarDoCardapio'
+import { SecaoPromocao } from '../produtos/SecaoPromocao'
 import { buscarProduto, ProdutoNaoEncontradoError, salvarProduto, tirarDoCardapio, voltarAoCardapio } from '../produtos/servicoProdutos'
 import classes from '../produtos/Produtos.module.css'
 import { IconeAlergeno } from '../produtos/SelosAlergenos'
@@ -133,6 +134,10 @@ export function PaginaProduto() {
 
   async function salvar() {
     const novosErros = validarProduto(dados)
+    // Com a promoção ativa, o preço normal não pode ficar igual ou abaixo do preço com desconto (ZAP-152)
+    if (!novosErros.preco && emPromocao(original) && lerPreco(dados.preco) <= original.precoPromocional) {
+      novosErros.preco = `Com a promoção ativa, o preço precisa ser maior que o preço com desconto (R$ ${precoParaTela(original.precoPromocional)}). Para baixar mais, encerre a promoção.`
+    }
     setErros(novosErros)
     const primeiro = ORDEM_CAMPOS.find((campo) => novosErros[campo])
     if (primeiro) {
@@ -238,6 +243,19 @@ export function PaginaProduto() {
             </Button>
           )}
         </div>
+      )}
+
+      {/* Promoção (ZAP-161): só aparece quando o backend já tem o preço promocional (ZAP-160) */}
+      {editando && temPromocaoNaApi(original) && (
+        <SecaoPromocao
+          produto={original}
+          aoMudar={(produto) => {
+            setOriginal((atual) => ({ ...atual, preco: produto.preco, precoPromocional: produto.precoPromocional }))
+            // O preço antes da promoção é o preço normal: o campo de preço acompanha
+            setDados((atual) => ({ ...atual, preco: precoParaTela(produto.preco) }))
+          }}
+          aoAvisar={(texto) => setAviso({ tipo: 'ok', texto })}
+        />
       )}
 
       <JanelaTirarDoCardapio

@@ -747,3 +747,79 @@
 .selosAlergenos {
   margin-top: 4px;
 }
+
+/* Promoção do produto (ZAP-152, ZAP-161): na tela do produto, uma caixa própria que vale na hora,
+   como tirar do cardápio */
+.promocao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 1px solid #d9cbbe;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.formPromocao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.camposPromocao {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.botoesPromocao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.erroPromocao {
+  width: 100%;
+}
+
+.precosPromocao {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  font-size: 1.1rem;
+
+  & s {
+    /* Preço antigo riscado: secundário, 7,4:1 sobre o branco */
+    color: #5c5048;
+  }
+
+  & strong {
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Selo "Promoção" em texto (não só pela cor): branco sobre o vermelho do projeto, 6,13:1 */
+.seloPromocao {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #b42318;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Preço antigo no cartão da lista */
+.precoAntigo {
+  font-size: 1rem;
+  color: #5c5048;
+}

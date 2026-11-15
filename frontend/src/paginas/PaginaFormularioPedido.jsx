@@ -7,15 +7,17 @@ import { agruparPorCategoria } from '../categorias/regrasCategorias'
 import { CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
 import { dataLocal, HORARIOS_RETIRADA, horaTexto, moeda, podeEditar, podeTrocarCliente, STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedido, cadastrarPedido, editarPedido } from '../pedidos/servicoPedidos'
-import { precoParaTela, UNIDADES } from '../produtos/regrasProdutos'
+import { emPromocao, precoParaTela, precoVigente, UNIDADES } from '../produtos/regrasProdutos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
 import formulario from '../produtos/Produtos.module.css'
 import classes from '../pedidos/NovoPedido.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
 // Só os produtos que estão no cardápio podem ser escolhidos (ZAP-155). O item que já estava no
-// pedido continua, com o preço da época, mesmo se o produto saiu do cardápio (RN10).
-const soDoCardapio = (lista) => lista.filter((p) => p.noCardapio !== false)
+// pedido continua, com o preço da época, mesmo se o produto saiu do cardápio (RN10). Em promoção,
+// o preço é o com desconto, o mesmo que o backend vai gravar (ZAP-161).
+const soDoCardapio = (lista) =>
+  lista.filter((p) => p.noCardapio !== false).map((p) => (emPromocao(p) ? { ...p, preco: precoVigente(p), emPromocao: true } : p))
 const FORA_DO_CARDAPIO = 'Este produto não está mais no cardápio. Escolha outro.'
 
 const VAZIO = () => ({ clienteNome: '', clienteWhatsapp: '', consentimentoLgpd: false, itens: [itemVazio()], dataRetirada: '', horaRetirada: '', observacao: '' })
@@ -184,7 +186,7 @@ export function PaginaFormularioPedido() {
     limparErro('clienteWhatsapp')
   }
 
-  const rotuloOpcao = (p, sufixo = '') => `${p.nome} · R$ ${precoParaTela(p.preco)} ${UNIDADES[p.unidade].selo}${sufixo}`
+  const rotuloOpcao = (p, sufixo = '') => `${p.nome} · R$ ${precoParaTela(p.preco)} ${UNIDADES[p.unidade].selo}${p.emPromocao ? ' (promoção)' : ''}${sufixo}`
 
   // Item que já estava no pedido: a primeira opção é ele, com o preço da época (RN10). Escolher
   // outro produto da lista faz o item valer como novo, com o preço atual. Os produtos aparecem

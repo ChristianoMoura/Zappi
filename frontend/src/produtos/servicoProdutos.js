@@ -4,11 +4,19 @@
 // As páginas continuam usando as mesmas funções e erros de antes. O token, o 401 e a falta de
 // conexão ficam no clienteApi, o mesmo do Estabelecimento.
 
-import { chamarApi, lerArquivoTemporario, ServicoIndisponivelError } from '../autenticacao/clienteApi'
+import { chamarApi, lerArquivoTemporario, lerJson, ServicoIndisponivelError } from '../autenticacao/clienteApi'
 import { ordenarAlergenos } from './regrasProdutos'
 
 export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
 export class ProdutoNaoEncontradoError extends Error {}
+
+// O backend recusou a promoção (400): `campos` traz o erro de cada campo (preco, precoPromocional)
+export class PromocaoRecusadaError extends Error {
+  constructor(campos) {
+    super('Promoção recusada.')
+    this.campos = campos ?? {}
+  }
+}
 
 async function chamar(caminho, opcoes) {
   const resposta = await chamarApi(`/produtos${caminho}`, opcoes)
@@ -101,4 +109,20 @@ export async function tirarDoCardapio(id) {
 
 export async function voltarAoCardapio(id) {
   return paraTela(await chamar(`/${id}/voltar-ao-cardapio`, { metodo: 'POST' }))
+}
+
+// Promoção (ZAP-152, ZAP-160, ZAP-161), formato combinado com o backend:
+// POST /api/produtos/{id}/promocao { preco, precoPromocional } aplica (o preço antes da promoção é
+// o preço normal do produto) e DELETE /api/produtos/{id}/promocao encerra. As duas devolvem o
+// produto, com `precoPromocional` (nulo sem promoção). O 400 traz o erro de cada campo.
+export async function aplicarPromocao(id, { preco, precoPromocional }) {
+  const resposta = await chamarApi(`/produtos/${id}/promocao`, { metodo: 'POST', json: { preco, precoPromocional } })
+  if (resposta.status === 400) throw new PromocaoRecusadaError((await lerJson(resposta))?.campos)
+  if (resposta.status === 404) throw new ProdutoNaoEncontradoError()
+  if (!resposta.ok) throw new ServicoIndisponivelError()
+  return paraTela(await resposta.json())
+}
+
+export async function encerrarPromocao(id) {
+  return paraTela(await chamar(`/${id}/promocao`, { metodo: 'DELETE' }))
 }
