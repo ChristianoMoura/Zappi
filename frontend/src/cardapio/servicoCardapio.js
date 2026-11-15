@@ -100,3 +100,38 @@ export async function buscarCardapio(slug) {
   if (resposta.status === 404) throw new CardapioNaoEncontradoError()
   throw new ServicoIndisponivelError()
 }
+
+// ---------- Envio do pedido pelo cliente (ZAP-110) ----------
+
+// O backend recusou os dados (400): `campos` traz a mensagem de cada campo, para a tela mostrar
+// junto dele (ex.: { "cliente.telefone": "..." })
+export class PedidoRecusadoError extends Error {
+  constructor(mensagem, campos) {
+    super(mensagem || 'Confira os dados do pedido.')
+    this.campos = campos ?? {}
+  }
+}
+
+// Limite de envios atingido (429, ZAP-112): a tela mostra a mensagem do backend
+export class EnviosDemaisError extends Error {}
+
+// POST /api/cardapio/{slug}/pedidos (ZAP-109), sem login. Responde 201 com o número do pedido. Se
+// o campo invisível veio preenchido, o backend responde igual, mas sem número (robô, ZAP-103).
+export async function enviarPedido(slug, corpo) {
+  let resposta
+  try {
+    resposta = await fetch(`/api/cardapio/${encodeURIComponent(slug)}/pedidos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpo),
+    })
+  } catch {
+    throw new ServicoIndisponivelError()
+  }
+  if (resposta.ok) return (await lerJson(resposta))?.numero ?? null
+  const erro = await lerJson(resposta)
+  if (resposta.status === 400) throw new PedidoRecusadoError(erro?.mensagem, erro?.campos)
+  if (resposta.status === 429) throw new EnviosDemaisError(erro?.mensagem || 'Você já enviou muitos pedidos. Tente mais tarde ou fale com a loja pelo WhatsApp.')
+  if (resposta.status === 404) throw new CardapioNaoEncontradoError()
+  throw new ServicoIndisponivelError()
+}

@@ -46,7 +46,7 @@ import { buscarCardapio, CardapioNaoEncontradoError } from '../cardapio/servicoC
 import { useTemaCardapio } from '../cardapio/useTemaCardapio'
 import classes from './PaginaCardapio.module.css'
 import { BotaoWhatsapp, Foto, LogoLoja, Preco, Rodape } from './partesCardapio'
-import { DetalheDoProduto, SeuPedido } from './PedidoCardapio'
+import { DetalheDoProduto, PedidoRecebido, SeuPedido } from './PedidoCardapio'
 import { useTituloPagina } from './useTituloPagina'
 
 // Símbolo do Pix desenhado aqui (o Tabler não tem): quatro losangos em volta de um centro vazado
@@ -108,6 +108,8 @@ export function PaginaCardapio() {
     conteudo = <DetalheDoProduto key={idProduto} loja={estado.estabelecimento} produtos={estado.produtos} idProduto={idProduto} montagem={montagem} escuro={escuro} />
   } else if (pagina === 'pedido' && !idProduto) {
     conteudo = <SeuPedido loja={estado.estabelecimento} produtos={estado.produtos} montagem={montagem} escuro={escuro} />
+  } else if (pagina === 'recebido' && !idProduto) {
+    conteudo = <PedidoRecebido loja={estado.estabelecimento} escuro={escuro} />
   } else if (pagina) conteudo = <NaoEncontrado escuro={escuro} />
   else conteudo = <Cardapio loja={estado.estabelecimento} categorias={estado.categorias} produtos={estado.produtos} montagem={montagem} escuro={escuro} alternarTema={alternarTema} tema={tema} />
 

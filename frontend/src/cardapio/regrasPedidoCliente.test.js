@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import {
+  CLIENTE_VAZIO,
+  mascaraWhatsapp,
+  montarEnvio,
+  validarCliente,
   subtotal,
   contagemDosItens,
   dataMinima,
@@ -98,5 +102,20 @@ describe('regras da montagem do pedido pelo cliente (ZAP-107)', () => {
     const ninho = { id: 2, unidade: 'KG', preco: 115, precoPromocional: 100 }
     expect(subtotal(ninho, 1.5)).toBe(150)
     expect(totalDoPedido([{ chave: 1, produtoId: 2, quantidade: 1.5 }, { chave: 2, produtoId: 1, quantidade: 1 }], [bolo, ninho])).toBe(250)
+  })
+
+  test('identificação do cliente: nome, WhatsApp com DDD e a caixa marcada (ZAP-110)', () => {
+    expect(validarCliente(CLIENTE_VAZIO)).toEqual({ nome: 'Escreva seu nome.', whatsapp: 'Escreva seu WhatsApp com DDD.', aceite: 'Marque a caixa para enviar o pedido.' })
+    expect(validarCliente({ ...CLIENTE_VAZIO, nome: 'Ana', whatsapp: '(11) 9876-543', aceite: true })).toEqual({ whatsapp: 'O WhatsApp precisa ter DDD e 9 números. Ex.: (11) 90000-0000' })
+    expect(validarCliente({ ...CLIENTE_VAZIO, nome: 'Ana', whatsapp: '(11) 98765-4321', aceite: true })).toEqual({})
+    expect(mascaraWhatsapp('11987654321999')).toBe('(11) 98765-4321')
+  })
+
+  test('o envio leva o cliente com 55, a data com o fuso, só os itens do cardápio e a versão dos termos quando houver (ZAP-110)', () => {
+    const cliente = { nome: ' Ana ', whatsapp: '(11) 98765-4321', aceite: true, site: '' }
+    const envio = montarEnvio({ ...pedido(), itens: [...pedido().itens, { chave: 9, produtoId: 99, quantidade: 1 }] }, produtos, cliente, 2)
+    expect(envio).toMatchObject({ cliente: { nome: 'Ana', telefone: '5511987654321' }, consentimentoLgpd: true, versaoTermos: 2, dataRetirada: '2026-11-17T15:30:00-03:00', site: '' })
+    expect(envio.itens.map((item) => item.produtoId)).toEqual([1, 4])
+    expect(montarEnvio(pedido(), produtos, cliente)).not.toHaveProperty('versaoTermos')
   })
 })

@@ -519,3 +519,193 @@
 .valorPromocao {
   color: var(--promocao);
 }
+
+/* ---------- Envio do pedido pelo Zappi (ZAP-110) ---------- */
+/* Nome e WhatsApp lado a lado no computador, alinhados pelo topo */
+.doisCampos {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+}
+
+/* Campo invisível contra robôs (ZAP-103): fora da tela, sem foco e escondido do leitor de tela */
+.robo {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.consentimento {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 2px solid var(--borda);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.consentimento input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--botao);
+}
+
+.consentimento a {
+  color: var(--destaque);
+  font-weight: 600;
+}
+
+.consentimentoInvalido {
+  border-color: #b42318;
+}
+
+/* Claro: #7a3e00 sobre #fff4e5, 8,3:1. Escuro: as cores dos selos de alérgenos, 11:1 */
+.naoConfirmado {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--selo-alergeno-fundo, #fff4e5);
+  border: 1px solid var(--selo-alergeno-borda, #f2c48d);
+  color: var(--selo-alergeno-texto, #7a3e00);
+}
+
+.naoConfirmado svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* Limite de envios e falhas: #8a1c13 sobre #fdecea, 8,9:1 */
+.alertaEnvio {
+  margin: 14px 12px 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fdecea;
+  border: 1px solid #f5b7b1;
+  color: #8a1c13;
+  font-weight: 600;
+}
+
+.alertaEnvio svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.principal[aria-disabled='true'] {
+  opacity: 0.8;
+  cursor: progress;
+}
+
+.girandoBotao {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid rgb(255 255 255 / 0.4);
+  border-top-color: #fff;
+  animation: girarBotao 0.8s linear infinite;
+}
+
+@keyframes girarBotao {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .girandoBotao {
+    animation: none;
+  }
+}
+
+/* Pedido recebido */
+.recebido {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 28px 16px 24px;
+  text-align: center;
+}
+
+.recebido h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.seloRecebido {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--destaque);
+  background: color-mix(in srgb, var(--destaque) 14%, transparent);
+}
+
+.numeroPedido {
+  margin: 0;
+  display: grid;
+  font-size: 1.05rem;
+}
+
+.numeroPedido b {
+  font-size: 1.6rem;
+  color: var(--destaque);
+}
+
+.caixaRecebido {
+  width: 100%;
+  max-width: 560px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--cartao);
+  text-align: left;
+}
+
+.caixaRecebido p {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.caixaRecebido svg {
+  flex: none;
+  color: var(--destaque);
+}
+
+.acoesRecebido {
+  width: 100%;
+  max-width: 560px;
+  display: grid;
+  gap: 10px;
+}
+
+.acoesRecebido .principal {
+  justify-content: center;
+}
+
+@media (min-width: 48em) {
+  .doisCampos {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .alertaEnvio {
+    margin-inline: 0;
+  }
+
+  .acoesRecebido {
+    grid-template-columns: 1fr 1fr;
+  }
+}

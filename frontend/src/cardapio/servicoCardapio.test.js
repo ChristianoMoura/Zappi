@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { buscarCardapio, CardapioNaoEncontradoError, ServicoIndisponivelError } from './servicoCardapio'
+import { buscarCardapio, CardapioNaoEncontradoError, EnviosDemaisError, enviarPedido, PedidoRecusadoError, ServicoIndisponivelError } from './servicoCardapio'
 
 const json = (status, corpo) => new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -93,6 +93,31 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
     test('o simulado também responde link inexistente', async () => {
       vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('rede') }))
       await expect(buscarCardapio('outra-loja')).rejects.toBeInstanceOf(CardapioNaoEncontradoError)
+    })
+  })
+
+  describe('envio do pedido pelo cliente (ZAP-110)', () => {
+    test('manda o pedido sem token pela rota pública e devolve o número', async () => {
+      const buscar = vi.fn(async () => json(201, { numero: 128 }))
+      vi.stubGlobal('fetch', buscar)
+
+      await expect(enviarPedido('casa-belt', { site: '' })).resolves.toBe(128)
+      const [endereco, opcoes] = buscar.mock.calls[0]
+      expect(endereco).toBe('/api/cardapio/casa-belt/pedidos')
+      expect(opcoes.method).toBe('POST')
+      expect(opcoes.headers.Authorization).toBeUndefined()
+    })
+
+    test('400 traz o erro de cada campo; 429 traz a mensagem do limite; sem conexão, serviço indisponível', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => json(400, { mensagem: 'Confira os dados.', campos: { 'cliente.nome': 'Escreva o nome do cliente.' } })))
+      await expect(enviarPedido('casa-belt', {})).rejects.toMatchObject({ campos: { 'cliente.nome': 'Escreva o nome do cliente.' } })
+      await expect(enviarPedido('casa-belt', {})).rejects.toBeInstanceOf(PedidoRecusadoError)
+
+      vi.stubGlobal('fetch', vi.fn(async () => json(429, { mensagem: 'Você já enviou muitos pedidos.' })))
+      await expect(enviarPedido('casa-belt', {})).rejects.toThrow(new EnviosDemaisError('Você já enviou muitos pedidos.'))
+
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('rede') }))
+      await expect(enviarPedido('casa-belt', {})).rejects.toBeInstanceOf(ServicoIndisponivelError)
     })
   })
 })

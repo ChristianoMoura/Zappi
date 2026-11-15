@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { dataMinima } from '../cardapio/regrasPedidoCliente'
-import { buscarCardapio } from '../cardapio/servicoCardapio'
+import { buscarCardapio, EnviosDemaisError, enviarPedido, PedidoRecusadoError } from '../cardapio/servicoCardapio'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaCardapio } from './PaginaCardapio'
 
@@ -10,6 +10,7 @@ import { PaginaCardapio } from './PaginaCardapio'
 vi.mock('../cardapio/servicoCardapio', async (importarOriginal) => ({
   ...(await importarOriginal()),
   buscarCardapio: vi.fn(),
+  enviarPedido: vi.fn(),
 }))
 
 const CARDAPIO = {
@@ -129,39 +130,111 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(guardado().itens).toHaveLength(1)
   })
 
-  test('sem data e hora não envia: mostra o erro junto do campo e leva o foco para ele', async () => {
-    localStorage.setItem(
-      'zappi.pedido.casa-belt',
-      JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: '', hora: '', observacao: '' }),
-    )
+  test('não envia sem data, hora, nome, WhatsApp e a caixa: erro junto de cada campo e foco no primeiro (ZAP-110)', async () => {
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: '', hora: '', observacao: '' }))
     const usuario = userEvent.setup()
     abrir('/cardapio/casa-belt/pedido')
 
-    await usuario.click(await screen.findByRole('link', { name: /Enviar pelo WhatsApp/ }))
+    await usuario.click(await screen.findByRole('button', { name: /Enviar pedido/ }))
 
     expect(screen.getByText('Escolha a data de retirada.')).toBeVisible()
     expect(screen.getByText('Escolha a hora de retirada.')).toBeVisible()
+    expect(screen.getByText('Escreva seu nome.')).toBeVisible()
+    expect(screen.getByText('Escreva seu WhatsApp com DDD.')).toBeVisible()
+    expect(screen.getByText('Marque a caixa para enviar o pedido.')).toBeVisible()
     expect(screen.getByLabelText('Data')).toHaveFocus()
+    expect(enviarPedido).not.toHaveBeenCalled()
     expect(screen.getByRole('link', { name: /Fale com a loja pelo WhatsApp/ })).toHaveAttribute('href', expect.stringContaining('wa.me/5511900000000'))
   })
 
-  test('com data e hora, o botão leva o pedido pronto para o WhatsApp da loja', async () => {
+  test('com tudo preenchido, envia pelo Zappi, apaga o pedido guardado e mostra o "Pedido recebido" (ZAP-110)', async () => {
     const data = dataMinima()
     localStorage.setItem(
       'zappi.pedido.casa-belt',
-      JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 2 }], data, hora: '', observacao: '' }),
+      JSON.stringify({
+        itens: [
+          { chave: 1, produtoId: 1, quantidade: 2, observacao: ' Feliz aniversário ' },
+          { chave: 2, produtoId: 9, quantidade: 1, nome: 'Torta de limão', unidade: 'UN' },
+        ],
+        data,
+        hora: '',
+        observacao: 'Festa',
+      }),
     )
+    enviarPedido.mockResolvedValue(128)
+    const usuario = userEvent.setup()
+    const roteador = abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.selectOptions(await screen.findByLabelText('Hora'), '15:30')
+    await usuario.type(screen.getByRole('textbox', { name: 'Nome' }), ' Ana Souza ')
+    const whatsapp = screen.getByRole('textbox', { name: 'WhatsApp' })
+    await usuario.type(whatsapp, '11987654321')
+    expect(whatsapp).toHaveValue('(11) 98765-4321')
+    // Sem a frase de ajuda embaixo do WhatsApp e sem a frase sobre apagar os dados (pedido do Lucas)
+    expect(screen.queryByText(/A confirmação chega por este número/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Para apagar seus dados/)).not.toBeInTheDocument()
+    await usuario.click(screen.getByRole('checkbox', { name: /Li e concordo com os Termos de uso e a Política de privacidade/ }))
+    expect(screen.getByText('Seu pedido ainda não está confirmado. A loja vai avaliar e responder pelo WhatsApp.')).toBeVisible()
+
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
+
+    expect(enviarPedido).toHaveBeenCalledWith('casa-belt', {
+      cliente: { nome: 'Ana Souza', telefone: '5511987654321' },
+      consentimentoLgpd: true,
+      dataRetirada: data + 'T15:30:00-03:00',
+      observacao: 'Festa',
+      // O item indisponível (ZAP-156) não vai; o preço também não, quem decide é o backend
+      itens: [{ produtoId: 1, quantidade: 2, observacao: 'Feliz aniversário' }],
+      site: '',
+    })
+    expect(await screen.findByRole('heading', { level: 2, name: 'Pedido enviado!' })).toHaveFocus()
+    expect(roteador.state.location.pathname).toBe('/cardapio/casa-belt/recebido')
+    expect(screen.getByText('#128')).toBeVisible()
+    expect(screen.getByText(/às 15h30/)).toBeVisible()
+    expect(screen.getByText('O pagamento é na retirada. Não há entrega.')).toBeVisible()
+    expect(guardado().itens).toEqual([])
+  })
+
+  test('o limite de envios mostra a mensagem do backend e mantém o pedido (ZAP-110, ZAP-112)', async () => {
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: dataMinima(), hora: '15:30', observacao: '' }))
+    enviarPedido.mockRejectedValue(new EnviosDemaisError('Você já enviou muitos pedidos. Tente mais tarde ou fale com a Lídia pelo WhatsApp.'))
     const usuario = userEvent.setup()
     abrir('/cardapio/casa-belt/pedido')
 
-    await usuario.selectOptions(await screen.findByLabelText('Hora'), '15:30')
+    await usuario.type(await screen.findByRole('textbox', { name: 'Nome' }), 'Ana')
+    await usuario.type(screen.getByRole('textbox', { name: 'WhatsApp' }), '11987654321')
+    await usuario.click(screen.getByRole('checkbox', { name: /Li e concordo/ }))
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
 
-    expect(screen.getByText(/às 15h30/)).toBeVisible()
-    const enviar = screen.getByRole('link', { name: /Enviar pelo WhatsApp/ })
-    const texto = new URL(enviar.getAttribute('href')).searchParams.get('text')
-    expect(texto).toContain('• Bolo de brigadeiro de chocolate — 2 kg (R$ 200,00)')
-    expect(texto).toContain('às 15h30')
-    expect(guardado()).toMatchObject({ data, hora: '15:30' })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Você já enviou muitos pedidos.')
+    expect(guardado().itens).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 1, name: 'Seu pedido' })).toBeVisible()
+  })
+
+  test('erro de um campo vindo do backend aparece junto dele, com o foco nele (ZAP-110)', async () => {
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: dataMinima(), hora: '15:30', observacao: '' }))
+    enviarPedido.mockRejectedValue(new PedidoRecusadoError('Confira os dados.', { 'cliente.telefone': 'O WhatsApp precisa ter DDD e 9 números. Ex.: (11) 90000-0000' }))
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.type(await screen.findByRole('textbox', { name: 'Nome' }), 'Ana')
+    await usuario.type(screen.getByRole('textbox', { name: 'WhatsApp' }), '11987654321')
+    await usuario.click(screen.getByRole('checkbox', { name: /Li e concordo/ }))
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
+
+    expect(await screen.findByText('O WhatsApp precisa ter DDD e 9 números. Ex.: (11) 90000-0000')).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'WhatsApp' })).toHaveFocus()
+  })
+
+  test('o campo invisível contra robôs fica fora da ordem de foco e escondido do leitor de tela (ZAP-103)', async () => {
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: '', hora: '', observacao: '' }))
+    abrir('/cardapio/casa-belt/pedido')
+
+    await screen.findByRole('heading', { level: 1, name: 'Seu pedido' })
+    const robo = document.querySelector('input[name="site"]')
+    expect(robo).toHaveAttribute('tabindex', '-1')
+    expect(robo.closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(screen.queryByRole('textbox', { name: 'Site' })).not.toBeInTheDocument()
   })
 
   test('pedido guardado antes da mudança leva o recheio e a cobertura para a observação do item (ZAP-140)', async () => {
@@ -213,20 +286,6 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(screen.getByText('Bolo de ninho com morango removido do pedido.')).toBeVisible()
     expect(guardado().itens.map((item) => item.produtoId)).toEqual([1])
     expect(within(itens).getByText(/^1 item ·/)).toBeVisible()
-  })
-
-  test('o item indisponível não vai na mensagem do WhatsApp (ZAP-156)', async () => {
-    localStorage.setItem(
-      'zappi.pedido.casa-belt',
-      JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 2 }, { chave: 2, produtoId: 9, quantidade: 1, nome: 'Torta de limão', unidade: 'UN' }], data: dataMinima(), hora: '15:30', observacao: '' }),
-    )
-    abrir('/cardapio/casa-belt/pedido')
-
-    const enviar = await screen.findByRole('link', { name: /Enviar pelo WhatsApp/ })
-    const texto = new URL(enviar.getAttribute('href')).searchParams.get('text')
-    expect(texto).toContain('Bolo de brigadeiro de chocolate')
-    expect(texto).not.toContain('Torta de limão')
-    expect(screen.queryByText(/não vai junto/)).not.toBeInTheDocument()
   })
 
   test('item guardado antes da mudança, sem o nome, aparece como "Produto indisponível" (ZAP-156)', async () => {

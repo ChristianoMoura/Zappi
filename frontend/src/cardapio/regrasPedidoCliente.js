@@ -1,5 +1,6 @@
 // Regras da montagem do pedido pelo cliente no cardápio público (ZAP-101 / ZAP-107).
 // O valor na tela é só informativo: quem calcula o valor gravado é o backend (RN11).
+import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
 import { moeda } from '../pedidos/regrasPedidos'
 import { LIMITES } from '../pedidos/regrasCadastroPedido'
 import { precoVigente } from '../produtos/regrasProdutos'
@@ -87,6 +88,44 @@ export function dataPorExtenso(iso) {
 
 // Data e hora no formato da API (ZAP-124): ISO 8601 com o fuso de São Paulo, que não tem horário de verão
 export const dataRetiradaISO = (data, hora) => `${data}T${hora}:00-03:00`
+
+// ---------- Identificação do cliente (ZAP-110) ----------
+
+// Nome e WhatsApp ficam só na tela, sem ir para o pedido guardado no navegador (LGPD)
+export const CLIENTE_VAZIO = { nome: '', whatsapp: '', aceite: false, site: '' }
+export const LIMITE_NOME = 100
+
+// O WhatsApp aparece como "(11) 90000-0000" enquanto o cliente digita
+export const mascaraWhatsapp = (digitado) => mascaraTelefone(soDigitos(digitado).slice(0, 11))
+
+export function validarCliente(cliente) {
+  const erros = {}
+  if (!cliente.nome.trim()) erros.nome = 'Escreva seu nome.'
+  else if (cliente.nome.trim().length > LIMITE_NOME) erros.nome = `Use no máximo ${LIMITE_NOME} caracteres.`
+  const digitos = soDigitos(cliente.whatsapp)
+  if (!digitos) erros.whatsapp = 'Escreva seu WhatsApp com DDD.'
+  else if (digitos.length !== 11) erros.whatsapp = 'O WhatsApp precisa ter DDD e 9 números. Ex.: (11) 90000-0000'
+  if (!cliente.aceite) erros.aceite = 'Marque a caixa para enviar o pedido.'
+  return erros
+}
+
+// Corpo do POST /api/cardapio/{slug}/pedidos (ZAP-109). Vão só os itens que estão no cardápio
+// (ZAP-156). O preço não vai: quem decide é o backend, com o desconto vigente (RN10).
+export function montarEnvio(pedido, produtos, cliente, versaoTermos = null) {
+  return {
+    cliente: { nome: cliente.nome.trim(), telefone: `55${soDigitos(cliente.whatsapp)}` },
+    consentimentoLgpd: cliente.aceite,
+    ...(versaoTermos ? { versaoTermos } : {}),
+    dataRetirada: dataRetiradaISO(pedido.data, pedido.hora),
+    observacao: pedido.observacao.trim(),
+    itens: itensComProduto(pedido.itens, produtos).map(({ produtoId, quantidade, observacao }) => ({
+      produtoId,
+      quantidade,
+      observacao: (observacao ?? '').trim(),
+    })),
+    site: cliente.site,
+  }
+}
 
 // ---------- Validação ----------
 
