@@ -18,7 +18,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useTermosVigentes } from '../autenticacao/useTermosVigentes'
 import { juntar } from '../cardapio/juntarClasses'
-import { linkWhatsapp } from '../cardapio/regrasCardapio'
+import { formaEscolhida, linkWhatsapp, pedeFormaPagamento } from '../cardapio/regrasCardapio'
+import { nomeFormaPagamento } from '../comum/formasPagamento'
+import { IconeFormaPagamento } from './IconeFormaPagamento'
 import { EnviosDemaisError, enviarPedido, PedidoRecusadoError } from '../cardapio/servicoCardapio'
 import {
   CLIENTE_VAZIO,
@@ -291,7 +293,13 @@ export function PedidoRecebido({ loja, escuro }) {
           </p>
           <p>
             <IconCreditCard size={22} aria-hidden />
-            <span>O pagamento é na retirada. Não há entrega.</span>
+            {state?.formaPagamento ? (
+              <span>
+                Pagamento: <b>{nomeFormaPagamento(state.formaPagamento)}</b>, na retirada. Não há entrega.
+              </span>
+            ) : (
+              <span>O pagamento é na retirada. Não há entrega.</span>
+            )}
           </p>
         </div>
         <div className={classes.acoesRecebido}>
@@ -343,10 +351,10 @@ function ItemIndisponivel({ item, aoRemover }) {
   )
 }
 
-const ORDEM_DOS_ERROS = ['itens', 'data', 'hora', 'observacao', 'nome', 'whatsapp', 'aceite']
+const ORDEM_DOS_ERROS = ['itens', 'data', 'hora', 'observacao', 'nome', 'whatsapp', 'aceite', 'pagamento']
 
 // Campos que o backend devolve no 400 (ZAP-109) e o campo da tela onde o erro aparece
-const CAMPOS_DO_BACKEND = { 'cliente.nome': 'nome', 'cliente.telefone': 'whatsapp', consentimentoLgpd: 'aceite', dataRetirada: 'data', observacao: 'observacao' }
+const CAMPOS_DO_BACKEND = { 'cliente.nome': 'nome', 'cliente.telefone': 'whatsapp', consentimentoLgpd: 'aceite', dataRetirada: 'data', observacao: 'observacao', formaPagamento: 'pagamento' }
 
 const NAO_CONFIRMADO = 'Seu pedido ainda não está confirmado. A loja vai avaliar e responder pelo WhatsApp.'
 
@@ -368,7 +376,12 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
   const nomeRef = useRef(null)
   const whatsappRef = useRef(null)
   const aceiteRef = useRef(null)
+  const pagamentoRef = useRef(null)
   const alertaRef = useRef(null)
+  // Forma de pagamento (ZAP-194): só quando a loja tem as formas cadastradas. A escolha guardada
+  // só vale se a loja ainda aceita; com uma forma só, ela já vem escolhida
+  const pedePagamento = pedeFormaPagamento(loja)
+  const pagamento = formaEscolhida(loja, pedido.formaPagamento)
   const cardapio = `/cardapio/${loja.slug}`
   const todos = itensDoPedido(pedido.itens, produtos)
   const itens = todos.filter((item) => item.disponivel)
@@ -391,7 +404,7 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
     setErros((atuais) => ({ ...atuais, [campo]: undefined }))
   }
 
-  const camposComFoco = { data: dataRef, hora: horaRef, observacao: observacaoRef, nome: nomeRef, whatsapp: whatsappRef, aceite: aceiteRef }
+  const camposComFoco = { data: dataRef, hora: horaRef, observacao: observacaoRef, nome: nomeRef, whatsapp: whatsappRef, aceite: aceiteRef, pagamento: pagamentoRef }
   function focarPrimeiro(novos) {
     const primeiro = ORDEM_DOS_ERROS.find((campo) => novos[campo])
     if (primeiro) camposComFoco[primeiro]?.current?.focus()
@@ -408,6 +421,7 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
   async function enviar() {
     if (enviando) return
     const novos = { ...validarPedido(pedido, produtos), ...validarCliente(cliente) }
+    if (pedePagamento && !pagamento) novos.pagamento = 'Escolha como você vai pagar.'
     setErros(novos)
     setAlerta('')
     if (novos.itens) {
@@ -417,9 +431,9 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
     if (focarPrimeiro(novos)) return
     setEnviando(true)
     try {
-      const numero = await enviarPedido(loja.slug, montarEnvio(pedido, produtos, cliente, termos?.versao))
+      const numero = await enviarPedido(loja.slug, montarEnvio(pedido, produtos, cliente, termos?.versao, pagamento))
       limpar()
-      navegar(`/cardapio/${loja.slug}/recebido`, { replace: true, state: { numero, data: pedido.data, hora: pedido.hora } })
+      navegar(`/cardapio/${loja.slug}/recebido`, { replace: true, state: { numero, data: pedido.data, hora: pedido.hora, formaPagamento: pagamento } })
     } catch (erro) {
       setEnviando(false)
       if (erro instanceof PedidoRecusadoError) {
@@ -683,6 +697,44 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
             )}
           </div>
         </section>
+
+        {pedePagamento && (
+          <section className={classes.cartao} aria-labelledby="titulo-pagamento">
+            <header>
+              <h2 id="titulo-pagamento">Pagamento</h2>
+            </header>
+            <div className={classes.corpo}>
+              <fieldset className={juntar(classes.formas, erros.pagamento && classes.formasInvalidas)} aria-describedby={erroDe('pagamento')}>
+                <legend>Como você vai pagar?</legend>
+                <div className={classes.opcoesForma}>
+                  {loja.formasPagamento.map((codigo, indice) => (
+                    <label key={codigo} className={classes.forma}>
+                      <input
+                        ref={indice === 0 ? pagamentoRef : undefined}
+                        type="radio"
+                        name="forma-pagamento"
+                        value={codigo}
+                        checked={pagamento === codigo}
+                        onChange={() => {
+                          mudar('formaPagamento', codigo)
+                          setErros((atuais) => ({ ...atuais, pagamento: undefined }))
+                        }}
+                      />
+                      <IconeFormaPagamento codigo={codigo} size={22} />
+                      <span>{nomeFormaPagamento(codigo)}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              {erros.pagamento && (
+                <p className={classes.erro} id="erro-pagamento">
+                  <IconAlertCircle size={20} aria-hidden />
+                  {erros.pagamento}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         <section className={classes.cartao} aria-labelledby="titulo-total">
           <div className={classes.corpo}>

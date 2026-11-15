@@ -9,7 +9,6 @@ import {
   IconShoppingCart,
   IconCircleCheck,
   IconCreditCard,
-  IconCreditCardPay,
   IconExternalLink,
   IconLinkOff,
   IconMapPin,
@@ -28,7 +27,7 @@ import {
   agruparPorCategoria,
   AVISO_ENCOMENDA,
   filtrarProdutos,
-  FORMAS_PAGAMENTO,
+  formasDaLoja,
   mensagemContato,
   PONTO_RETIRADA_EXEMPLO,
   REGRAS_ENCOMENDA,
@@ -38,6 +37,7 @@ import {
   unidadeTexto,
 } from '../cardapio/regrasCardapio'
 import { juntar } from '../cardapio/juntarClasses'
+import { nomeFormaPagamento } from '../comum/formasPagamento'
 import { totalDoPedido } from '../cardapio/regrasPedidoCliente'
 import { textoDescontoCurto } from '../produtos/regrasProdutos'
 import { moeda } from '../pedidos/regrasPedidos'
@@ -47,20 +47,9 @@ import { useTemaCardapio } from '../cardapio/useTemaCardapio'
 import classes from './PaginaCardapio.module.css'
 import { BotaoWhatsapp, Foto, LogoLoja, Preco, Rodape } from './partesCardapio'
 import { DetalheDoProduto, PedidoRecebido, SeuPedido } from './PedidoCardapio'
+import { IconeFormaPagamento } from './IconeFormaPagamento'
 import { useTituloPagina } from './useTituloPagina'
 
-// Símbolo do Pix desenhado aqui (o Tabler não tem): quatro losangos em volta de um centro vazado
-function IconePix({ size = 24, ...resto }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" {...resto}>
-      <path d="M12 2.5l4 4l-4 4l-4 -4z" />
-      <path d="M17.5 8l4 4l-4 4l-4 -4z" />
-      <path d="M12 13.5l4 4l-4 4l-4 -4z" />
-      <path d="M6.5 8l4 4l-4 4l-4 -4z" />
-    </svg>
-  )
-}
-const ICONES_PAGAMENTO = { pix: IconePix, credito: IconCreditCard, debito: IconCreditCardPay }
 
 const ICONES_REGRAS ={ calendario: IconCalendarEvent, retirada: IconShoppingBag, pagamento: IconCreditCard, confirmacao: IconCircleCheck }
 
@@ -599,15 +588,15 @@ function PerfilLoja({ loja, escuro }) {
           <h2 id="perfil-pagamento" className={classes.tituloBloco}>Formas de pagamento</h2>
           <div className={classes.bloco}>
             <ul className={classes.pagamentos}>
-              {FORMAS_PAGAMENTO.map(({ id, nome }) => {
-                const Icone = ICONES_PAGAMENTO[id]
+              {/* Só as formas que a loja aceita, na ordem da lista (ZAP-194) */}
+              {formasDaLoja(loja).map((codigo) => {
                 return (
-                  <li key={id} className={classes.pagamento}>
+                  <li key={codigo} className={classes.pagamento}>
                     <span className={classes.iconePagamento}>
-                      <Icone size={24} aria-hidden />
+                      <IconeFormaPagamento codigo={codigo} />
                     </span>
                     <span>
-                      <b>{nome}</b>
+                      <b>{nomeFormaPagamento(codigo)}</b>
                       <small>Pagamento na retirada</small>
                     </span>
                   </li>

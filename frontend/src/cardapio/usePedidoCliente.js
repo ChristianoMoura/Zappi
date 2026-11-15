@@ -6,7 +6,7 @@ import { LIMITES } from './regrasPedidoCliente'
 // WhatsApp do cliente ficam para a identificação (ZAP-110).
 const chave = (slug) => `zappi.pedido.${slug}`
 let proximaChave = Date.now()
-export const PEDIDO_VAZIO = { itens: [], data: '', hora: '', observacao: '' }
+export const PEDIDO_VAZIO = { itens: [], data: '', hora: '', observacao: '', formaPagamento: '' }
 
 // Recheio e cobertura saíram (ZAP-140). Um pedido guardado antes da mudança não perde o que o
 // cliente escreveu: os dois passam para o começo da observação do item.
@@ -28,6 +28,8 @@ function ler(slug) {
       data: typeof guardado.data === 'string' ? guardado.data : '',
       hora: typeof guardado.hora === 'string' ? guardado.hora : '',
       observacao: typeof guardado.observacao === 'string' ? guardado.observacao : '',
+      // Forma de pagamento escolhida (ZAP-194); a tela confere se a loja ainda aceita
+      formaPagamento: typeof guardado.formaPagamento === 'string' ? guardado.formaPagamento : '',
     }
   } catch {
     return { ...PEDIDO_VAZIO }

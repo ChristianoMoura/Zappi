@@ -709,3 +709,65 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ---------- Forma de pagamento (ZAP-194) ---------- */
+.formas {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.formas legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.opcoesForma {
+  display: grid;
+  /* Uma por linha no celular, para "Cartão de crédito" caber sem quebrar; lado a lado no computador */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 8px;
+}
+
+.forma {
+  display: grid;
+  grid-template-columns: 22px 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 2px solid var(--borda);
+  border-radius: 12px;
+  background: var(--cartao);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.forma input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--botao);
+}
+
+.forma svg {
+  color: var(--destaque);
+}
+
+.forma:has(input:checked) {
+  border-color: var(--destaque);
+  background: color-mix(in srgb, var(--destaque) 12%, var(--cartao));
+}
+
+.forma:has(input:focus-visible) {
+  outline: 3px solid var(--zappi-cor-foco);
+  outline-offset: 3px;
+}
+
+.formasInvalidas .forma {
+  border-color: #b42318;
+}

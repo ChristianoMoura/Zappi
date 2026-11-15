@@ -111,8 +111,10 @@ export function validarCliente(cliente) {
 
 // Corpo do POST /api/cardapio/{slug}/pedidos (ZAP-109). Vão só os itens que estão no cardápio
 // (ZAP-156). O preço não vai: quem decide é o backend, com o desconto vigente (RN10).
-export function montarEnvio(pedido, produtos, cliente, versaoTermos = null) {
+export function montarEnvio(pedido, produtos, cliente, versaoTermos = null, formaPagamento = '') {
   return {
+    // Forma de pagamento escolhida (ZAP-194), só quando a loja tem as formas cadastradas
+    ...(formaPagamento ? { formaPagamento } : {}),
     cliente: { nome: cliente.nome.trim(), telefone: `55${soDigitos(cliente.whatsapp)}` },
     consentimentoLgpd: cliente.aceite,
     ...(versaoTermos ? { versaoTermos } : {}),
