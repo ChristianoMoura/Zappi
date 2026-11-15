@@ -19,8 +19,9 @@ import br.com.zappi.produto.ProdutoRepositorio;
 
 /**
  * Leitura do cardápio público pelo link da loja (ZAP-104), sem login (RN02). A loja é achada
- * pelo {@code slug}, e só os produtos ativos dela aparecem (RN01, RN14), na ordem das categorias
- * da Lídia (ZAP-136). Categoria sem produto no cardápio não aparece para o cliente.
+ * pelo {@code slug}, e só os produtos dela não excluídos e no cardápio aparecem (RN01, RN14,
+ * ZAP-151), na ordem das categorias da Lídia (ZAP-136). Categoria sem produto no cardápio não
+ * aparece para o cliente.
  */
 @Service
 public class ServicoCardapio {
@@ -51,7 +52,7 @@ public class ServicoCardapio {
 				fotosDaLoja.enderecoPublico(loja.getCapaCaminho()));
 		// As categorias saem dos próprios produtos, que já vêm na ordem delas
 		Map<Long, RespostaCategoria> categorias = new LinkedHashMap<>();
-		List<ProdutoDoCardapio> doCardapio = produtos.listarAtivosNaOrdem(loja.getId())
+		List<ProdutoDoCardapio> doCardapio = produtos.listarNoCardapioNaOrdem(loja.getId())
 			.stream()
 			.map(produto -> new ProdutoDoCardapio(produto.getId(), produto.getNome(),
 					categorias.computeIfAbsent(produto.getCategoria().getId(),

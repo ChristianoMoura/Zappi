@@ -154,6 +154,24 @@ class CardapioPublicoTests {
 	}
 
 	@Test
+	void naoMostraOsProdutosForaDoCardapioNemACategoriaQueFicouVazia() throws Exception {
+		jdbc.update("""
+				update produto set no_cardapio = false
+				where estabelecimento_id = ? and (nome = 'Bolo de ninho com morango' or categoria_id =
+				    (select id from categoria where estabelecimento_id = ? and nome = 'Salgados'))
+				""", casaBelt, casaBelt);
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(jsonPath("$.produtos[*].nome", contains("Bolo de brigadeiro de chocolate")))
+			.andExpect(jsonPath("$.categorias[*].nome", contains("Bolos")))
+			.andExpect(jsonPath("$.produtos[0].noCardapio").doesNotExist());
+
+		// Voltou ao cardápio: aparece de novo para o cliente (ZAP-151)
+		jdbc.update("update produto set no_cardapio = true where estabelecimento_id = ?", casaBelt);
+		mockMvc.perform(get(CASA_BELT)).andExpect(jsonPath("$.produtos.length()").value(4));
+	}
+
+	@Test
 	void categoriaSemProdutoNoCardapioNaoAparece() throws Exception {
 		jdbc.update("insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Doces finos', 0)", casaBelt);
 		jdbc.update("""

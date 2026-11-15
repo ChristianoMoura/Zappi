@@ -252,6 +252,26 @@ class CadastroPedidoTests {
 	}
 
 	@Test
+	void recusaProdutoForaDoCardapioSemGravarNada() throws Exception {
+		long ninho = produto("Bolo de ninho com morango");
+		jdbc.update("update produto set no_cardapio = false where id = ?", ninho);
+
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()), item(ninho, 1, Map.of()))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.length()").value(1))
+			.andExpect(jsonPath("$.campos['itens[1].produtoId']").value("Este produto não está mais no cardápio."));
+		nadaFoiGravado();
+
+		// De volta ao cardápio pela rota da Lídia, entra no pedido (ZAP-151)
+		mockMvc.perform(post("/api/produtos/" + ninho + "/voltar-ao-cardapio")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR))
+			.andExpect(status().isOk());
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()), item(ninho, 1, Map.of()))))
+			.andExpect(status().isCreated());
+	}
+
+	@Test
 	void produtoPorUnidadeSoAceitaNumeroInteiro() throws Exception {
 		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1.25, Map.of()), item(coxinha, 1.5, Map.of()))))
 			.andExpect(status().isBadRequest())

@@ -9,18 +9,20 @@ import br.com.zappi.categoria.RespostaCategoria;
  * Produto como a tela usa. {@code foto} é o endereço público da imagem no Supabase Storage
  * (ZAP-40), ou nulo quando o produto não tem foto. {@code contemGluten} nulo é "não
  * informado" e nunca é devolvido como {@code false} (ZAP-128). O nome é o nome completo, e a
- * categoria vem com id e nome (ZAP-136).
+ * categoria vem com id e nome (ZAP-136). {@code noCardapio} falso é o produto fora do cardápio
+ * por um tempo, que só aparece no painel (ZAP-151).
  */
 public record RespostaProduto(Long id, String nome, RespostaCategoria categoria, String unidade, BigDecimal preco,
 		String descricao, String foto, String textoAlternativo, Boolean contemGluten, String outrosAlergenos,
-		boolean ativo) {
+		boolean ativo, boolean noCardapio) {
 
 	static RespostaProduto de(Produto produto, ArmazenamentoDeFotos armazenamento) {
 		return new RespostaProduto(produto.getId(), produto.getNome(),
 				RespostaCategoria.de(produto.getCategoria()),
 				produto.getUnidadeMedida().getSigla(), produto.getPreco(), produto.getDescricao(),
 				armazenamento.enderecoPublico(produto.getFotoCaminho()), produto.getFotoTextoAlternativo(),
-				produto.getContemGluten(), produto.getOutrosAlergenos(), produto.isAtivo());
+				produto.getContemGluten(), produto.getOutrosAlergenos(), produto.isAtivo(),
+				produto.isNoCardapio());
 	}
 
 }

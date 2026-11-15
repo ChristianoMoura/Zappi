@@ -137,6 +137,25 @@ class EdicaoPedidoTests {
 	}
 
 	@Test
+	void itemDeProdutoForaDoCardapioPodeFicarMasNaoEntrar() throws Exception {
+		jdbc.update("update produto set no_cardapio = false where id in (?, ?)", brigadeiro, ninho);
+
+		// O item que já estava continua, com o preço da época (RN10, ZAP-151)
+		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 2, Map.of()))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.itens[0].produtoId").value(brigadeiro))
+			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
+			.andExpect(jsonPath("$.valorTotal").value(200.00));
+
+		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 2, Map.of()), item(ninho, 1, Map.of()))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.length()").value(1))
+			.andExpect(jsonPath("$.campos['itens[1].produtoId']").value("Este produto não está mais no cardápio."));
+		assertThat(jdbc.queryForObject("select count(*) from item_pedido where pedido_id = ?", Integer.class, pedido))
+			.isEqualTo(1);
+	}
+
+	@Test
 	void doisItensDoMesmoProdutoMantemUmPrecoCongelado() throws Exception {
 		jdbc.update("update produto set preco = 150.00 where id = ?", brigadeiro);
 
