@@ -69,7 +69,7 @@ class PedidoPeloPortalTests {
 	@BeforeEach
 	void prepara() {
 		casaBelt = jdbc.queryForObject("select id from estabelecimento where slug = 'casa-belt'", Long.class);
-		brigadeiro = produto("Brigadeiro de chocolate");
+		brigadeiro = produto("Bolo de brigadeiro de chocolate");
 		coxinha = produto("Coxinha por unidade");
 	}
 
@@ -100,7 +100,8 @@ class PedidoPeloPortalTests {
 			.andExpect(jsonPath("$.status").value(1))
 			.andExpect(jsonPath("$.cliente.nome").value("Carla Nova"))
 			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
-			.andExpect(jsonPath("$.itens[0].recheio").value("Brigadeiro"));
+			// Recheio de uma tela antiga é ignorado (ZAP-136)
+			.andExpect(jsonPath("$.itens[0].recheio").doesNotExist());
 	}
 
 	@Test
@@ -182,16 +183,19 @@ class PedidoPeloPortalTests {
 
 	@Test
 	void soAceitaProdutosAtivosDaPropriaLoja() throws Exception {
-		long excluido = produto("Ninho com morango");
+		long excluido = produto("Bolo de ninho com morango");
 		jdbc.update("update produto set ativo = false where id = ?", excluido);
 		long outraLoja = jdbc.queryForObject("""
 				insert into estabelecimento (nome, slug, telefone_whatsapp)
 				values ('Doces da Ana', 'doces-da-ana', '5511900000009') returning id
 				""", Long.class);
 		long deOutraLoja = jdbc.queryForObject("""
-				insert into produto (estabelecimento_id, unidade_medida_id, nome, sabor, preco)
-				values (?, 1, 'Bolo', 'Cenoura', 90.00) returning id
-				""", Long.class, outraLoja);
+				with categoria as (
+				    insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1) returning id
+				)
+				insert into produto (estabelecimento_id, categoria_id, unidade_medida_id, nome, preco)
+				select ?, categoria.id, 1, 'Bolo de cenoura', 90.00 from categoria returning id
+				""", Long.class, outraLoja, outraLoja);
 
 		enviar(pedido("Carla", CARLA, daquiA(7), List.of(item(excluido, 1, Map.of()), item(deOutraLoja, 1, Map.of()),
 				item(coxinha, 1.5, Map.of()))))
@@ -249,9 +253,9 @@ class PedidoPeloPortalTests {
 		return hoje().plusDays(dias);
 	}
 
-	private long produto(String sabor) {
-		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and sabor = ?", Long.class,
-				casaBelt, sabor);
+	private long produto(String nome) {
+		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and nome = ?", Long.class,
+				casaBelt, nome);
 	}
 
 	private String tokenDaLidia() {

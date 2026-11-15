@@ -36,7 +36,7 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 class ListagemPedidosTests {
 
 	/** O item de Ninho do pedido #2, sem depender da ordem dos itens. */
-	private static final String NINHO = "$[1].itens[?(@.sabor == 'Ninho com morango')]";
+	private static final String NINHO = "$[1].itens[?(@.produto == 'Bolo de ninho com morango')]";
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -99,13 +99,13 @@ class ListagemPedidosTests {
 			.andExpect(jsonPath("$[1].cliente.telefone").value("5511900000002"))
 			.andExpect(jsonPath("$[1].cliente.anonimizado").value(false))
 			.andExpect(jsonPath("$[1].valorTotal").value(292.50))
-			.andExpect(jsonPath("$[1].itens[*].sabor", containsInAnyOrder("Cento de coxinha", "Ninho com morango")))
-			.andExpect(jsonPath(NINHO + ".produto", contains("Bolo")))
+			.andExpect(jsonPath("$[1].itens[*].produto",
+					containsInAnyOrder("Cento de coxinha", "Bolo de ninho com morango")))
 			.andExpect(jsonPath(NINHO + ".unidade", contains("KG")))
 			.andExpect(jsonPath(NINHO + ".quantidade", contains(1.5)))
 			.andExpect(jsonPath(NINHO + ".precoUnitario", contains(115.0)))
 			.andExpect(jsonPath(NINHO + ".subtotal", contains(172.5)))
-			.andExpect(jsonPath("$[0].itens[0].recheio").value("Brigadeiro"))
+			.andExpect(jsonPath("$[0].itens[0].observacao").value("Recheio: Brigadeiro. Cobertura: Granulado."))
 			.andExpect(jsonPath("$[0].dataRetirada").isString());
 	}
 
@@ -187,7 +187,7 @@ class ListagemPedidosTests {
 		jdbc.update("""
 				insert into item_pedido (pedido_id, produto_id, quantidade, preco_unitario, subtotal)
 				select ?, id, 1.000, 100.00, 100.00 from produto
-				where estabelecimento_id = ? and sabor = 'Brigadeiro de chocolate'
+				where estabelecimento_id = ? and nome = 'Bolo de brigadeiro de chocolate'
 				""", id, casaBelt);
 	}
 

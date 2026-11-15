@@ -57,10 +57,14 @@ class CardapioPublicoTests {
 				.value("Confeitaria artesanal: bolos e salgados sob encomenda."))
 			.andExpect(jsonPath("$.estabelecimento.whatsapp").value("5511900000000"))
 			.andExpect(jsonPath("$.estabelecimento.logo").value(nullValue()))
-			.andExpect(jsonPath("$.produtos[*].sabor", contains("Brigadeiro de chocolate", "Ninho com morango",
-					"Cento de coxinha", "Coxinha por unidade")))
+			.andExpect(jsonPath("$.categorias[*].nome", contains("Bolos", "Salgados")))
+			.andExpect(jsonPath("$.produtos[*].nome", contains("Bolo de brigadeiro de chocolate",
+					"Bolo de ninho com morango", "Cento de coxinha", "Coxinha por unidade")))
 			.andExpect(jsonPath("$.produtos[0].id").isNumber())
-			.andExpect(jsonPath("$.produtos[0].nome").value("Bolo"))
+			.andExpect(jsonPath("$.produtos[0].categoria.nome").value("Bolos"))
+			.andExpect(jsonPath("$.produtos[0].categoria.id").isNumber())
+			.andExpect(jsonPath("$.produtos[0].sabor").doesNotExist())
+			.andExpect(jsonPath("$.produtos[2].categoria.nome").value("Salgados"))
 			.andExpect(jsonPath("$.produtos[0].unidade").value("KG"))
 			.andExpect(jsonPath("$.produtos[0].preco").value(100.00))
 			.andExpect(jsonPath("$.produtos[0].descricao")
@@ -71,12 +75,12 @@ class CardapioPublicoTests {
 
 	@Test
 	void soMostraOsProdutosAtivos() throws Exception {
-		jdbc.update("update produto set ativo = false where estabelecimento_id = ? and sabor = 'Ninho com morango'",
+		jdbc.update("update produto set ativo = false where estabelecimento_id = ? and nome = 'Bolo de ninho com morango'",
 				casaBelt);
 
 		mockMvc.perform(get(CASA_BELT))
-			.andExpect(jsonPath("$.produtos[*].sabor",
-					contains("Brigadeiro de chocolate", "Cento de coxinha", "Coxinha por unidade")));
+			.andExpect(jsonPath("$.produtos[*].nome",
+					contains("Bolo de brigadeiro de chocolate", "Cento de coxinha", "Coxinha por unidade")));
 	}
 
 	@Test
@@ -106,7 +110,7 @@ class CardapioPublicoTests {
 				casaBelt + "/logo-abc.webp", casaBelt + "/capa-def.webp", casaBelt);
 		jdbc.update("""
 				update produto set foto_caminho = ?, foto_texto_alternativo = 'Bolo de brigadeiro com granulado'
-				where estabelecimento_id = ? and sabor = 'Brigadeiro de chocolate'
+				where estabelecimento_id = ? and nome = 'Bolo de brigadeiro de chocolate'
 				""", casaBelt + "/1-abcd.jpg", casaBelt);
 
 		mockMvc.perform(get(CASA_BELT))
@@ -126,14 +130,40 @@ class CardapioPublicoTests {
 				values ('Doces da Ana', 'doces-da-ana', '5511900000009') returning id
 				""", Long.class);
 		jdbc.update("""
-				insert into produto (estabelecimento_id, unidade_medida_id, nome, sabor, preco)
-				values (?, 1, 'Bolo', 'Cenoura', 90.00)
-				""", outraLoja);
+				with categoria as (
+				    insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1) returning id
+				)
+				insert into produto (estabelecimento_id, categoria_id, unidade_medida_id, nome, preco)
+				select ?, categoria.id, 1, 'Bolo de cenoura', 90.00 from categoria
+				""", outraLoja, outraLoja);
 
 		mockMvc.perform(get("/api/cardapio/doces-da-ana"))
 			.andExpect(jsonPath("$.estabelecimento.nome").value("Doces da Ana"))
-			.andExpect(jsonPath("$.produtos[*].sabor", contains("Cenoura")));
+			.andExpect(jsonPath("$.produtos[*].nome", contains("Bolo de cenoura")));
 		mockMvc.perform(get(CASA_BELT)).andExpect(jsonPath("$.produtos.length()").value(4));
+	}
+
+	@Test
+	void segueAOrdemDasCategoriasDaLidia() throws Exception {
+		jdbc.update("update categoria set ordem = 3 - ordem where estabelecimento_id = ?", casaBelt);
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(jsonPath("$.categorias[*].nome", contains("Salgados", "Bolos")))
+			.andExpect(jsonPath("$.produtos[*].nome", contains("Cento de coxinha", "Coxinha por unidade",
+					"Bolo de brigadeiro de chocolate", "Bolo de ninho com morango")));
+	}
+
+	@Test
+	void categoriaSemProdutoNoCardapioNaoAparece() throws Exception {
+		jdbc.update("insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Doces finos', 0)", casaBelt);
+		jdbc.update("""
+				update produto set ativo = false
+				where categoria_id = (select id from categoria where estabelecimento_id = ? and nome = 'Salgados')
+				""", casaBelt);
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(jsonPath("$.categorias[*].nome", contains("Bolos")))
+			.andExpect(jsonPath("$.produtos.length()").value(2));
 	}
 
 	@Test

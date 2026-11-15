@@ -81,8 +81,8 @@ class EdicaoPedidoTests {
 		pedido = jdbc.queryForObject("select id from pedido where estabelecimento_id = ? and numero = 1", Long.class,
 				casaBelt);
 		retirada = jdbc.queryForObject("select data_retirada from pedido where id = ?", LocalDateTime.class, pedido);
-		brigadeiro = produto("Brigadeiro de chocolate");
-		ninho = produto("Ninho com morango");
+		brigadeiro = produto("Bolo de brigadeiro de chocolate");
+		ninho = produto("Bolo de ninho com morango");
 	}
 
 	@Test
@@ -103,7 +103,8 @@ class EdicaoPedidoTests {
 			.andExpect(jsonPath("$.itens[0].produtoId").value(brigadeiro))
 			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
 			.andExpect(jsonPath("$.itens[0].subtotal").value(300.00))
-			.andExpect(jsonPath("$.itens[0].cobertura").value(nullValue()))
+			.andExpect(jsonPath("$.itens[0].observacao").value(nullValue()))
+			.andExpect(jsonPath("$.itens[0].recheio").doesNotExist())
 			.andExpect(jsonPath("$.itens[1].produtoId").value(ninho))
 			.andExpect(jsonPath("$.itens[1].precoUnitario").value(150.00))
 			.andExpect(jsonPath("$.valorTotal").value(450.00));
@@ -140,7 +141,7 @@ class EdicaoPedidoTests {
 		jdbc.update("update produto set preco = 150.00 where id = ?", brigadeiro);
 
 		editar(1, pedido("Ana Exemplo", ANA, retirada,
-				List.of(item(brigadeiro, 2, Map.of()), item(brigadeiro, 1, Map.of("recheio", "Ninho")))))
+				List.of(item(brigadeiro, 2, Map.of()), item(brigadeiro, 1, Map.of("observacao", "Ninho")))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
 			.andExpect(jsonPath("$.itens[1].precoUnitario").value(150.00))
@@ -376,6 +377,27 @@ class EdicaoPedidoTests {
 			.andExpect(status().isUnauthorized());
 	}
 
+	/**
+	 * O item antigo pode ter observação maior que 300, com o recheio e a cobertura copiados pela
+	 * migração (ZAP-136): ela continua ao editar. Item novo fica com até 300.
+	 */
+	@Test
+	void itemAntigoMantemObservacaoLongaEItemNovoTemAte300() throws Exception {
+		String longa = "Recheio: " + "x".repeat(100) + ". Cobertura: " + "y".repeat(100) + ". " + "z".repeat(300);
+		jdbc.update("update item_pedido set observacao = ? where pedido_id = ?", longa, pedido);
+
+		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 2, Map.of("observacao", longa)),
+				item(ninho, 1, Map.of("observacao", "n".repeat(301))))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos.length()").value(1))
+			.andExpect(jsonPath("$.campos['itens[1].observacao']").value("Use no máximo 300 caracteres."));
+
+		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 2, Map.of("observacao", longa)),
+				item(ninho, 1, Map.of("observacao", "n".repeat(300))))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.itens[0].observacao").value(longa));
+	}
+
 	private ResultActions editar(int numero, Map<String, Object> corpo) throws Exception {
 		return mockMvc.perform(put("/api/pedidos/" + numero).header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
 			.header(HttpHeaders.USER_AGENT, CadastroPedidoTests.NAVEGADOR)
@@ -400,9 +422,9 @@ class EdicaoPedidoTests {
 		jdbc.update("update pedido set " + campos + " where id = ?", pedido);
 	}
 
-	private long produto(String sabor) {
-		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and sabor = ?", Long.class,
-				casaBelt, sabor);
+	private long produto(String nome) {
+		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and nome = ?", Long.class,
+				casaBelt, nome);
 	}
 
 }
