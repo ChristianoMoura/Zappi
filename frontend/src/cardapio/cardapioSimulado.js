@@ -35,6 +35,7 @@ const CASA_BELT = {
       textoAlternativo: 'Bolo de brigadeiro coberto com granulado e brigadeiros por cima',
       alergenos: ['GLUTEN', 'LEITE', 'OVOS'],
       outrosAlergenos: '',
+      precoPromocional: null,
     },
     {
       id: 2,
@@ -47,6 +48,7 @@ const CASA_BELT = {
       textoAlternativo: 'Bolo branco de leite Ninho decorado com morangos e chantilly',
       alergenos: ['GLUTEN', 'LEITE', 'OVOS'],
       outrosAlergenos: '',
+      precoPromocional: 100,
     },
     {
       id: 3,

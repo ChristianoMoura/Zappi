@@ -2,6 +2,7 @@
 // O valor na tela é só informativo: quem calcula o valor gravado é o backend (RN11).
 import { moeda } from '../pedidos/regrasPedidos'
 import { LIMITES } from '../pedidos/regrasCadastroPedido'
+import { precoVigente } from '../produtos/regrasProdutos'
 
 export { LIMITES }
 
@@ -19,7 +20,8 @@ export function quantidadeTexto(produto, quantidade) {
   return `${quantidade} ${quantidade === 1 ? 'unidade' : 'unidades'}`
 }
 
-export const subtotal = (produto, quantidade) => arredondar(produto.preco * quantidade)
+// Com promoção, o preço com desconto (ZAP-162). A estimativa da tela; quem grava é o backend (RN10)
+export const subtotal = (produto, quantidade) => arredondar(precoVigente(produto) * quantidade)
 
 // Itens do pedido com o produto do cardápio. Os de produtos que saíram do cardápio (RN14, ZAP-151)
 // não entram no total nem na mensagem enviada à loja

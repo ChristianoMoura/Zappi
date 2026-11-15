@@ -32,6 +32,7 @@ import {
   validarPedido,
 } from '../cardapio/regrasPedidoCliente'
 import { moeda } from '../pedidos/regrasPedidos'
+import { emPromocao } from '../produtos/regrasProdutos'
 import { SelosAlergenos } from '../produtos/SelosAlergenos'
 import base from './PaginaCardapio.module.css'
 import { Foto, Preco, Rodape } from './partesCardapio'
@@ -184,7 +185,7 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
             <div className={classes.linhaQuantidade}>
               <Quantidade produto={produto} quantidade={quantidade} aoMudar={setQuantidade} rotulo={`Quantidade de ${produto.nome}`} />
               <span className={classes.valor}>
-                Valor: <b>{moeda(valor)}</b>
+                Valor: <b className={emPromocao(produto) ? classes.valorPromocao : undefined}>{moeda(valor)}</b>
               </span>
             </div>
           </div>
@@ -361,7 +362,7 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
                         aoMudar={(quantidade) => mudarItem(item.chave, { quantidade })}
                         rotulo={`Quantidade de ${produto.nome}`}
                       />
-                      <b className={classes.subtotal}>{moeda(subtotal(produto, item.quantidade))}</b>
+                      <b className={juntar(classes.subtotal, emPromocao(produto) && classes.valorPromocao)}>{moeda(subtotal(produto, item.quantidade))}</b>
                     </div>
                     <button type="button" className={classes.remover} onClick={() => tirar(item)} aria-label={`Remover ${produto.nome}`}>
                       <IconTrash size={18} aria-hidden />

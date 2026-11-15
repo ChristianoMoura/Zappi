@@ -53,6 +53,8 @@ function paraTela(resposta) {
       whatsapp: estabelecimento?.whatsapp ?? '',
       logo: estabelecimento?.logo ?? '',
       capa: estabelecimento?.capa ?? '',
+      // Seção "Promoções" no topo do cardápio, ligada por padrão (ZAP-160, ZAP-162)
+      destacarPromocoes: estabelecimento?.destacarPromocoes !== false,
     },
     produtos: (produtos ?? []).map((p) => ({
       id: p.id,
@@ -66,6 +68,8 @@ function paraTela(resposta) {
       textoAlternativo: p.textoAlternativo ?? '',
       alergenos: ordenarAlergenos(p.alergenos),
       outrosAlergenos: p.outrosAlergenos ?? '',
+      // Preço com desconto, nulo sem promoção (ZAP-152, ZAP-162)
+      precoPromocional: p.precoPromocional == null ? null : Number(p.precoPromocional),
     })),
   }
 }

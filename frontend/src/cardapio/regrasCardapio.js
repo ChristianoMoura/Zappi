@@ -1,7 +1,7 @@
 // Regras da página pública do cardápio (ZAP-100 / US9, layout H aprovado na ZAP-105)
 import { mascaraTelefone, soDigitos, whatsappParaTela } from '../estabelecimento/regrasEstabelecimento'
 import { moeda } from '../pedidos/regrasPedidos'
-import { UNIDADES } from '../produtos/regrasProdutos'
+import { emPromocao, percentualDesconto, precoVigente, UNIDADES } from '../produtos/regrasProdutos'
 
 // Regras da encomenda, iguais para toda loja: não dependem de cadastro (RN19, RN22 e CDC)
 export const REGRAS_ENCOMENDA = [
@@ -33,7 +33,25 @@ export const PONTO_RETIRADA_EXEMPLO = {
 export const AVISO_ENCOMENDA ='Encomendas com pelo menos 7 dias de antecedência · Retirada, sem entrega'
 
 // Preço sempre com a unidade ao lado (CDC): "R$ 100,00" e "por kg"
-export const precoTexto = (produto) => moeda(produto.preco)
+// Com promoção, o preço com desconto (ZAP-162)
+export const precoTexto = (produto) => moeda(precoVigente(produto))
+
+// Seção automática "Promoções" no topo do cardápio (ZAP-162): com o destaque ligado e sem busca,
+// os produtos em promoção na ordem das categorias da loja. Eles continuam também na categoria.
+// Na busca, a seção sai, para o produto não aparecer duas vezes no resultado.
+// O que o leitor de tela ouve no lugar do preço riscado: "De R$ 115,00 por R$ 100,00 por kg, 13% de desconto"
+export function textoPrecoLido(produto) {
+  const percentual = percentualDesconto(produto)
+  const precos = `De ${moeda(produto.preco)} por ${moeda(produto.precoPromocional)} ${unidadeTexto(produto)}`
+  return percentual >= 1 ? `${precos}, ${percentual}% de desconto` : precos
+}
+
+export const ID_PROMOCOES = 'promocoes'
+export function secaoPromocoes(categorias, { destacar, buscando }) {
+  if (!destacar || buscando) return null
+  const produtos = categorias.flatMap((c) => c.produtos).filter(emPromocao)
+  return produtos.length ? { id: ID_PROMOCOES, titulo: 'Promoções', produtos, promocoes: true } : null
+}
 export const unidadeTexto = (produto) => UNIDADES[produto.unidade]?.selo ?? ''
 
 // As seções são as categorias cadastradas no painel (ZAP-136, ZAP-140), na ordem que a loja

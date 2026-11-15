@@ -3,9 +3,11 @@ import zappiNomeCreme from '../assets/zappi-nome-creme.svg'
 import zappiNome from '../assets/zappi-nome.svg'
 import zappiSimboloCreme from '../assets/zappi-simbolo-creme.svg'
 import zappiSimbolo from '../assets/zappi-simbolo.svg'
-import { linkWhatsapp, precoTexto, unidadeTexto } from '../cardapio/regrasCardapio'
+import { linkWhatsapp, precoTexto, textoPrecoLido, unidadeTexto } from '../cardapio/regrasCardapio'
+import { emPromocao, textoDescontoCurto } from '../produtos/regrasProdutos'
 import { juntar } from '../cardapio/juntarClasses'
 import { iniciaisDaLoja } from '../estabelecimento/useMarcaLoja'
+import { moeda } from '../pedidos/regrasPedidos'
 import classes from './PaginaCardapio.module.css'
 
 // Partes usadas pelo cardápio público, pelo detalhe do produto e pelo "Seu pedido"
@@ -44,10 +46,29 @@ export function Foto({ produto, className, decorativa = false }) {
   )
 }
 
+// Com promoção (ZAP-162), como no painel (ZAP-161): o preço antigo riscado, o novo em verde e o
+// "-13%" ao lado da unidade, sempre na mesma linha. O risco não é anunciado pelo leitor de tela,
+// então ele ouve "De R$ 115,00 por R$ 100,00 por kg, 13% de desconto".
 export function Preco({ produto, className }) {
+  if (!emPromocao(produto)) {
+    return (
+      <span className={juntar(classes.preco, className)}>
+        {precoTexto(produto)} <small>{unidadeTexto(produto)}</small>
+      </span>
+    )
+  }
+  const desconto = textoDescontoCurto(produto)
   return (
-    <span className={juntar(classes.preco, className)}>
-      {precoTexto(produto)} <small>{unidadeTexto(produto)}</small>
+    <span className={juntar(classes.preco, classes.precoPromocao, className)}>
+      <span className={classes.somenteLeitor}>{textoPrecoLido(produto)}</span>
+      <s aria-hidden="true">{moeda(produto.preco)}</s>
+      <span className={classes.precoNovo} aria-hidden="true">
+        {precoTexto(produto)}
+      </span>
+      <span className={classes.unidadeEDesconto} aria-hidden="true">
+        <small>{unidadeTexto(produto)}</small>
+        {desconto && <span className={classes.descontoCurto}>{desconto}</span>}
+      </span>
     </span>
   )
 }
