@@ -24,9 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class MigracoesTests {
 
-	/** As nove do dicionário de dados (Atividade #14), a categoria (ZAP-137) e o aceite dos termos (ZAP-145). */
+	/** As nove do dicionário de dados (Atividade #14), a categoria (ZAP-137), o aceite dos termos (ZAP-145) e as notificações (ZAP-173). */
 	private static final List<String> TABELAS = List.of("estabelecimento", "usuario", "unidade_medida", "produto",
-			"cliente", "pedido", "item_pedido", "mensagem_whatsapp", "log_auditoria", "categoria", "aceite_termos");
+			"cliente", "pedido", "item_pedido", "mensagem_whatsapp", "log_auditoria", "categoria", "aceite_termos",
+			"notificacao");
 
 	@Autowired
 	private JdbcTemplate jdbc;
