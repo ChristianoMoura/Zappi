@@ -49,7 +49,9 @@ export function PaginaPedidos() {
   const [abaAtiva, setAbaAtiva] = useState(String(STATUS.NOVO))
   const [aberto, setAberto] = useState(null)
   const [enviando, setEnviando] = useState(false)
-  const { state } = useLocation()
+  // `key` muda a cada navegação: clicar numa notificação (ZAP-175) já estando no quadro recarrega
+  // os pedidos e abre o pedido, mesmo que seja o mesmo de antes
+  const { state, key: navegacao } = useLocation()
   // Voltando da edição (ZAP-91), o painel do pedido abre de novo; depois de salvar, com o aviso
   const [acabouDe, setAcabouDe] = useState(state?.editado ? 'editar' : null)
   const [erroAcao, setErroAcao] = useState('')
@@ -83,7 +85,7 @@ export function PaginaPedidos() {
     return () => {
       ativo = false
     }
-  }, [abrirAoVoltar])
+  }, [abrirAoVoltar, navegacao])
 
   useEffect(() => {
     if (carregando || (!novo && !focoAoVoltar)) return
