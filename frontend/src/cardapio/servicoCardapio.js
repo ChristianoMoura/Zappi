@@ -58,6 +58,16 @@ function paraTela(resposta) {
       destacarPromocoes: estabelecimento?.destacarPromocoes !== false,
       // Formas de pagamento aceitas (ZAP-192, ZAP-194); nulo sem o campo na API
       formasPagamento: Array.isArray(estabelecimento?.formasPagamento) ? ordenarFormas(estabelecimento.formasPagamento) : null,
+      // Endereço de retirada (ZAP-185, ZAP-186)
+      endereco: {
+        cep: estabelecimento?.cep ?? '',
+        logradouro: estabelecimento?.logradouro ?? '',
+        numero: estabelecimento?.numero ?? '',
+        complemento: estabelecimento?.complemento ?? '',
+        bairro: estabelecimento?.bairro ?? '',
+        cidade: estabelecimento?.cidade ?? '',
+        uf: estabelecimento?.uf ?? '',
+      },
     },
     produtos: (produtos ?? []).map((p) => ({
       id: p.id,
