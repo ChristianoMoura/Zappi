@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import br.com.zappi.TestcontainersConfiguration;
+import br.com.zappi.termos.ServicoTermos;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -65,16 +66,20 @@ class LoginTests {
 	@Autowired
 	private PasswordEncoder codificadorDeSenha;
 
+	@Autowired
+	private ServicoTermos termos;
+
 	@AfterEach
 	void limpa() {
-		jdbc.update("delete from log_auditoria where acao in ('LOGIN_SUCESSO', 'LOGIN_FALHA')");
+		jdbc.update("delete from aceite_termos");
+		jdbc.update("delete from log_auditoria where acao in ('LOGIN_SUCESSO', 'LOGIN_FALHA', 'TERMOS_ACEITOS')");
 		jdbc.update("delete from usuario where email = ?", EMAIL_DESATIVADA);
 		jdbc.update("update usuario set ultimo_login_em = null where email = ?", EMAIL_DA_LIDIA);
 	}
 
 	@Test
 	void entraComEmailESenhaCertos() throws Exception {
-		String corpo = entrar(EMAIL_DA_LIDIA, TestcontainersConfiguration.SENHA_DA_LIDIA)
+		String corpo = entrarAceitandoOsTermos(EMAIL_DA_LIDIA, TestcontainersConfiguration.SENHA_DA_LIDIA)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.nome").value("Lídia"))
 			.andReturn().getResponse().getContentAsString();
@@ -90,7 +95,7 @@ class LoginTests {
 	void registraOUltimoLogin() throws Exception {
 		OffsetDateTime antes = OffsetDateTime.now().minusSeconds(1);
 
-		entrar(EMAIL_DA_LIDIA, TestcontainersConfiguration.SENHA_DA_LIDIA).andExpect(status().isOk());
+		entrarAceitandoOsTermos(EMAIL_DA_LIDIA, TestcontainersConfiguration.SENHA_DA_LIDIA).andExpect(status().isOk());
 
 		OffsetDateTime ultimoLogin = jdbc.queryForObject(
 				"select ultimo_login_em from usuario where email = ?", OffsetDateTime.class, EMAIL_DA_LIDIA);
@@ -99,7 +104,8 @@ class LoginTests {
 
 	@Test
 	void registraOLoginComSucessoNoLog() throws Exception {
-		entrar("  Lidia@CasaBelt.com ", TestcontainersConfiguration.SENHA_DA_LIDIA).andExpect(status().isOk());
+		entrarAceitandoOsTermos("  Lidia@CasaBelt.com ", TestcontainersConfiguration.SENHA_DA_LIDIA)
+			.andExpect(status().isOk());
 
 		Map<String, Object> lidia = lidia();
 		assertThat(logsDeLogin()).singleElement().satisfies(log -> {
@@ -168,7 +174,7 @@ class LoginTests {
 	@Test
 	void nuncaGravaASenhaNoLog() throws Exception {
 		entrar(EMAIL_DA_LIDIA, "Errada@123");
-		entrar(EMAIL_DA_LIDIA, TestcontainersConfiguration.SENHA_DA_LIDIA);
+		entrarAceitandoOsTermos(EMAIL_DA_LIDIA, TestcontainersConfiguration.SENHA_DA_LIDIA);
 
 		String tudo = jdbc.queryForList("select row_to_json(l)::text from log_auditoria l", String.class)
 			.toString();
@@ -205,6 +211,14 @@ class LoginTests {
 		return mockMvc.perform(post(ROTA).contentType(MediaType.APPLICATION_JSON)
 			.header(HttpHeaders.USER_AGENT, NAVEGADOR)
 			.content(json.writeValueAsString(Map.of("email", email, "senha", senha))));
+	}
+
+	/** Com a caixa dos termos marcada para a versão vigente (ZAP-146). */
+	private ResultActions entrarAceitandoOsTermos(String email, String senha) throws Exception {
+		return mockMvc.perform(post(ROTA).contentType(MediaType.APPLICATION_JSON)
+			.header(HttpHeaders.USER_AGENT, NAVEGADOR)
+			.content(json.writeValueAsString(Map.of("email", email, "senha", senha, "aceiteTermos", true,
+					"versaoTermos", termos.versaoVigente()))));
 	}
 
 	private Map<String, Object> lidia() {

@@ -17,6 +17,8 @@ import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
 import br.com.zappi.seguranca.ServicoToken;
 import br.com.zappi.seguranca.UsuarioAutenticado;
+import br.com.zappi.termos.ServicoTermos;
+import br.com.zappi.termos.TermosAceitos;
 import br.com.zappi.usuario.Usuario;
 import br.com.zappi.usuario.UsuarioRepositorio;
 
@@ -44,6 +46,8 @@ public class ServicoAutenticacao {
 
 	private final BloqueioDeLogin bloqueio;
 
+	private final ServicoTermos termos;
+
 	/**
 	 * Hash de uma senha aleatória, conferido quando o e-mail não existe. Assim a resposta
 	 * leva o mesmo tempo nos dois casos e não revela quais e-mails estão cadastrados.
@@ -51,12 +55,13 @@ public class ServicoAutenticacao {
 	private final String hashFicticio;
 
 	public ServicoAutenticacao(UsuarioRepositorio usuarios, PasswordEncoder codificadorDeSenha,
-			ServicoToken servicoToken, ServicoAuditoria auditoria, BloqueioDeLogin bloqueio) {
+			ServicoToken servicoToken, ServicoAuditoria auditoria, BloqueioDeLogin bloqueio, ServicoTermos termos) {
 		this.usuarios = usuarios;
 		this.codificadorDeSenha = codificadorDeSenha;
 		this.servicoToken = servicoToken;
 		this.auditoria = auditoria;
 		this.bloqueio = bloqueio;
+		this.termos = termos;
 		this.hashFicticio = codificadorDeSenha.encode(UUID.randomUUID().toString());
 	}
 
@@ -64,9 +69,19 @@ public class ServicoAutenticacao {
 	 * Confere e-mail e senha e devolve o token. Com qualquer problema nas credenciais,
 	 * lança {@link CredenciaisInvalidasException}, sempre com a mesma mensagem. Com 5
 	 * falhas seguidas, lança {@link LoginBloqueadoException} por 15 minutos.
+	 *
+	 * <p>Com as credenciais certas, a Lídia precisa ter aceitado a versão vigente dos termos (RN26,
+	 * ZAP-146): ou a requisição traz o aceite dessa versão, que é gravado junto com o login, ou o
+	 * aceite já está no servidor. Senão, lança {@link TermosPendentesException}, sem token. Isso só
+	 * acontece depois da senha certa, para não revelar se o e-mail existe.
+	 *
+	 * @param ipOrigem IP do cliente, já lido do proxy do Render, para o registro do aceite
+	 * @param userAgent navegador, para o registro do aceite
 	 */
 	@Transactional
-	public RespostaLogin entrar(String email, String senha) {
+	public RespostaLogin entrar(RequisicaoLogin requisicao, String ipOrigem, String userAgent) {
+		String email = requisicao.email();
+		String senha = requisicao.senha();
 		String emailNormalizado = email.trim().toLowerCase(Locale.ROOT);
 		Optional<Usuario> encontrado = usuarios.findByEmail(emailNormalizado);
 
@@ -92,6 +107,8 @@ public class ServicoAutenticacao {
 		}
 
 		Long estabelecimentoId = usuario.getEstabelecimento().getId();
+		TermosAceitos termosAceitos = aceiteDosTermos(requisicao, usuario.getId(), estabelecimentoId, ipOrigem,
+				userAgent);
 		usuario.registrarLogin(agora);
 		// Na mesma transação: se algo falhar daqui em diante, o registro é desfeito junto.
 		auditoria.registrar(RegistroAuditoria.de(AcaoAuditoria.LOGIN_SUCESSO)
@@ -100,7 +117,20 @@ public class ServicoAutenticacao {
 			.emailInformado(emailNormalizado));
 
 		String token = servicoToken.gerar(new UsuarioAutenticado(usuario.getId(), estabelecimentoId));
-		return new RespostaLogin(token, usuario.getNome());
+		return new RespostaLogin(token, usuario.getNome(), termosAceitos);
+	}
+
+	/**
+	 * Grava o aceite se a requisição traz o da versão vigente (mesmo que a Lídia já tenha aceitado
+	 * antes: cada aceite é um registro). Sem o aceite na requisição, vale o que já está gravado
+	 * para a versão vigente; sem nenhum dos dois, o login fica pendente.
+	 */
+	private TermosAceitos aceiteDosTermos(RequisicaoLogin requisicao, Long usuarioId, Long estabelecimentoId,
+			String ipOrigem, String userAgent) {
+		if (requisicao.aceitaAVersao(termos.versaoVigente())) {
+			return termos.registrarAceite(usuarioId, estabelecimentoId, ipOrigem, userAgent);
+		}
+		return termos.aceiteDaVersaoVigente(usuarioId).orElseThrow(TermosPendentesException::new);
 	}
 
 	/**

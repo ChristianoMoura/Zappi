@@ -21,6 +21,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import br.com.zappi.cardapio.ControladorCardapio;
+import br.com.zappi.termos.ControladorTermos;
 
 /**
  * Regras de acesso da API (RN02, ISO 27002 5.15).
@@ -48,6 +49,8 @@ public class ConfiguracaoSeguranca {
 			.authorizeHttpRequests(rotas -> rotas
 				.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 				.requestMatchers(HttpMethod.POST, ROTA_LOGIN).permitAll()
+				// Versão vigente dos termos, lida pelo login e pelo cardápio sem token (ZAP-146)
+				.requestMatchers(HttpMethod.GET, ControladorTermos.ROTA_VIGENTES).permitAll()
 				// Portal do Cliente (RN02): a leitura do cardápio pelo link da loja (ZAP-104)
 				.requestMatchers(HttpMethod.GET, ControladorCardapio.ROTA + "/*").permitAll()
 				// e o envio do pedido pelo cliente (ZAP-109)

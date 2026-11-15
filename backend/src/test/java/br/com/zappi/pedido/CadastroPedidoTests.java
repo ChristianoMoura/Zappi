@@ -112,10 +112,13 @@ class CadastroPedidoTests {
 			.andExpect(jsonPath("$.mensagens.length()").value(0));
 
 		Map<String, Object> cliente = jdbc.queryForMap("""
-				select id, nome, consentimento_lgpd, consentimento_em from cliente
+				select id, nome, consentimento_lgpd, consentimento_em, consentimento_versao from cliente
 				where estabelecimento_id = ? and telefone_whatsapp = ?
 				""", casaBelt, CARLA);
-		assertThat(cliente).containsEntry("nome", "Carla Nova").containsEntry("consentimento_lgpd", true);
+		// O cliente criado pela Lídia fica com a versão dos termos vigente (ZAP-146, RN16)
+		assertThat(cliente).containsEntry("nome", "Carla Nova")
+			.containsEntry("consentimento_lgpd", true)
+			.containsEntry("consentimento_versao", 1);
 		assertThat(cliente.get("consentimento_em")).isNotNull();
 		assertThat(jdbc.queryForMap("""
 				select detalhes ->> 'numero' as numero, detalhes ->> 'clienteId' as cliente,

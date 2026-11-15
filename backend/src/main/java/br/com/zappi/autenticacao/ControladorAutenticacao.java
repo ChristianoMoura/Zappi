@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.zappi.seguranca.ConfiguracaoSeguranca;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 /** Login do painel (ZAP-31). A rota é aberta em {@link ConfiguracaoSeguranca}. */
@@ -19,9 +20,10 @@ public class ControladorAutenticacao {
 		this.servico = servico;
 	}
 
+	/** IP e navegador vão ao serviço para gravar o aceite dos termos (ZAP-146). */
 	@PostMapping("/login")
-	public RespostaLogin entrar(@Valid @RequestBody RequisicaoLogin requisicao) {
-		return servico.entrar(requisicao.email(), requisicao.senha());
+	public RespostaLogin entrar(@Valid @RequestBody RequisicaoLogin requisicao, HttpServletRequest http) {
+		return servico.entrar(requisicao, http.getRemoteAddr(), http.getHeader("User-Agent"));
 	}
 
 }
