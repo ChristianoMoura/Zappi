@@ -70,6 +70,13 @@ public class Estabelecimento {
 	@Column(name = "capa_caminho", length = 255)
 	private String capaCaminho;
 
+	/**
+	 * Mostrar a seção "Promoções" no topo do cardápio público (ZAP-152). Ligado por padrão;
+	 * desligado, o selo e o preço riscado continuam nos produtos.
+	 */
+	@Column(name = "destacar_promocoes", nullable = false)
+	private boolean destacarPromocoes;
+
 	@Column(name = "ativo", nullable = false)
 	private boolean ativo;
 
@@ -173,6 +180,10 @@ public class Estabelecimento {
 
 	public String getUf() {
 		return uf;
+	}
+
+	public boolean isDestacarPromocoes() {
+		return destacarPromocoes;
 	}
 
 	public boolean isAtivo() {

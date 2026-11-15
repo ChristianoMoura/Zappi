@@ -49,6 +49,13 @@ public class Produto {
 	@Column(name = "preco", nullable = false, precision = 10, scale = 2)
 	private BigDecimal preco;
 
+	/**
+	 * Preço com desconto (ZAP-152): nulo sem promoção. Com valor, é maior que zero e menor que
+	 * {@code preco}, que continua sendo o preço normal (restrição no banco, V9).
+	 */
+	@Column(name = "preco_promocional", precision = 10, scale = 2)
+	private BigDecimal precoPromocional;
+
 	@Column(name = "foto_caminho", length = 255)
 	private String fotoCaminho;
 
@@ -176,6 +183,11 @@ public class Produto {
 
 	public BigDecimal getPreco() {
 		return preco;
+	}
+
+	/** Nulo quando o produto não está em promoção (ZAP-152). */
+	public BigDecimal getPrecoPromocional() {
+		return precoPromocional;
 	}
 
 	public String getFotoCaminho() {
