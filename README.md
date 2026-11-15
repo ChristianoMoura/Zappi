@@ -43,7 +43,9 @@ O cardápio público da Casa Belt, sem login.
 - Identificação com nome e WhatsApp, com consentimento LGPD
 - O pedido entra na coluna **Novo** do quadro da Lídia
 
-**Fora da entrega (futuro):** pagamento online, controle de estoque, relatórios financeiros, fidelização e envio automático das mensagens pela WhatsApp Cloud API (Meta). Os avisos ao cliente continuam pelo botão "Enviar no WhatsApp", e o link do cardápio vai pela mensagem de saudação do WhatsApp Business (decisão da ZAP-94).
+**Fora da entrega (futuro):** pagamento online, controle de estoque, relatórios financeiros e fidelização.
+
+**Não será feito:** envio automático das mensagens pela WhatsApp Cloud API (Meta), por decisão da equipe em 15/11/2026. Os avisos ao cliente continuam pelo botão "Enviar no WhatsApp", e o link do cardápio vai pela mensagem de saudação do WhatsApp Business.
 
 ## Tecnologias
 
@@ -227,7 +229,7 @@ O corpo do `POST` e do `PUT` (e a resposta) usa os nomes da tela: `{ "nome", "sa
 | `POST /api/pedidos/{numero}/voltar-para-confirmado` | Em produção → Confirmado | Apaga `producao_em` (ZAP-64). Se o pedido foi editado em produção, atualiza a confirmação (ZAP-90) |
 | `POST /api/pedidos/{numero}/voltar-para-producao` | Concluído → Em produção | Apaga só `concluido_em` e mantém `producao_em`. Não gera mensagem. A resposta traz `avisoDeProntoEnviado: true` quando a mensagem de pronto já tinha sido enviada, para a tela avisar a Lídia |
 
-**Mensagens ao cliente (ZAP-50, RF10, RF12):** o `GeradorDeMensagens` monta os três textos aprovados em [docs/mensagens-whatsapp.md](docs/mensagens-whatsapp.md): confirmação, recusa ou cancelamento (o mesmo texto, com o motivo exatamente como a Lídia digitou) e pronto para retirada. Ele também monta o link `https://wa.me/<telefone>?text=<texto codificado>`. Quando a Lídia clica em "Enviar no WhatsApp", a tela chama `POST /api/pedidos/{numero}/mensagens/{id}/enviada`, que marca a mensagem como `ENVIADA` e grava `enviado_em`. Chamar de novo ao reenviar não dá erro e mantém a data do primeiro envio. A resposta é o pedido completo. Mensagem inexistente, de outro pedido ou de outro estabelecimento recebe `404 MENSAGEM_NAO_ENCONTRADA`. O status `FALHA` fica reservado para o envio automático pela WhatsApp Cloud API, ainda em validação.
+**Mensagens ao cliente (ZAP-50, RF10, RF12):** o `GeradorDeMensagens` monta os três textos aprovados em [docs/mensagens-whatsapp.md](docs/mensagens-whatsapp.md): confirmação, recusa ou cancelamento (o mesmo texto, com o motivo exatamente como a Lídia digitou) e pronto para retirada. Ele também monta o link `https://wa.me/<telefone>?text=<texto codificado>`. Quando a Lídia clica em "Enviar no WhatsApp", a tela chama `POST /api/pedidos/{numero}/mensagens/{id}/enviada`, que marca a mensagem como `ENVIADA` e grava `enviado_em`. Chamar de novo ao reenviar não dá erro e mantém a data do primeiro envio. A resposta é o pedido completo. Mensagem inexistente, de outro pedido ou de outro estabelecimento recebe `404 MENSAGEM_NAO_ENCONTRADA`. O status `FALHA` fica sem uso: era para o envio automático pela WhatsApp Cloud API, que não será feito.
 
 As tabelas são criadas pelo **Flyway**, com migrações em SQL em `backend/src/main/resources/db/migration` (ex.: `V1__cria_tabelas.sql`). Elas rodam sozinhas na subida do backend, no banco local, nos testes e no Supabase. Nunca crie nem altere tabelas pelo painel do Supabase: toda mudança no banco é uma **nova** migração (`V2__...`, `V3__...`), sem editar as que já foram aplicadas. Na subida, o Hibernate confere se as entidades batem com as tabelas (`ddl-auto: validate`) e não sobe se houver diferença.
 
