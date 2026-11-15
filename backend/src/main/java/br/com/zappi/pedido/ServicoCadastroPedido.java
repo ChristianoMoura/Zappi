@@ -36,6 +36,7 @@ import br.com.zappi.produto.Produto;
 import br.com.zappi.produto.ProdutoRepositorio;
 import br.com.zappi.produto.UnidadeMedida;
 import br.com.zappi.seguranca.UsuarioAutenticado;
+import br.com.zappi.termos.ServicoTermos;
 import jakarta.persistence.EntityManager;
 
 /**
@@ -95,9 +96,11 @@ public class ServicoCadastroPedido {
 
 	private final EntityManager entityManager;
 
+	private final ServicoTermos termos;
+
 	public ServicoCadastroPedido(PedidoRepositorio pedidos, ItemPedidoRepositorio itens, ClienteRepositorio clientes,
 			ProdutoRepositorio produtos, EstabelecimentoRepositorio estabelecimentos, ServicoAuditoria auditoria,
-			ServicoAcoesPedido acoes, ServicoPedido consulta, EntityManager entityManager) {
+			ServicoAcoesPedido acoes, ServicoPedido consulta, EntityManager entityManager, ServicoTermos termos) {
 		this.pedidos = pedidos;
 		this.itens = itens;
 		this.clientes = clientes;
@@ -107,6 +110,7 @@ public class ServicoCadastroPedido {
 		this.acoes = acoes;
 		this.consulta = consulta;
 		this.entityManager = entityManager;
+		this.termos = termos;
 	}
 
 	/**
@@ -346,7 +350,7 @@ public class ServicoCadastroPedido {
 		return clientes.findByEstabelecimentoIdAndTelefoneWhatsapp(estabelecimento.getId(),
 				requisicao.cliente().telefone())
 			.orElseGet(() -> clientes.save(new Cliente(estabelecimento, requisicao.cliente().nome(),
-					requisicao.cliente().telefone(), agora)));
+					requisicao.cliente().telefone(), termos.versaoVigente(), agora)));
 	}
 
 	private static ItemPedido novoItem(Pedido pedido, Produto produto, ItemDaRequisicao item) {

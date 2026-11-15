@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
 import br.com.zappi.TestcontainersConfiguration;
+import br.com.zappi.termos.ServicoTermos;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -52,9 +53,13 @@ class BloqueioDeLoginTests {
 	@Autowired
 	private JdbcTemplate jdbc;
 
+	@Autowired
+	private ServicoTermos termos;
+
 	@AfterEach
 	void limpa() {
-		jdbc.update("delete from log_auditoria where acao in ('LOGIN_SUCESSO', 'LOGIN_FALHA')");
+		jdbc.update("delete from aceite_termos");
+		jdbc.update("delete from log_auditoria where acao in ('LOGIN_SUCESSO', 'LOGIN_FALHA', 'TERMOS_ACEITOS')");
 		jdbc.update("update usuario set ultimo_login_em = null where email = ?", EMAIL_DA_LIDIA);
 	}
 
@@ -163,9 +168,11 @@ class BloqueioDeLoginTests {
 		}
 	}
 
+	/** Sempre com a caixa dos termos marcada (ZAP-146): aqui só interessa a senha. */
 	private ResultActions entrar(String email, String senha) throws Exception {
 		return mockMvc.perform(post(ROTA).contentType(MediaType.APPLICATION_JSON)
-			.content(json.writeValueAsString(Map.of("email", email, "senha", senha))));
+			.content(json.writeValueAsString(Map.of("email", email, "senha", senha, "aceiteTermos", true,
+					"versaoTermos", termos.versaoVigente()))));
 	}
 
 }

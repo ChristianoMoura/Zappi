@@ -21,6 +21,8 @@ public enum AcaoAuditoria {
 	CATEGORIA_CRIADA,
 	/** Nome ou ordem (ZAP-136). Na ordem, o log guarda a lista de ids antes e depois. */
 	CATEGORIA_EDITADA,
-	CATEGORIA_EXCLUIDA
+	CATEGORIA_EXCLUIDA,
+	/** Aceite dos Termos de uso e da Política de privacidade no login (ZAP-146); o log guarda a versão. */
+	TERMOS_ACEITOS
 
 }

@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.autenticacao.CredenciaisInvalidasException;
 import br.com.zappi.autenticacao.LoginBloqueadoException;
+import br.com.zappi.autenticacao.TermosPendentesException;
 import br.com.zappi.cardapio.EnviosDemaisException;
 import br.com.zappi.categoria.CategoriaComProdutoException;
 import br.com.zappi.categoria.CategoriaNaoEncontradaException;
@@ -49,6 +50,13 @@ public class TratadorDeErros {
 	@ResponseStatus(HttpStatus.UNAUTHORIZED)
 	RespostaErro credenciaisInvalidas(CredenciaisInvalidasException erro) {
 		return new RespostaErro("CREDENCIAIS_INVALIDAS", erro.getMessage());
+	}
+
+	/** Senha certa, mas sem o aceite da versão vigente dos termos (ZAP-146): 403 sem token. */
+	@ExceptionHandler(TermosPendentesException.class)
+	@ResponseStatus(HttpStatus.FORBIDDEN)
+	RespostaErro termosPendentes(TermosPendentesException erro) {
+		return new RespostaErro("TERMOS_PENDENTES", erro.getMessage());
 	}
 
 	/** 429 com o header Retry-After em segundos, arredondado para cima. */

@@ -44,6 +44,10 @@ public class Cliente {
 	@Column(name = "consentimento_em", nullable = false)
 	private OffsetDateTime consentimentoEm;
 
+	/** Versão dos termos aceita junto com o consentimento (ZAP-146); nula nos clientes anteriores a eles. */
+	@Column(name = "consentimento_versao")
+	private Integer consentimentoVersao;
+
 	@Column(name = "anonimizado_em")
 	private OffsetDateTime anonimizadoEm;
 
@@ -57,12 +61,17 @@ public class Cliente {
 		// exigido pelo JPA
 	}
 
-	/** Cliente novo, sempre com o consentimento registrado (RN16, LGPD). */
-	public Cliente(Estabelecimento estabelecimento, String nome, String telefoneWhatsapp, OffsetDateTime agora) {
+	/**
+	 * Cliente novo, sempre com o consentimento registrado (RN16, LGPD) e a versão dos termos que
+	 * valia nesse momento (ZAP-146).
+	 */
+	public Cliente(Estabelecimento estabelecimento, String nome, String telefoneWhatsapp,
+			int consentimentoVersao, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.nome = nome;
 		this.telefoneWhatsapp = telefoneWhatsapp;
 		this.consentimentoLgpd = true;
+		this.consentimentoVersao = consentimentoVersao;
 		this.consentimentoEm = agora;
 		this.atualizadoEm = agora;
 	}
@@ -115,6 +124,10 @@ public class Cliente {
 
 	public OffsetDateTime getConsentimentoEm() {
 		return consentimentoEm;
+	}
+
+	public Integer getConsentimentoVersao() {
+		return consentimentoVersao;
 	}
 
 	public OffsetDateTime getAnonimizadoEm() {

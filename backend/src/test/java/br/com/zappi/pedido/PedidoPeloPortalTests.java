@@ -86,13 +86,16 @@ class PedidoPeloPortalTests {
 			.andExpect(jsonPath("$.length()").value(1));
 
 		Map<String, Object> gravado = jdbc.queryForMap("""
-				select p.status, p.valor_total, p.data_retirada, c.nome, c.consentimento_lgpd
+				select p.status, p.valor_total, p.data_retirada, c.nome, c.consentimento_lgpd, c.consentimento_versao
 				from pedido p join cliente c on c.id = p.cliente_id
 				where p.estabelecimento_id = ? and p.numero = 3
 				""", casaBelt);
 		assertThat(((Number) gravado.get("status")).intValue()).isEqualTo(1);
 		assertThat((BigDecimal) gravado.get("valor_total")).isEqualByComparingTo("212.50");
-		assertThat(gravado).containsEntry("nome", "Carla Nova").containsEntry("consentimento_lgpd", true);
+		// O cliente do portal fica gravado com a versão dos termos vigente (ZAP-146, RN16)
+		assertThat(gravado).containsEntry("nome", "Carla Nova")
+			.containsEntry("consentimento_lgpd", true)
+			.containsEntry("consentimento_versao", 1);
 
 		// A Lídia vê o pedido na coluna Novo
 		mockMvc.perform(get("/api/pedidos/3").header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDaLidia()))
