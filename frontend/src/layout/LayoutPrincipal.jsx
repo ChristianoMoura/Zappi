@@ -64,33 +64,34 @@ export function LayoutPrincipal() {
                 {recolhido ? <IconLayoutSidebarLeftExpand size={24} aria-hidden /> : <IconLayoutSidebarLeftCollapse size={24} aria-hidden />}
               </ActionIcon>
             )}
-            {/* Collab Casa Belt × Zappi: nome e logo vêm do Meu estabelecimento */}
-            {marca && (
-              <>
-                {marca.logo ? (
-                  <img src={marca.logo} alt="" className={classes.seloLoja} />
-                ) : (
-                  <span className={classes.seloLoja} aria-hidden="true">{iniciaisDaLoja(marca.nome)}</span>
-                )}
-                <span className={classes.nomeLoja}>{marca.nome}</span>
-                <span className={classes.vezes} aria-hidden="true">×</span>
-              </>
-            )}
+            {/* Só a marca do Zappi; o logo da loja foi para o botão da conta (ZAP-178) */}
             <span className={classes.marcaZappi}>
               <img src={simbolo} alt="" className={classes.marcaSimbolo} />
               <img src={nome} alt="Zappi" className={classes.marcaNome} />
             </span>
           </div>
-          {/* Conta no canto superior direito, como na Referência A: o "Sair" fica no menu */}
-          <Menu position="bottom-end" width={240} shadow="md" radius="md">
+          {/* Conta no canto superior direito, como na Referência A: o "Sair" fica no menu. O logo
+              da loja fica no botão, como uma foto de perfil (ZAP-178) */}
+          <Menu position="bottom-end" width={260} shadow="md" radius="md">
             <Menu.Target>
               <UnstyledButton className={classes.botaoConta} aria-label="Minha conta" data-onda>
-                <IconUserCircle size={38} stroke={1.5} aria-hidden />
+                <AvatarLoja marca={marca} />
                 <IconChevronDown size={18} stroke={2.5} aria-hidden className={classes.setaConta} />
               </UnstyledButton>
             </Menu.Target>
             <Menu.Dropdown>
-              {nomeUsuaria ? <Menu.Label className={classes.nomeConta}>{nomeUsuaria}</Menu.Label> : null}
+              {(nomeUsuaria || marca) && (
+                <>
+                  <div className={classes.cabecalhoConta}>
+                    <AvatarLoja marca={marca} grande />
+                    <div className={classes.textoConta}>
+                      {nomeUsuaria && <span className={classes.nomeConta}>{nomeUsuaria}</span>}
+                      {marca && <span className={classes.lojaConta}>{marca.nome}</span>}
+                    </div>
+                  </div>
+                  <Menu.Divider />
+                </>
+              )}
               <Menu.Item leftSection={<IconLogout size={22} aria-hidden />} onClick={sair} className={classes.itemConta}>
                 Sair
               </Menu.Item>
@@ -153,6 +154,15 @@ export function LayoutPrincipal() {
       )}
     </AppShell>
   )
+}
+
+// Logo da loja redondo, no botão da conta e no cabeçalho do menu (ZAP-178). Sem logo, as
+// iniciais da loja; sem a loja, o ícone de pessoa. É decorativo: o botão já se chama "Minha conta".
+function AvatarLoja({ marca, grande = false }) {
+  const classe = grande ? `${classes.avatarLoja} ${classes.avatarGrande}` : classes.avatarLoja
+  if (marca?.logo) return <img src={marca.logo} alt="" className={classe} />
+  if (marca) return <span className={classe} aria-hidden="true">{iniciaisDaLoja(marca.nome)}</span>
+  return <IconUserCircle size={grande ? 44 : 38} stroke={1.5} aria-hidden />
 }
 
 // Grupo do menu lateral (ZAP-139). Aberto: o nome com uma seta abre e fecha a lista dos filhos,
