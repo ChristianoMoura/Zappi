@@ -144,11 +144,11 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 2. Cadastro e edição das informações do estabelecimento (Casa Belt).
 3. Cadastro, edição e exclusão lógica de produtos (nome, sabor, unidade, preço, descrição e foto com texto alternativo).
 4. Upload da foto do produto para o Supabase Storage.
-5. Quadro **Kanban** de pedidos com as colunas Novo, Confirmado, Em produção e Concluído, mais um filtro para exibir os **Recusados**.
+5. Quadro **Kanban** de pedidos com as colunas Novo, Confirmado, Em produção, Concluído, Entregue e Recusado, e um **filtro de status**: em "Todos", Entregue e Recusado ficam ocultos; escolhendo um status, só os pedidos dele aparecem (RN04).
 6. Detalhes do pedido ao abrir um card.
 7. **Confirmar** um pedido.
 8. **Recusar** um pedido com **motivo obrigatório**, e **cancelar** um pedido Confirmado ou Em produção pelo mesmo fluxo.
-9. Mover o pedido para **Em produção** e **Concluído**, e voltar uma etapa da produção para corrigir um clique errado.
+9. Mover o pedido para **Em produção**, **Concluído** e **Entregue** (quando o cliente retira), e voltar uma etapa para corrigir um clique errado.
 10. Geração da mensagem ao cliente (confirmação, recusa e pronto para retirada) e botão **"Enviar no WhatsApp"** com link `wa.me`, que continua disponível para reenviar.
 11. Registro de auditoria (logins e ações administrativas).
 12. Infraestrutura: Docker Compose no ambiente local; em produção, Render e Supabase com HTTPS gerenciado, CI no GitHub Actions e deploy automático do Render a cada merge na `main`.
@@ -197,11 +197,11 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | **US1** — Como Lídia, quero fazer login, para acessar de forma segura minhas informações e pedidos. | **RF01** Login com e-mail e senha. **RF02** Validar credenciais e bloquear acesso com dados incorretos. |
 | **US2** — Como Lídia, quero cadastrar as informações do estabelecimento, para manter meus dados registrados. | **RF03** Cadastro de nome, descrição e contato do Casa Belt. **RF04** Edição posterior dessas informações. |
 | **US3** — Como Lídia, quero cadastrar meus produtos, para manter o cardápio atualizado. | **RF05** Cadastro de produtos com nome, sabor, preço por kg e foto. **RF06** Edição e exclusão de produtos (exclusão lógica). |
-| **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído). **RF08** Detalhes do pedido ao selecionar um card. |
+| **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído, Entregue e Recusado), com filtro de status; em "Todos", Entregue e Recusado ficam ocultos (RN04). **RF08** Detalhes do pedido ao selecionar um card. |
 | **US5** — Como Lídia, quero confirmar um pedido, para informar ao cliente que ele será atendido. | **RF09** Mover o pedido para "Confirmado". **RF10** Preparar a mensagem de confirmação ao cliente via WhatsApp. |
 | **US6** — Como Lídia, quero recusar um pedido informando o motivo, para que o cliente entenda. | **RF11** Motivo obrigatório ao recusar. **RF12** Preparar a mensagem de recusa com o motivo via WhatsApp. |
 | **US7** — Como Lídia, quero cadastrar e editar pedidos, para registrar as encomendas que recebo pelo WhatsApp e corrigir um pedido quando o cliente pede uma mudança. | **RF13** Cadastro de pedido com cliente (nome e WhatsApp), itens do cardápio com quantidade, data e hora de retirada e observações. **RF14** Edição do pedido conforme o status (RN21). |
-| **US8** — Como Lídia, quero mover o pedido para Em produção e Concluído, para acompanhar o andamento e avisar o cliente que o pedido está pronto. | **RF15** Mover o pedido para "Em produção" e "Concluído", com a volta de uma etapa para corrigir um clique errado (RN03). **RF16** Preparar a mensagem de pronto para retirada via WhatsApp. |
+| **US8** — Como Lídia, quero mover o pedido para Em produção e Concluído, para acompanhar o andamento e avisar o cliente que o pedido está pronto. | **RF15** Mover o pedido para "Em produção", "Concluído" e "Entregue", com a volta de uma etapa para corrigir um clique errado (RN03). **RF16** Preparar a mensagem de pronto para retirada via WhatsApp. |
 | **US9** — Como cliente, quero ver o cardápio pelo link, para conhecer sabores e preços sem precisar de login. | **RF17** Cardápio público pelo `slug`, só com produtos ativos, com busca pelos produtos, modo escuro e botão de compartilhar o link (ZAP-100). **RF18** Exibir o contato da Lídia. |
 | **US10** — Como cliente, quero montar meu pedido, para encomendar sem depender de troca de mensagens. | **RF19** Escolher produtos, quantidade, recheio, cobertura e observações. **RF20** Escolher a data e a hora de retirada, com 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23). |
 | **US11** — Como cliente, quero enviar meu pedido, para que a Lídia avalie se pode atender. | **RF21** Identificar com nome e WhatsApp, com consentimento (RN16). **RF22** Registrar o pedido como Novo e avisar que ainda não está confirmado. **RF23** Limitar os envios e descartar os automáticos. |
@@ -212,6 +212,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 - **US12 e RF24** são a anonimização de clientes (`ZAP-18`; história `ZAP-114`).
 - **US7, RF13 e RF14** são novos (decisão da `ZAP-64`, item 14.9; história `ZAP-87`).
 - **US8, RF15 e RF16** numeram o escopo ampliado que já tinha sido aprovado sem RF (história `ZAP-60`).
+- **RF07 e RF15** passam a ter o status **Entregue** (`ZAP-60`, 14/11/2026), e o **RF07** ganha o filtro de status no lugar do filtro "Recusados" (`ZAP-28`, `ZAP-179`, 14/11/2026).
 - **RF11 e RF12** passam a valer também para o **cancelamento** de pedidos Confirmados e Em produção (`ZAP-64`).
 - **RF10, RF12 e RF16:** o botão "Enviar no WhatsApp" continua disponível para **reenviar** a mensagem, e o painel mostra só a mensagem da etapa atual, com as anteriores guardadas para consulta (`ZAP-64`, `ZAP-51`).
 
@@ -223,10 +224,10 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 |---|---|---|
 | RN01 | Todo dado de negócio pertence a um estabelecimento (`estabelecimento_id`). O sistema é multi-estabelecimento; a Casa Belt é o primeiro. | DER |
 | RN02 | Só a proprietária (usuário do estabelecimento) acessa o painel. A Romilda e os clientes não têm usuário. | ISO 5.15 |
-| RN03 | Status do pedido: 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado. Transições permitidas: Novo → Confirmado ou Recusado; Confirmado → Em produção ou Recusado (cancelamento); Em produção → Concluído ou Recusado (cancelamento); e as voltas Em produção → Confirmado e Concluído → Em produção. Nada volta para antes da confirmação, e Recusado não muda mais. A mudança é feita por botões nos detalhes do pedido, sem arrastar. | DER / RF07 / ZAP-64 |
-| RN04 | Recusados ficam ocultos no Kanban por padrão e aparecem pelo filtro "Recusados". | Arquitetura |
+| RN03 | Status do pedido: 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado · 6-Entregue. O Entregue entrou depois e ficou com o número 6, para nenhum pedido antigo mudar de status (ZAP-60). Transições permitidas: Novo → Confirmado ou Recusado; Confirmado → Em produção ou Recusado (cancelamento); Em produção → Concluído ou Recusado (cancelamento); Concluído → Entregue, quando o cliente retira; e as voltas Em produção → Confirmado, Concluído → Em produção e Entregue → Concluído. Nada volta para antes da confirmação, e Recusado não muda mais. Entregue não pode ser cancelado. A mudança é feita por botões nos detalhes do pedido, sem arrastar. | DER / RF07 / ZAP-64 / ZAP-60 |
+| RN04 | O quadro tem um **filtro de status** ("Mostrar"), com a opção "Todos" e uma opção por status, cada uma com a quantidade de pedidos. Em "Todos" (o padrão), aparecem só os pedidos em andamento: **Entregue e Recusado ficam ocultos**. Escolhendo um status, aparecem só os pedidos dele. O filtro fica no endereço da página (`?status=3`) e continua valendo ao voltar do cadastro ou da edição de um pedido. É feito na tela, sem rota nova no backend. | Arquitetura / ZAP-179 / ZAP-60 |
 | RN05 | Recusar ou cancelar exige `motivo_recusa` (obrigatório quando status = 5). O cancelamento usa o mesmo fluxo da recusa. | RF11 / ZAP-64 |
-| RN06 | Confirmar grava `confirmado_em`; iniciar a produção grava `producao_em`; recusar ou cancelar grava `recusado_em`; concluir grava `concluido_em`. Voltar de Concluído para Em produção apaga `concluido_em`; voltar de Em produção para Confirmado apaga `producao_em`. | DER / ZAP-64 / ZAP-83 |
+| RN06 | Confirmar grava `confirmado_em`; iniciar a produção grava `producao_em`; recusar ou cancelar grava `recusado_em`; concluir grava `concluido_em`; marcar como entregue grava `entregue_em`, com a data e a hora do clique. Voltar de Entregue para Concluído apaga `entregue_em`; voltar de Concluído para Em produção apaga `concluido_em`; voltar de Em produção para Confirmado apaga `producao_em`. | DER / ZAP-64 / ZAP-83 / ZAP-60 |
 | RN07 | Confirmar, recusar, cancelar ou concluir **gera uma mensagem** (`mensagem_whatsapp`) dos tipos 1-Confirmação, 2-Recusa e 3-Pronto. Iniciar a produção e as voltas não geram mensagem. | RF10 / RF12 / ZAP-64 |
 | RN08 | Mudar o status, gerar a mensagem e gravar o log acontecem **na mesma transação**. | Justificativa do banco |
 | RN09 | O número do pedido é sequencial e único **por estabelecimento** e aparece no card (ex.: #1). É gerado com `MAX + 1` e bloqueio da linha do estabelecimento (`SELECT ... FOR UPDATE`), na mesma transação da criação do pedido. | DER / ZAP-64 |
@@ -237,11 +238,11 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN14 | Excluir um produto é **lógico** (`ativo = FALSE`): ele some do cardápio, mas o histórico continua. | RF06 |
 | RN15 | Toda foto de produto exige **texto alternativo**. | NBR 5.9.1 |
 | RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. | LGPD |
-| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. O cliente pede pelo WhatsApp da Lídia, e ela anonimiza no painel, o que fica bloqueado se houver pedido em aberto (Novo, Confirmado ou Em produção). O nome vira "Cliente anonimizado", o telefone vira `0` + id do cliente completado com zeros, em 13 dígitos, e nome e telefone também saem de `mensagem_whatsapp`, de `log_auditoria.detalhes` e de `pedido.motivo_recusa`, que vai para a mensagem de recusa. As observações do pedido e do item não mudam. Depois de anonimizado, o cliente nunca volta a ter pedido em aberto: o pedido Concluído dele não pode voltar para Em produção. | LGPD / ZAP-64 / ZAP-18 / ZAP-115 |
+| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. O cliente pede pelo WhatsApp da Lídia, e ela anonimiza no painel, o que fica bloqueado se houver pedido em aberto (Novo, Confirmado ou Em produção); Concluído, Entregue e Recusado contam como encerrados. O nome vira "Cliente anonimizado", o telefone vira `0` + id do cliente completado com zeros, em 13 dígitos, e nome e telefone também saem de `mensagem_whatsapp`, de `log_auditoria.detalhes` e de `pedido.motivo_recusa`, que vai para a mensagem de recusa. As observações do pedido e do item não mudam. Depois de anonimizado, o cliente nunca volta a ter pedido em aberto: o pedido Concluído dele não pode voltar para Em produção. | LGPD / ZAP-64 / ZAP-18 / ZAP-115 / ZAP-60 |
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
 | RN19 | Não há delivery: o pedido tem `data_retirada`, com a data e a hora da retirada (RN23), e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
-| RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data e hora de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e hora de retirada e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído e 5-Recusado: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 |
+| RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data e hora de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e hora de retirada e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído, 5-Recusado e 6-Entregue: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 / ZAP-60 |
 | RN22 | **Antecedência mínima.** Pelo Portal do Cliente, a data de retirada deve ser de pelo menos 7 dias corridos após o envio do pedido, contados no horário de São Paulo e validados também no backend. No Portal do Administrador, a Lídia pode escolher hoje ou uma data futura, inclusive ao editar pedidos que vieram do portal. O horário segue a RN23. | RF20 / ZAP-18 |
 | RN23 | **Horário de retirada.** A retirada tem data e hora: das 8h às 20h, de 30 em 30 minutos, no horário de São Paulo, nos dois portais. A data e hora não pode ser antes de agora; na edição, a que já estava no pedido pode ficar, se não foi mudada. Validado na tela, no backend e no banco. | ZAP-127 |
 
@@ -305,7 +306,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Acesso | Navegador (computador ou celular) | Sistema web, sem instalar aplicativo |
 | Hospedagem | **Render** (plano gratuito) | Frontend como Static Site e backend como Web Service (Docker); deploy automático a cada merge na `main`. O Docker Compose fica só no ambiente local |
 | Endereço e HTTPS | Render | Subdomínio gratuito `*.onrender.com`; HTTPS/TLS gerenciado, com HTTP redirecionando para HTTPS; regra de reescrita (`/*` → `/index.html`) para as rotas do React |
-| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos, Kanban com filtro de recusados, cadastro e edição de pedidos, botão "Enviar no WhatsApp". Portal do Cliente: cardápio público e montagem do pedido |
+| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos, Kanban com filtro de status, cadastro e edição de pedidos, botão "Enviar no WhatsApp". Portal do Cliente: cardápio público e montagem do pedido |
 | Backend | **Java 21 + Spring Boot 4** (build com **Maven**, com Maven Wrapper) | API REST (JSON); regras de negócio; upload de fotos; geração das mensagens e links `wa.me`; isolamento por estabelecimento; CORS liberado só para o endereço do frontend |
 | Persistência | **Spring Data JPA** + **Flyway** | Acesso ao banco; migrações em SQL puro em `backend/src/main/resources/db/migration`, só para frente |
 | Segurança | **Spring Security** | Login, BCrypt, JWT, política de senha |
@@ -465,7 +466,7 @@ Encomenda. Cada pedido é um card do Kanban (RF07–RF16).
 | estabelecimento_id | BIGINT | Sim | FK | → estabelecimento.id |
 | cliente_id | BIGINT | Sim | FK | → cliente.id |
 | numero | INTEGER | Sim | UK* | *Único por estabelecimento. Exibido no card (#1) |
-| status | SMALLINT | Sim | | 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado |
+| status | SMALLINT | Sim | | 1-Novo · 2-Confirmado · 3-Em produção · 4-Concluído · 5-Recusado · 6-Entregue. O 6 entrou depois (ZAP-60, migração na ZAP-167) |
 | data_retirada | TIMESTAMP | Sim | | Data e hora da retirada, no horário de São Paulo, sem fuso (RN23, ZAP-127). Não há delivery |
 | observacao | VARCHAR(500) | Não | | Ocasião, tema da festa |
 | motivo_recusa | VARCHAR(500) | Não | | Obrigatório quando status = 5 (RF11) |
@@ -475,6 +476,7 @@ Encomenda. Cada pedido é um card do Kanban (RF07–RF16).
 | producao_em | TIMESTAMPTZ | Não | | RF15. Entrada em Em produção. **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-83) |
 | recusado_em | TIMESTAMPTZ | Não | | RF11 |
 | concluido_em | TIMESTAMPTZ | Não | | Dispara a mensagem de "pronto" |
+| entregue_em | TIMESTAMPTZ | Não | | RF15. Data e hora em que a Lídia marcou o pedido como entregue (RN06). **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-60, ZAP-167) |
 | atualizado_em | TIMESTAMPTZ | Sim | | |
 
 #### item_pedido
@@ -530,7 +532,7 @@ Trilha de auditoria (ISO 8.16).
 - `UNIQUE (email)` em `usuario`; `UNIQUE (slug)` em `estabelecimento`; `UNIQUE (sigla)` em `unidade_medida`.
 - `CHECK (preco > 0)` em `produto`; `CHECK (quantidade > 0)` em `item_pedido`.
 - `CHECK (status <> 5 OR motivo_recusa IS NOT NULL)` em `pedido`.
-- `CHECK (status BETWEEN 1 AND 5)` em `pedido`; `tipo` e `status` de `mensagem_whatsapp` entre 1 e 3.
+- `CHECK (status BETWEEN 1 AND 6)` em `pedido` (o 6-Entregue entrou na ZAP-167; antes, de 1 a 5); `tipo` e `status` de `mensagem_whatsapp` entre 1 e 3.
 - `CHECK (consentimento_lgpd = TRUE)` em `cliente`.
 - `CHECK` do horário de retirada em `pedido`: das 8h às 20h, em hora cheia ou meia hora (RN23, ZAP-127).
 - `CHECK (foto_caminho IS NULL OR foto_texto_alternativo IS NOT NULL)` em `produto`.
@@ -548,6 +550,7 @@ Trilha de auditoria (ISO 8.16).
    - mudar de coluna por **botões** nos detalhes do pedido, mostrando só o próximo passo possível, **sem arrastar**;
    - **cancelar** pedidos Confirmados e Em produção pelo fluxo de recusa: o pedido vai para Recusado, com motivo obrigatório; um status próprio "Cancelado" fica como melhoria futura;
    - **voltar** só para desfazer o último passo da produção: Concluído → Em produção e Em produção → Confirmado, com confirmação; ao voltar de Concluído, se o aviso de pronto já foi enviado, a tela lembra a Lídia de avisar o cliente;
+   - **Entregue** (ZAP-60, 14/11/2026): no pedido Concluído, "Marcar como entregue" leva o pedido para Entregue; "Voltar para concluído", com confirmação, corrige um clique errado. Nenhum dos dois gera mensagem;
    - nada volta para antes da confirmação, e um pedido Recusado não volta para o quadro.
 4. **Massa do bolo.** **Decidido (ZAP-64):** sem campo próprio, e o DER não muda. A massa padrão de cada bolo vai na **descrição do produto** (ex.: "Massa de chocolate, recheio de brigadeiro…"). Quando o cliente pede outra massa, a Lídia anota na **observação do item** (`item_pedido.observacao`). No Portal do Cliente, a massa também vai na observação do item, com uma dica no campo (`ZAP-18`, seção 14, item 11).
 5. **Salgados.** **Decidido (ZAP-64):** vendidos por **unidade (UN)**, sem unidade de medida nova. O cento, o meio cento e pacotes viram produtos próprios no cardápio (ex.: "Cento de coxinha"), o que também dá o desconto do cento. O sistema não obriga um mínimo de unidades: a Lídia combina com o cliente. No cadastro, o nome é o tipo ("Salgado") e o sabor é o item ("Coxinha de frango").
@@ -603,8 +606,8 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | 3 | Autenticação | Login, BCrypt, JWT, política de senha, log de login, tela de login acessível | US1, RF01–RF02, ISO 5.15–5.17, 8.24, 8.16 |
 | 4 | Estabelecimento | API e tela de cadastro/edição, log de edição | US2, RF03–RF04 |
 | 5 | Produtos | CRUD com exclusão lógica, upload para o Storage, texto alternativo, ordem de foco | US3, RF05–RF06, NBR 5.9.1, 5.1.4 |
-| 6 | Kanban de pedidos | Colunas por status, filtro de recusados, detalhes do pedido | US4, RF07–RF08 |
-| 7 | Decisões sobre pedidos | Confirmar, recusar ou cancelar com motivo, em produção, concluir e voltar uma etapa da produção; transação status + mensagem + log | US5, US6, US8, RF09–RF12, RF15–RF16, RN03, RN05–RN08 |
+| 6 | Kanban de pedidos | Colunas por status, filtro de status, detalhes do pedido | US4, RF07–RF08, RN04 |
+| 7 | Decisões sobre pedidos | Confirmar, recusar ou cancelar com motivo, em produção, concluir, marcar como entregue e voltar uma etapa; transação status + mensagem + log | US5, US6, US8, RF09–RF12, RF15–RF16, RN03, RN05–RN08 |
 | 8 | Mensagens WhatsApp | Textos, geração do link `wa.me`, botão "Enviar no WhatsApp", status da mensagem | RF10, RF12, CDC, NBR 5.12.12 |
 | 9 | Acessibilidade e UX | Revisão de contraste, foco, rótulos e uso no celular | Ativ. #11 |
 | 10 | Infra e deploy | Render (Static Site e Web Service) com HTTPS, Supabase, GitHub Actions (build e testes) e deploy automático do Render | Arquitetura |
@@ -680,6 +683,8 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Busca no cardápio público | Não prevista | **Lupa no topo do cardápio** que filtra os produtos pelo nome, sabor e descrição enquanto o cliente digita, com "Nenhum produto encontrado." quando nada combina (09/11/2026, ZAP-100, ZAP-105, ZAP-83). Feita na tela, sem rota nova no backend. Motivo: aprovada no protótipo do cardápio (layout H), para o cliente achar o produto quando o cardápio crescer |
 | Modo escuro | Só o tema claro | **Lua e sol no topo do cardápio público** alternam entre claro e escuro (09/11/2026, ZAP-100, ZAP-105, ZAP-83). Começa pela preferência do aparelho e guarda a escolha só no navegador (`localStorage`), sem dado pessoal, com contraste de 4,5:1 nos dois temas. O painel da Lídia continua só com o tema claro. Motivo: aprovado no mesmo protótipo, para o conforto de leitura à noite |
 | Compartilhar o cardápio | Não previsto | **Botão "Compartilhar"** no topo do cardápio e no detalhe do produto (ZAP-105, ZAP-83, testes na ZAP-189). No celular, abre o compartilhar do aparelho com o link da página; no computador, copia o link e avisa ("Link do cardápio copiado."). Motivo: aprovado no protótipo do cardápio (layout H), para o cliente mandar o cardápio ou um produto para outra pessoa |
+| Pedidos ocultos no quadro | Recusados ocultos por padrão, com o interruptor "Mostrar recusados" (RN04, ZAP-46); as outras colunas sempre à vista | **Filtro de status** ("Mostrar"), com "Todos" e uma opção por status, com a quantidade de pedidos (14/11/2026, ZAP-28, ZAP-179, ZAP-83). Em "Todos", Entregue e Recusado ficam ocultos; escolhendo um status, só os pedidos dele aparecem, em grade no computador e em lista no celular. O filtro fica no endereço (`?status=3`), e o backend não muda. Motivo: pedido da equipe, para a Lídia ver só os pedidos de uma etapa quando precisar |
+| Fim do pedido | Concluído era o último status (RN03, cinco status), e o sistema não registrava a retirada | **Status 6-Entregue** e coluna "Entregue" no quadro (14/11/2026, ZAP-60, ZAP-83). "Marcar como entregue" no pedido Concluído grava `entregue_em`, e "Voltar para concluído" corrige um engano. Entregue não pode ser editado nem cancelado e conta como encerrado na anonimização (RN17). No banco, `ck_pedido_status` aceita de 1 a 6 e entra a coluna `pedido.entregue_em` (ZAP-167); o Recusado continua 5. Motivo: a Lídia precisa controlar quais pedidos foram de fato retirados e quando |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
