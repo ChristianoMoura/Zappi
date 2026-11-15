@@ -21,6 +21,7 @@ import { juntar } from '../cardapio/juntarClasses'
 import { formaEscolhida, linkWhatsapp, pedeFormaPagamento } from '../cardapio/regrasCardapio'
 import { nomeFormaPagamento } from '../comum/formasPagamento'
 import { IconeFormaPagamento } from './IconeFormaPagamento'
+import { CampoData } from '../comum/CampoData'
 import { EnviosDemaisError, enviarPedido, PedidoRecusadoError } from '../cardapio/servicoCardapio'
 import {
   CLIENTE_VAZIO,
@@ -28,7 +29,6 @@ import {
   mascaraWhatsapp,
   montarEnvio,
   validarCliente,
-  dataCurta,
   dataMinima,
   dataPorExtenso,
   HORARIOS,
@@ -228,17 +228,14 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
         <Rodape escuro={escuro} />
       </main>
 
-      <footer className={classes.baixo}>
-        <div className={classes.baixoConteudo}>
-          <button type="button" className={classes.principal} onClick={adicionar}>
-            <span>
-              <IconShoppingBag size={22} aria-hidden />
-              Adicionar ao pedido
-            </span>
-            <b>{moeda(valor)}</b>
-          </button>
-          <small>Você escolhe a data e a hora de retirada no seu pedido. Pagamento na retirada.</small>
-        </div>
+      <footer className={classes.barraSolta}>
+        <button type="button" className={juntar(classes.principal, classes.botaoSolto)} onClick={adicionar}>
+          <span>
+            <IconShoppingBag size={22} aria-hidden />
+            Adicionar ao pedido
+          </span>
+          <b>{moeda(valor)}</b>
+        </button>
       </footer>
 
       <p className={base.toast} role="status" aria-live="polite">
@@ -529,18 +526,17 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
           </header>
           <div className={classes.corpo}>
             <div className={classes.dataHora}>
-              <label className={classes.campo}>
-                <b>Data</b>
-                <input
-                  ref={dataRef}
-                  type="date"
-                  min={minima}
-                  value={pedido.data}
-                  onChange={(e) => mudarCampo('data', e.currentTarget.value)}
-                  aria-invalid={Boolean(erros.data)}
-                  aria-describedby={juntar('dica-data', erroDe('data'))}
-                />
-              </label>
+              <CampoData
+                ref={dataRef}
+                label="Data"
+                minDate={minima}
+                value={pedido.data}
+                onChange={(data) => mudarCampo('data', data)}
+                error={Boolean(erros.data)}
+                aria-invalid={Boolean(erros.data)}
+                aria-describedby={erroDe('data')}
+                classNames={{ root: classes.campo, label: classes.rotuloData, input: classes.entradaData }}
+              />
               <label className={classes.campo}>
                 <b>Hora</b>
                 <select
@@ -548,7 +544,7 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
                   value={pedido.hora}
                   onChange={(e) => mudarCampo('hora', e.currentTarget.value)}
                   aria-invalid={Boolean(erros.hora)}
-                  aria-describedby={juntar('dica-hora', erroDe('hora'))}
+                  aria-describedby={erroDe('hora')}
                 >
                   <option value="">Escolha</option>
                   {HORARIOS.map((hora) => (
@@ -559,12 +555,6 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
                 </select>
               </label>
             </div>
-            <span className={classes.dica} id="dica-data">
-              A partir de {dataCurta(minima)}. Retirada na data combinada, sem entrega.
-            </span>
-            <span className={classes.dica} id="dica-hora">
-              Horários de 30 em 30 minutos, das 8h às 20h.
-            </span>
             {['data', 'hora'].map(
               (campo) =>
                 erros[campo] && (
@@ -595,7 +585,6 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
           </header>
           <div className={classes.corpo}>
             <label className={classes.campo}>
-              <span id="dica-observacao-pedido">Ocasião, tema da festa ou o que mais a loja precisa saber.</span>
               <textarea
                 ref={observacaoRef}
                 value={pedido.observacao}
@@ -603,7 +592,6 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
                 maxLength={LIMITES.observacao}
                 rows={3}
                 aria-labelledby="titulo-observacao-pedido"
-                aria-describedby="dica-observacao-pedido"
                 placeholder="Ex.: aniversário de 5 anos, tema fazenda"
               />
             </label>
@@ -742,7 +730,6 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
               <h2 id="titulo-total">Total</h2>
               <b>{moeda(total)}</b>
             </div>
-            <p className={classes.detalhe}>Valor estimado, já com os descontos. Pagamento na retirada, sem entrega.</p>
             <p className={classes.naoConfirmado}>
               <IconInfoCircle size={20} aria-hidden />
               <span>{NAO_CONFIRMADO}</span>

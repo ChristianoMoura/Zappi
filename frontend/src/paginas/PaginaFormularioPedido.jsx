@@ -2,6 +2,7 @@ import { Alert, Button, Checkbox, Loader, NativeSelect, Textarea, TextInput } fr
 import { IconAlertCircle, IconAlertTriangle, IconCheck, IconChevronLeft, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { CampoData } from '../comum/CampoData'
 import { FORMAS_PAGAMENTO, nomeFormaPagamento } from '../comum/formasPagamento'
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
 import { buscarEstabelecimento } from '../estabelecimento/servicoEstabelecimento'
@@ -389,12 +390,11 @@ export function PaginaFormularioPedido() {
         <section className={formulario.caixa} aria-labelledby="secao-retirada">
           <h2 id="secao-retirada" className={formulario.tituloCaixa}>Retirada</h2>
           <div className={classes.dataHora}>
-            <TextInput
+            <CampoData
               {...propsCampo('dataRetirada', 'Data de retirada', { obrigatorio: true })}
-              type="date"
-              min={hoje}
+              minDate={hoje}
               value={dados.dataRetirada}
-              onChange={(e) => mudar('dataRetirada', e.currentTarget.value)}
+              onChange={(data) => mudar('dataRetirada', data)}
             />
             {/* RN23: das 8h às 20h, de 30 em 30 minutos (ZAP-127) */}
             <NativeSelect

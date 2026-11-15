@@ -411,6 +411,46 @@
   text-align: center;
 }
 
+/* "Adicionar ao pedido" solto sobre a tela, como o botão do WhatsApp do cardápio */
+.barraSolta {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding: 10px 12px 14px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.botaoSolto {
+  max-width: 480px;
+  pointer-events: auto;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.22);
+}
+
+/* Campo de data com o calendário do Zappi, no mesmo visual dos outros campos */
+.rotuloData {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--texto);
+  margin-bottom: 0;
+}
+
+.entradaData {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--texto);
+  background: var(--cartao);
+  border: 2px solid var(--borda);
+  border-radius: 12px;
+  min-height: 50px;
+  height: auto;
+
+  &[data-error] {
+    border-color: #b42318;
+  }
+}
+
 .principal {
   display: flex;
   align-items: center;

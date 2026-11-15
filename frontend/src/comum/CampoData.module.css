@@ -1,0 +1,45 @@
+/* Calendário do Zappi: mês em destaque, setas em botões creme e dias arredondados.
+   O dia escolhido usa a cor principal do tema (verde-azulado) */
+.icone {
+  color: #006d6d;
+}
+
+.mes {
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.seta {
+  border-radius: 12px;
+  background: #f6efe7;
+  color: #006d6d;
+
+  &[data-disabled] {
+    color: #c9bdb2;
+    background: #f6efe7;
+  }
+}
+
+.semana {
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #5c5048;
+}
+
+.dia {
+  border-radius: 12px;
+  font-size: 0.95rem;
+
+  &[data-today]:not([data-selected]) {
+    box-shadow: inset 0 0 0 2px #e7ddd2;
+  }
+
+  &[data-disabled] {
+    color: #c9bdb2;
+  }
+
+  &[data-selected] {
+    font-weight: 700;
+  }
+}

@@ -743,11 +743,6 @@
   }
 }
 
-/* Selos de alérgenos no cartão do produto */
-.selosAlergenos {
-  margin-top: 4px;
-}
-
 /* Promoção do produto (ZAP-152, ZAP-161): na tela do produto, uma caixa própria que vale na hora,
    como tirar do cardápio */
 .promocao {

@@ -4,7 +4,6 @@ import { Link } from 'react-router'
 import { DescontoCurto } from './DescontoCurto'
 import { emPromocao, precoParaTela, textoPrecoPromocao, UNIDADES } from './regrasProdutos'
 import classes from './Produtos.module.css'
-import { SelosAlergenos } from './SelosAlergenos'
 
 // Cartão de um produto do cardápio (ZAP-41): foto com texto alternativo (NBR 17225 5.9.1), o nome
 // do produto (ZAP-139, sem o sabor), preço com a unidade, os alérgenos (ZAP-132) e as ações de
@@ -61,7 +60,6 @@ export function CartaoProduto({ produto, destaque, aoExcluir, aoTirar, aoVoltar,
             <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
           </p>
         )}
-        <SelosAlergenos alergenos={produto.alergenos} outros={produto.outrosAlergenos} className={classes.selosAlergenos} />
       </div>
       <div className={classes.acoes}>
         <Button
