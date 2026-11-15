@@ -47,7 +47,9 @@ export function CartaoProduto({ produto, destaque, aoExcluir, aoTirar, aoVoltar,
             <s className={classes.precoAntigo} aria-hidden="true">
               R$ {precoParaTela(produto.preco)}
             </s>
-            <strong aria-hidden="true">R$ {precoParaTela(produto.precoPromocional)}</strong>
+            <strong className={classes.precoComDesconto} aria-hidden="true">
+              R$ {precoParaTela(produto.precoPromocional)}
+            </strong>
             <span className={classes.unidadeEDesconto}>
               <span className={classes.selo}>{UNIDADES[produto.unidade].selo}</span>
               <DescontoCurto produto={produto} lido={false} />

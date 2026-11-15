@@ -811,6 +811,12 @@
   white-space: nowrap;
 }
 
+/* Preço com desconto em verde (ajuste de 15/11/2026): #1d6b45 sobre o branco, 6,9:1. A promoção
+   não depende só da cor: o preço antigo riscado e o "-13%" continuam */
+.precoComDesconto {
+  color: #1d6b45;
+}
+
 /* Percentual de desconto ("-13%"), ao lado da unidade: verde #1d6b45 sobre #eaf6ef, 6,4:1 */
 .descontoCurto {
   display: inline-flex;

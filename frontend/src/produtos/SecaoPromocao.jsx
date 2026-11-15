@@ -128,7 +128,7 @@ export function SecaoPromocao({ produto, aoMudar, aoAvisar }) {
       {ativa ? (
         <>
           <p className={classes.precosPromocao}>
-            De <s>R$ {precoParaTela(produto.preco)}</s> por <strong>R$ {precoParaTela(produto.precoPromocional)}</strong>{' '}
+            De <s>R$ {precoParaTela(produto.preco)}</s> por <strong className={classes.precoComDesconto}>R$ {precoParaTela(produto.precoPromocional)}</strong>{' '}
             <span className={classes.unidadeEDesconto}>
               {unidade.selo}
               <DescontoCurto produto={produto} />
