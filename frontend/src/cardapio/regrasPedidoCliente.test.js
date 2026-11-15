@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  subtotal,
   contagemDosItens,
   dataMinima,
   dataPorExtenso,
@@ -91,5 +92,11 @@ describe('regras da montagem do pedido pelo cliente (ZAP-107)', () => {
     expect(contagemDosItens(2, 0)).toBe('2 itens')
     expect(contagemDosItens(1, 1)).toBe('1 item · 1 indisponível')
     expect(contagemDosItens(1, 2)).toBe('1 item · 2 indisponíveis')
+  })
+
+  test('com promoção, o subtotal e o total usam o preço com desconto (ZAP-162)', () => {
+    const ninho = { id: 2, unidade: 'KG', preco: 115, precoPromocional: 100 }
+    expect(subtotal(ninho, 1.5)).toBe(150)
+    expect(totalDoPedido([{ chave: 1, produtoId: 2, quantidade: 1.5 }, { chave: 2, produtoId: 1, quantidade: 1 }], [bolo, ninho])).toBe(250)
   })
 })

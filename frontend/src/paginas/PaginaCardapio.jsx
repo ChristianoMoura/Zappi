@@ -3,6 +3,9 @@ import {
   IconAlertCircle,
   IconCalendarEvent,
   IconChevronLeft,
+  IconChevronRight,
+  IconDiscount,
+  IconPlus,
   IconShoppingCart,
   IconCircleCheck,
   IconCreditCard,
@@ -29,10 +32,14 @@ import {
   mensagemContato,
   PONTO_RETIRADA_EXEMPLO,
   REGRAS_ENCOMENDA,
+  secaoPromocoes,
   telefoneTexto,
+  textoPrecoLido,
+  unidadeTexto,
 } from '../cardapio/regrasCardapio'
 import { juntar } from '../cardapio/juntarClasses'
 import { totalDoPedido } from '../cardapio/regrasPedidoCliente'
+import { textoDescontoCurto } from '../produtos/regrasProdutos'
 import { moeda } from '../pedidos/regrasPedidos'
 import { usePedidoCliente } from '../cardapio/usePedidoCliente'
 import { buscarCardapio, CardapioNaoEncontradoError } from '../cardapio/servicoCardapio'
@@ -175,6 +182,53 @@ function RegrasEncomenda() {
 
 // ---------- Cardápio ----------
 
+// Seção "Promoções" em faixa que rola para o lado (ZAP-162, referência aprovada em 15/11/2026):
+// cartões pequenos com a foto, o "-13%" sobre ela, o nome em até 2 linhas e os dois preços. O
+// cartão todo abre o produto, porque o cliente escolhe a quantidade no detalhe; o "+" é só um
+// sinal. Cada cartão tem o nome completo para o leitor de tela. No computador, setas para rolar.
+function FaixaPromocoes({ produtos, aoAbrir }) {
+  const trilho = useRef(null)
+  const rolar = (sentido) => {
+    const lista = trilho.current
+    lista?.scrollBy?.({ left: sentido * lista.clientWidth * 0.8, behavior: movimentoReduzido() ? 'auto' : 'smooth' })
+  }
+  return (
+    <div className={classes.faixaPromocoes}>
+      <button type="button" className={juntar(classes.setaFaixa, classes.setaEsquerda)} onClick={() => rolar(-1)} aria-label="Ver promoções anteriores">
+        <IconChevronLeft size={22} aria-hidden />
+      </button>
+      <ul ref={trilho} className={classes.trilho} aria-label="Produtos em promoção">
+        {produtos.map((p) => (
+          <li key={p.id}>
+            <button type="button" className={classes.cartaoPromocao} onClick={() => aoAbrir(p)} aria-label={`${p.nome}, ${textoPrecoLido(p)}`}>
+              <span className={classes.fotoPromocao}>
+                <Foto produto={p} decorativa />
+                <span className={classes.descontoFoto} aria-hidden="true">
+                  {textoDescontoCurto(p)}
+                </span>
+                <span className={classes.maisFoto} aria-hidden="true">
+                  <IconPlus size={20} />
+                </span>
+              </span>
+              <span className={classes.nomePromocao} aria-hidden="true">
+                {p.nome}
+              </span>
+              <span className={classes.precosCartaoPromocao} aria-hidden="true">
+                <s>{moeda(p.preco)}</s>
+                <b>{moeda(p.precoPromocional)}</b>
+                <small>{unidadeTexto(p)}</small>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button type="button" className={juntar(classes.setaFaixa, classes.setaDireita)} onClick={() => rolar(1)} aria-label="Ver mais promoções">
+        <IconChevronRight size={22} aria-hidden />
+      </button>
+    </div>
+  )
+}
+
 function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escuro, alternarTema, tema }) {
   useTituloPagina(`Cardápio da ${loja.nome}`)
   const navegar = useNavigate()
@@ -195,7 +249,13 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
   // Seções e abas pelas categorias do painel, na ordem da loja (ZAP-140)
   const categorias = agruparPorCategoria(visiveis, categoriasDaLoja)
   const todasCategorias = agruparPorCategoria(produtos, categoriasDaLoja)
-  const categoriaAtual = atual ?? categorias[0]?.id
+  // Seção "Promoções" no topo, antes das categorias (ZAP-162). Na busca, ela sai das seções, para o
+  // produto não aparecer duas vezes; na janela "Categorias", continua
+  const promocoes = secaoPromocoes(todasCategorias, { destacar: loja.destacarPromocoes, buscando: busca.trim() !== '' })
+  const promocoesNaJanela = secaoPromocoes(todasCategorias, { destacar: loja.destacarPromocoes, buscando: false })
+  const secoes = promocoes ? [promocoes, ...categorias] : categorias
+  const secoesNaJanela = promocoesNaJanela ? [promocoesNaJanela, ...todasCategorias] : todasCategorias
+  const categoriaAtual = String(atual ?? secoes[0]?.id)
 
   // Barra compacta depois do cabeçalho e aba da seção que está na tela
   useEffect(() => {
@@ -216,7 +276,7 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
     aoRolar()
     window.addEventListener('scroll', aoRolar, { passive: true })
     return () => window.removeEventListener('scroll', aoRolar)
-  }, [categorias.length])
+  }, [secoes.length])
 
   const irPara = useCallback((id) => {
     const secao = document.getElementById(`categoria-${id}`)
@@ -342,12 +402,12 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
                   <IconMenu2 size={24} aria-hidden />
                 </button>
                 <div className={classes.listaAbas}>
-                  {categorias.map((c) => (
+                  {secoes.map((c) => (
                     <button
                       key={c.id}
                       type="button"
                       className={classes.aba}
-                      aria-current={c.id === categoriaAtual ? 'true' : undefined}
+                      aria-current={String(c.id) === categoriaAtual ? 'true' : undefined}
                       onClick={() => irPara(c.id)}
                     >
                       {c.titulo}
@@ -372,17 +432,27 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
                 </div>
               )}
 
-              {categorias.length === 0 && (
+              {secoes.length === 0 && (
                 <p className={classes.semResultado} role="status">
                   Nenhum produto encontrado.
                 </p>
               )}
 
-              {categorias.map((c) => (
+              {secoes.map((c) => (
                 <section key={c.id} id={`categoria-${c.id}`} data-categoria={c.id} aria-labelledby={`titulo-${c.id}`}>
                   <h2 id={`titulo-${c.id}`} className={classes.tituloSecao}>
-                    {c.titulo}
+                    {c.promocoes ? (
+                      <span className={classes.tituloPromocoes}>
+                        <IconDiscount size={22} aria-hidden />
+                        {c.titulo}
+                      </span>
+                    ) : (
+                      c.titulo
+                    )}
                   </h2>
+                  {c.promocoes ? (
+                    <FaixaPromocoes produtos={c.produtos} aoAbrir={abrirProduto} />
+                  ) : (
                   <ul className={classes.lista}>
                     {c.produtos.map((p) => (
                       <li key={p.id}>
@@ -398,6 +468,7 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
                       </li>
                     ))}
                   </ul>
+                  )}
                 </section>
               ))}
             </main>
@@ -432,12 +503,12 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
             <Modal.CloseButton icon={<IconX size={22} />} aria-label="Fechar categorias" className={classes.icone} />
           </Modal.Header>
           <Modal.Body p={0}>
-            {todasCategorias.map((c) => (
+            {secoesNaJanela.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 className={classes.categoria}
-                aria-current={c.id === categoriaAtual ? 'true' : undefined}
+                aria-current={String(c.id) === categoriaAtual ? 'true' : undefined}
                 onClick={() => {
                   setCategoriasAbertas(false)
                   setBusca('')

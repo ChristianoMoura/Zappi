@@ -168,3 +168,78 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(within(retirada).getByRole('link', { name: /Abrir no mapa/ })).toHaveAttribute('target', '_blank')
   })
 })
+
+describe('Promoção no cardápio público (ZAP-162)', () => {
+  const comPromocao = (destacarPromocoes = true) => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.estabelecimento.destacarPromocoes = destacarPromocoes
+    cardapio.produtos[1].precoPromocional = 1.1
+    cardapio.produtos.push({ id: 5, nome: 'Bolo de ninho com morango', categoriaId: 1, categoria: 'Bolos', unidade: 'KG', preco: 115, precoPromocional: 100, descricao: 'Ninho.', foto: 'ninho.jpg', textoAlternativo: '' })
+    return cardapio
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test('a seção Promoções vem no topo, na ordem das categorias, e o produto continua na categoria', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao())
+    abrir()
+
+    await screen.findByRole('heading', { level: 1, name: 'Casa Belt' })
+    const abas = screen.getByRole('navigation', { name: 'Categorias do cardápio' })
+    expect(within(abas).getAllByRole('button').slice(1).map((aba) => aba.textContent)).toEqual(['Promoções', 'Salgados', 'Bolos'])
+    const faixa = screen.getByRole('list', { name: 'Produtos em promoção' })
+    expect(within(faixa).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Coxinha por unidade, De R$ 1,25 por R$ 1,10 por unidade, 12% de desconto',
+      'Bolo de ninho com morango, De R$ 115,00 por R$ 100,00 por kg, 13% de desconto',
+    ])
+    expect(within(faixa).getByText('-13%')).toBeInTheDocument()
+    // Na categoria, o preço antigo riscado, o novo e o "-13%"; o leitor de tela ouve o "De ... por ..."
+    const bolos = screen.getByRole('region', { name: 'Bolos' })
+    expect(within(bolos).getByText('De R$ 115,00 por R$ 100,00 por kg, 13% de desconto')).toBeInTheDocument()
+    expect(within(bolos).getByText('R$ 115,00').tagName).toBe('S')
+  })
+
+  test('o cartão da faixa abre o detalhe do produto', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao())
+    const usuario = userEvent.setup()
+    const roteador = abrir()
+
+    const faixa = await screen.findByRole('list', { name: 'Produtos em promoção' })
+    await usuario.click(within(faixa).getByRole('button', { name: /^Bolo de ninho com morango/ }))
+
+    expect(roteador.state.location.pathname).toBe('/cardapio/casa-belt/produto/5')
+  })
+
+  test('na busca, a seção sai para o produto não aparecer duas vezes', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao())
+    const usuario = userEvent.setup()
+    abrir()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Buscar no cardápio' }))
+    await usuario.type(screen.getByRole('searchbox', { name: 'Buscar no cardápio' }), 'ninho')
+
+    expect(screen.queryByRole('list', { name: 'Produtos em promoção' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Bolo de ninho com morango' })).toHaveLength(1)
+  })
+
+  test('com o destaque desligado, a seção some, mas o preço com desconto continua', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao(false))
+    abrir()
+
+    await screen.findByRole('heading', { level: 1, name: 'Casa Belt' })
+    expect(screen.queryByRole('list', { name: 'Produtos em promoção' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Promoções' })).not.toBeInTheDocument()
+    expect(screen.getByText('De R$ 115,00 por R$ 100,00 por kg, 13% de desconto')).toBeInTheDocument()
+  })
+
+  test('o "Seu pedido" usa o preço com desconto no subtotal e no total', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao())
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 5, quantidade: 1.5 }], data: '', hora: '', observacao: '' }))
+    abrir('/cardapio/casa-belt/pedido')
+
+    expect(await screen.findByRole('region', { name: 'Total' })).toHaveTextContent('R$ 150,00')
+  })
+})

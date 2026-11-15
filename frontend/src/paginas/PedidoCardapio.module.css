@@ -514,3 +514,8 @@
   flex: none;
   margin-top: 2px;
 }
+
+/* Valor e subtotal de produto em promoção, no verde da promoção (ZAP-162) */
+.valorPromocao {
+  color: var(--promocao);
+}
