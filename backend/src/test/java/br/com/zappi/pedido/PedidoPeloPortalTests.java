@@ -108,6 +108,24 @@ class PedidoPeloPortalTests {
 	}
 
 	@Test
+	void produtoEmPromocaoEntraComOPrecoComDesconto() throws Exception {
+		jdbc.update("update produto set preco_promocional = 80.00 where id = ?", brigadeiro);
+
+		// O preço e o total que a tela manda são ignorados: vale o com desconto (RN10, ZAP-152)
+		Map<String, Object> corpo = pedido("Carla Nova", CARLA, daquiA(7),
+				List.of(item(brigadeiro, 1.5, Map.of("precoUnitario", 100.00)), item(coxinha, 10, Map.of())));
+		corpo.put("valorTotal", 1);
+		enviar(corpo).andExpect(status().isCreated());
+
+		assertThat(jdbc.queryForObject("select valor_total from pedido where estabelecimento_id = ? and numero = 3",
+				BigDecimal.class, casaBelt)).isEqualByComparingTo("132.50");
+		assertThat(jdbc.queryForObject("""
+				select i.preco_unitario from item_pedido i join pedido p on p.id = i.pedido_id
+				where p.estabelecimento_id = ? and p.numero = 3 and i.produto_id = ?
+				""", BigDecimal.class, casaBelt, brigadeiro)).isEqualByComparingTo("80.00");
+	}
+
+	@Test
 	void registraOLogSemUsuarioEComAOrigem() throws Exception {
 		enviar(pedido("Carla", CARLA, daquiA(8), List.of(item(brigadeiro, 1, Map.of())))).andExpect(status().isCreated());
 

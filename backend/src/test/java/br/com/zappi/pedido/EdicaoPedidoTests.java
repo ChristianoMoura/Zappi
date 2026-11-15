@@ -111,6 +111,22 @@ class EdicaoPedidoTests {
 	}
 
 	@Test
+	void promocaoSoValeParaOsItensNovos() throws Exception {
+		// A promoção começou depois do pedido: o item que já estava continua com o preço da época (RN10, ZAP-152)
+		jdbc.update("update produto set preco_promocional = 80.00 where id = ?", brigadeiro);
+		jdbc.update("update produto set preco_promocional = 99.90 where id = ?", ninho);
+
+		editar(1, pedido("Ana Exemplo", ANA, retirada,
+				List.of(item(brigadeiro, 2, Map.of()), item(ninho, 1, Map.of("precoUnitario", 115.00)))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.itens[0].produtoId").value(brigadeiro))
+			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
+			.andExpect(jsonPath("$.itens[1].produtoId").value(ninho))
+			.andExpect(jsonPath("$.itens[1].precoUnitario").value(99.90))
+			.andExpect(jsonPath("$.valorTotal").value(299.90));
+	}
+
+	@Test
 	void itemQueSaiDoFormularioSaiDoPedido() throws Exception {
 		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(ninho, 1, Map.of()))))
 			.andExpect(status().isOk())

@@ -368,7 +368,8 @@ public class ServicoCadastroPedido {
 	}
 
 	private static ItemPedido novoItem(Pedido pedido, Produto produto, ItemDaRequisicao item) {
-		return new ItemPedido(pedido, produto, produto.getPreco(), item.quantidade(), item.observacao());
+		// O preço vem do produto, nunca da tela: com a promoção ativa, o com desconto (RN10, ZAP-152)
+		return new ItemPedido(pedido, produto, produto.getPrecoVigente(), item.quantidade(), item.observacao());
 	}
 
 	private static BigDecimal total(List<ItemPedido> itensDoPedido) {

@@ -107,6 +107,9 @@ public class Estabelecimento {
 		this.bairro = dados.bairro();
 		this.cidade = dados.cidade();
 		this.uf = dados.uf();
+		if (dados.destacarPromocoes() != null) {
+			this.destacarPromocoes = dados.destacarPromocoes();
+		}
 		this.atualizadoEm = agora;
 	}
 
