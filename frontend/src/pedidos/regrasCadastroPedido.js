@@ -107,12 +107,16 @@ export function validarPedido(dados, produtos, hoje = new Date(), dataOriginal =
   else if (mudou && !HORARIOS_RETIRADA.includes(dados.horaRetirada)) erros.horaRetirada = 'Escolha um horário entre 8h e 20h, de 30 em 30 minutos.'
   else if (mudou && !erros.dataRetirada && dados.dataRetirada && retirada < horaLocal(hoje)) erros.horaRetirada = 'Esse horário já passou. Escolha um horário a partir de agora.'
 
+  // Forma de pagamento (ZAP-190, ZAP-193): obrigatória quando o formulário tem o campo, que só
+  // aparece com o backend pronto (ZAP-192)
+  if (dados.formaPagamento !== undefined && !dados.formaPagamento) erros.formaPagamento = 'Escolha a forma de pagamento.'
+
   if (dados.observacao.length > LIMITES.observacao) erros.observacao = `Use no máximo ${LIMITES.observacao} caracteres.`
   return erros
 }
 
 // Ordem dos campos na tela para levar o foco ao primeiro erro (NBR 17225 5.1.4):
-// cliente → itens → data e horário de retirada → observações
+// cliente → itens → data e horário de retirada → forma de pagamento → observações
 export function ordemDosCampos(itens) {
   return [
     'clienteNome',
@@ -121,6 +125,7 @@ export function ordemDosCampos(itens) {
     ...itens.flatMap((item) => [`item-${item.chave}-produto`, `item-${item.chave}-quantidade`]),
     'dataRetirada',
     'horaRetirada',
+    'formaPagamento',
     'observacao',
   ]
 }
@@ -133,6 +138,7 @@ export function montarPedido(dados, produtos) {
     consentimentoLgpd: dados.consentimentoLgpd,
     dataRetirada: `${dados.dataRetirada}T${dados.horaRetirada}`,
     observacao: dados.observacao.trim(),
+    ...(dados.formaPagamento !== undefined ? { formaPagamento: dados.formaPagamento } : {}),
     itens: dados.itens.map((item) => {
       const produto = produtoDoItem(item, produtos)
       return {

@@ -2,7 +2,9 @@ import { Alert, Button, Checkbox, Loader, NativeSelect, Textarea, TextInput } fr
 import { IconAlertCircle, IconAlertTriangle, IconCheck, IconChevronLeft, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { FORMAS_PAGAMENTO, nomeFormaPagamento } from '../comum/formasPagamento'
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
+import { buscarEstabelecimento } from '../estabelecimento/servicoEstabelecimento'
 import { agruparPorCategoria } from '../categorias/regrasCategorias'
 import { CONGELADO, formularioDoPedido, itemVazio, LIMITES, montarPedido, ordemDosCampos, produtoDoItem, subtotalDoItem, totalDoFormulario, validarPedido } from '../pedidos/regrasCadastroPedido'
 import { dataLocal, HORARIOS_RETIRADA, horaTexto, moeda, podeEditar, podeTrocarCliente, STATUS } from '../pedidos/regrasPedidos'
@@ -35,6 +37,8 @@ export function PaginaFormularioPedido() {
   // O filtro do quadro (?status=3) volta junto para os pedidos (ZAP-179)
   const { search } = useLocation()
   const [produtos, setProdutos] = useState([])
+  // Códigos das formas de pagamento aceitas pela loja; nulo enquanto o backend não tem o campo
+  const [formas, setFormas] = useState(null)
   const [pedido, setPedido] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erroCarregar, setErroCarregar] = useState('')
@@ -49,17 +53,28 @@ export function PaginaFormularioPedido() {
 
   useEffect(() => {
     let ativo = true
-    Promise.all([buscarProdutos(), editando ? buscarPedido(Number(numero)) : null])
-      .then(([cardapio, salvo]) => {
+    // As formas de pagamento aceitas vêm do Estabelecimento (ZAP-193). Sem o campo na API ou sem
+    // resposta, o formulário segue sem a forma de pagamento, como antes.
+    const formasAceitas = buscarEstabelecimento()
+      .then((loja) => loja.formasPagamento ?? null)
+      .catch(() => null)
+    Promise.all([buscarProdutos(), editando ? buscarPedido(Number(numero)) : null, formasAceitas])
+      .then(([cardapio, salvo, aceitas]) => {
         if (!ativo) return
         setProdutos(soDoCardapio(cardapio))
-        if (!editando) return
+        setFormas(aceitas)
+        // Com uma forma só, ela já vem escolhida
+        const formaInicial = (pedidoSalvo) => (aceitas ? { formaPagamento: pedidoSalvo?.formaPagamento ?? (aceitas.length === 1 ? aceitas[0] : '') } : {})
+        if (!editando) {
+          setDados((atual) => ({ ...atual, ...formaInicial(null) }))
+          return
+        }
         if (!podeEditar(salvo.status)) {
           setErroCarregar('Este pedido já foi encerrado e não pode mais ser editado.')
           return
         }
         setPedido(salvo)
-        setDados(formularioDoPedido(salvo))
+        setDados({ ...formularioDoPedido(salvo), ...formaInicial(salvo) })
       })
       .catch(() => {
         if (ativo) setErroCarregar(editando ? 'Não foi possível abrir este pedido agora. Tente novamente em alguns minutos.' : 'Não foi possível carregar os produtos do cardápio agora. Tente novamente em alguns minutos.')
@@ -201,6 +216,15 @@ export function PaginaFormularioPedido() {
         items: daCategoria.map((p) => ({ value: String(p.id), label: rotuloOpcao(p) })),
       })),
     ]
+  }
+
+  // Formas de pagamento do campo (ZAP-193): as aceitas hoje, na ordem da lista. Na edição, a forma
+  // que já estava no pedido continua na lista mesmo se a loja deixou de aceitar (RN10).
+  function opcoesPagamento() {
+    const atual = pedido?.formaPagamento
+    const aceitas = FORMAS_PAGAMENTO.filter(({ codigo }) => formas.includes(codigo))
+    const antiga = atual && !formas.includes(atual) ? [{ value: atual, label: `${nomeFormaPagamento(atual)} (a loja não aceita mais)` }] : []
+    return [{ value: '', label: 'Escolha a forma' }, ...antiga, ...aceitas.map(({ codigo, nome }) => ({ value: codigo, label: nome }))]
   }
 
   // Campo com rótulo sempre visível, marca de obrigatório ou opcional e erro ligado ao campo
@@ -380,6 +404,15 @@ export function PaginaFormularioPedido() {
               onChange={(e) => mudar('horaRetirada', e.currentTarget.value)}
             />
           </div>
+          {/* Forma combinada com o cliente (ZAP-190, RN19): só as que a loja aceita */}
+          {formas && dados.formaPagamento !== undefined && (
+            <NativeSelect
+              {...propsCampo('formaPagamento', 'Forma de pagamento', { obrigatorio: true, dica: 'O pagamento é sempre na retirada.' })}
+              data={opcoesPagamento()}
+              value={dados.formaPagamento}
+              onChange={(e) => mudar('formaPagamento', e.currentTarget.value)}
+            />
+          )}
           <Textarea
             {...propsCampo('observacao', 'Observações do pedido', { limite: LIMITES.observacao })}
             value={dados.observacao}

@@ -2,6 +2,8 @@ import { Alert, Button, Drawer } from '@mantine/core'
 import { IconAlertCircle, IconArrowBackUp, IconCheck, IconCircleCheck, IconPackage, IconPencil, IconSend, IconToolsKitchen2, IconUserX, IconX } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { nomeFormaPagamento } from '../comum/formasPagamento'
+import { IconeFormaPagamento } from '../comum/IconeFormaPagamento'
 import { JanelaAnonimizar } from './JanelaAnonimizar'
 import { JanelaMotivo } from './JanelaMotivo'
 import { JanelaVoltar } from './JanelaVoltar'
@@ -230,8 +232,21 @@ export function DetalhesPedido({ pedido, aberto, aoFechar, telaGrande, aoConfirm
                   <dd>{pedido.observacao}</dd>
                 </>
               )}
-              <dt>Pagamento</dt>
-              <dd>Na retirada</dd>
+              {/* Com a forma combinada (ZAP-193), a linha diz qual é; pedido antigo: "Não informada" */}
+              {pedido.formaPagamento === undefined ? (
+                <>
+                  <dt>Pagamento</dt>
+                  <dd>Na retirada</dd>
+                </>
+              ) : (
+                <>
+                  <dt>Pagamento na retirada</dt>
+                  <dd className={classes.formaPagamento}>
+                    <IconeFormaPagamento codigo={pedido.formaPagamento} tamanho={22} />
+                    {nomeFormaPagamento(pedido.formaPagamento)}
+                  </dd>
+                </>
+              )}
             </dl>
           </section>
 

@@ -53,6 +53,12 @@ describe('regras do estabelecimento (ZAP-26)', () => {
     expect(erros.bairro).toBe('Use no máximo 80 caracteres.')
   })
 
+  test('formas de pagamento: pelo menos uma, só quando a tela tem a seção (ZAP-193)', () => {
+    expect(validarEstabelecimento(valido).formasPagamento).toBeUndefined()
+    expect(validarEstabelecimento({ ...valido, formasPagamento: ['PIX'] }).formasPagamento).toBeUndefined()
+    expect(validarEstabelecimento({ ...valido, formasPagamento: [] }).formasPagamento).toBe('Escolha pelo menos uma forma de pagamento.')
+  })
+
   test('WhatsApp é guardado com o 55 e mostrado sem ele', () => {
     expect(whatsappParaGuardar('(11) 90000-0000')).toBe('5511900000000')
     expect(whatsappParaTela('5511900000000')).toBe('11900000000')

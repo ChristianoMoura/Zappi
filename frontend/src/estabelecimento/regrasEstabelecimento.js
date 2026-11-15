@@ -65,6 +65,11 @@ export function validarEstabelecimento(dados) {
   if (dados.cep && soDigitos(dados.cep).length !== 8) erros.cep = 'O CEP tem 8 números. Ex.: 01000-000'
   if (dados.uf && !UFS.includes(dados.uf)) erros.uf = 'Escolha o estado na lista.'
 
+  // Pelo menos uma forma de pagamento (ZAP-190), quando a tela já tem a seção (ZAP-193)
+  if (Array.isArray(dados.formasPagamento) && dados.formasPagamento.length === 0) {
+    erros.formasPagamento = 'Escolha pelo menos uma forma de pagamento.'
+  }
+
   for (const [campo, limite] of Object.entries(LIMITES)) {
     if (!erros[campo] && String(dados[campo] ?? '').length > limite) erros[campo] = `Use no máximo ${limite} caracteres.`
   }

@@ -157,6 +157,14 @@ describe('servicoPedidos (ZAP-122)', () => {
     expect(opcoes.method).toBe('POST')
   })
 
+  it('traz a forma de pagamento só quando o backend manda o campo, com nulo no pedido antigo (ZAP-193)', async () => {
+    simularBackend(json(200, doBackend), json(200, { ...doBackend, formaPagamento: 'PIX' }), json(200, { ...doBackend, formaPagamento: null }))
+
+    expect(await buscarPedido(1)).not.toHaveProperty('formaPagamento')
+    expect((await buscarPedido(1)).formaPagamento).toBe('PIX')
+    expect((await buscarPedido(1)).formaPagamento).toBeNull()
+  })
+
   it('traz a data e a hora da entrega no horário de quem usa o painel (ZAP-169)', async () => {
     simularBackend(json(200, { ...doBackend, status: STATUS.ENTREGUE, entregueEm: '2026-11-15T20:30:00Z' }))
 

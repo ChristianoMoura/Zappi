@@ -94,7 +94,20 @@ describe('regras do cadastro de pedido (ZAP-89, RF13)', () => {
     expect(ordemDosCampos([item(), item({ chave: 2 })])).toEqual([
       'clienteNome', 'clienteWhatsapp', 'consentimentoLgpd',
       'item-1-produto', 'item-1-quantidade', 'item-2-produto', 'item-2-quantidade',
-      'dataRetirada', 'horaRetirada', 'observacao',
+      'dataRetirada', 'horaRetirada', 'formaPagamento', 'observacao',
     ])
+  })
+})
+
+describe('forma de pagamento no pedido da Lídia (ZAP-193)', () => {
+  test('sem o campo no formulário (backend sem a ZAP-192), não pede nem envia a forma', () => {
+    expect(validarPedido(dados(), produtos, hoje)).toEqual({})
+    expect(montarPedido(dados(), produtos)).not.toHaveProperty('formaPagamento')
+  })
+
+  test('com o campo, a forma é obrigatória e vai pelo código', () => {
+    expect(validarPedido(dados({ formaPagamento: '' }), produtos, hoje)).toEqual({ formaPagamento: 'Escolha a forma de pagamento.' })
+    expect(validarPedido(dados({ formaPagamento: 'PIX' }), produtos, hoje)).toEqual({})
+    expect(montarPedido(dados({ formaPagamento: 'PIX' }), produtos).formaPagamento).toBe('PIX')
   })
 })

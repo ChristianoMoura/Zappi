@@ -304,3 +304,79 @@ describe('destaque das promoções no cardápio (ZAP-161)', () => {
     expect(salvarEstabelecimento.mock.calls[0][0]).toMatchObject({ destacarPromocoes: false })
   })
 })
+
+describe('formas de pagamento (ZAP-190, ZAP-193)', () => {
+  const todas = ['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO', 'VR']
+  const grupo = () => screen.getByRole('group', { name: /Formas que a loja aceita/ })
+
+  beforeEach(() => {
+    salvarEstabelecimento.mockReset().mockImplementation(async (dados) => dados)
+  })
+
+  test('sem o campo no backend, a seção não aparece', async () => {
+    buscarEstabelecimento.mockReset().mockResolvedValue(casaBelt)
+    await abrirTela()
+
+    expect(screen.queryByRole('heading', { name: 'Formas de pagamento' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: 'Pix' })).not.toBeInTheDocument()
+  })
+
+  test('mostra as cinco formas num grupo com legenda e explicação, como vieram do backend', async () => {
+    buscarEstabelecimento.mockReset().mockResolvedValue({ ...casaBelt, formasPagamento: ['PIX', 'DINHEIRO'] })
+    await abrirTela()
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Formas de pagamento' })).toBeVisible()
+    expect(grupo()).toHaveAccessibleDescription(/O cliente escolhe uma delas ao fazer o pedido. O pagamento é sempre na retirada./)
+    expect(screen.getByRole('checkbox', { name: 'Dinheiro' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Pix' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Cartão de crédito' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Cartão de débito' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Vale-refeição (VR)' })).not.toBeChecked()
+    // Cada forma tem o ícone, escondido do leitor de tela: o nome continua só o texto
+    expect(grupo().querySelectorAll('label svg[viewBox="0 0 24 24"][aria-hidden="true"]')).toHaveLength(5)
+  })
+
+  test('desmarcar uma forma vai junto ao salvar, na ordem da lista', async () => {
+    const usuario = userEvent.setup()
+    buscarEstabelecimento.mockReset().mockResolvedValue({ ...casaBelt, formasPagamento: todas })
+    await abrirTela()
+
+    await usuario.click(screen.getByRole('checkbox', { name: 'Vale-refeição (VR)' }))
+    await usuario.click(screen.getByRole('checkbox', { name: 'Dinheiro' }))
+    await usuario.click(screen.getByRole('checkbox', { name: 'Dinheiro' }))
+    await usuario.click(salvarBotao())
+
+    await waitFor(() => expect(salvarEstabelecimento).toHaveBeenCalledTimes(1))
+    expect(salvarEstabelecimento.mock.calls[0][0].formasPagamento).toEqual(['DINHEIRO', 'PIX', 'CREDITO', 'DEBITO'])
+  })
+
+  test('sem nenhuma marcada, mostra o erro junto do grupo, leva o foco a ele e não salva (NBR 17225 5.3.3)', async () => {
+    const usuario = userEvent.setup()
+    buscarEstabelecimento.mockReset().mockResolvedValue({ ...casaBelt, formasPagamento: ['PIX'] })
+    await abrirTela()
+
+    await usuario.click(screen.getByRole('checkbox', { name: 'Pix' }))
+    await usuario.click(salvarBotao())
+
+    expect(salvarEstabelecimento).not.toHaveBeenCalled()
+    expect(screen.getByRole('checkbox', { name: 'Dinheiro' })).toHaveFocus()
+    expect(grupo()).toHaveAccessibleDescription(/Escolha pelo menos uma forma de pagamento./)
+    expect(grupo()).toHaveAttribute('aria-invalid', 'true')
+
+    // Ao marcar de novo, o erro some
+    await usuario.click(screen.getByRole('checkbox', { name: 'Pix' }))
+    expect(screen.queryByText('Escolha pelo menos uma forma de pagamento.')).not.toBeInTheDocument()
+  })
+
+  test('mostra junto do grupo o erro que o backend devolver', async () => {
+    const usuario = userEvent.setup()
+    buscarEstabelecimento.mockReset().mockResolvedValue({ ...casaBelt, formasPagamento: todas })
+    salvarEstabelecimento.mockReset().mockRejectedValue(new DadosInvalidosError({ formasPagamento: 'Escolha pelo menos uma forma de pagamento.' }))
+    await abrirTela()
+
+    await usuario.click(salvarBotao())
+
+    expect(await screen.findByText('Escolha pelo menos uma forma de pagamento.')).toBeVisible()
+    expect(screen.getByRole('checkbox', { name: 'Dinheiro' })).toHaveFocus()
+  })
+})

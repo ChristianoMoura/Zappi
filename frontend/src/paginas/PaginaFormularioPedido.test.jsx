@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos, cadastrarPedido } from '../pedidos/servicoPedidos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
+import { buscarEstabelecimento } from '../estabelecimento/servicoEstabelecimento'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { pedidoDeTeste, usarTela } from '../testes/pedidosDeTeste'
 import { PaginaFormularioPedido } from './PaginaFormularioPedido'
@@ -12,6 +13,8 @@ import { PaginaPedidos } from './PaginaPedidos'
 // O backend é simulado aqui para os testes não dependerem da ZAP-88 e da ZAP-39
 vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarPedidos: vi.fn(), cadastrarPedido: vi.fn() }))
 vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarProdutos: vi.fn() }))
+// As formas de pagamento vêm do Estabelecimento (ZAP-193); sem o campo, o formulário segue como antes
+vi.mock('../estabelecimento/servicoEstabelecimento', async (importarOriginal) => ({ ...(await importarOriginal()), buscarEstabelecimento: vi.fn() }))
 
 
 const produtos = [
@@ -46,6 +49,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
   beforeEach(() => {
     usarTela(true)
     buscarProdutos.mockReset().mockResolvedValue(produtos)
+    buscarEstabelecimento.mockReset().mockResolvedValue({ nome: 'Casa Belt' })
     buscarPedidos.mockReset().mockResolvedValue([pedidoDeTeste(12, STATUS.NOVO, 'Ana Souza')])
     cadastrarPedido.mockReset().mockImplementation(async (dados) => {
       const pedido = pedidoDeTeste(14, STATUS.NOVO, dados.cliente.nome, { itens: dados.itens, dataRetirada: dados.dataRetirada })
@@ -226,5 +230,72 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
 
     expect(await screen.findByText(/O cardápio está vazio/)).toBeVisible()
     expect(screen.getByRole('link', { name: 'Cadastrar produto' })).toHaveAttribute('href', '/produtos/novo')
+  })
+})
+
+describe('forma de pagamento no cadastro de pedido (ZAP-190, ZAP-193)', () => {
+  const formaPagamento = () => screen.getByRole('combobox', { name: /^Forma de pagamento/ })
+
+  beforeEach(() => {
+    usarTela(true)
+    buscarProdutos.mockReset().mockResolvedValue(produtos)
+    buscarPedidos.mockReset().mockResolvedValue([])
+    buscarEstabelecimento.mockReset().mockResolvedValue({ nome: 'Casa Belt', formasPagamento: ['PIX', 'DEBITO'] })
+    cadastrarPedido.mockReset().mockImplementation(async (dados) => pedidoDeTeste(14, STATUS.NOVO, dados.cliente.nome))
+  })
+
+  afterEach(() => usarTela(false))
+
+  async function preencherResto(usuario) {
+    await preencherCliente(usuario)
+    await usuario.selectOptions(screen.getByRole('combobox', { name: /^Produto/ }), '1')
+    await usuario.type(campo(/^Quantidade/), '2')
+    await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(5))
+    await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '14:30')
+  }
+
+  test('sem o campo no backend, o formulário não pede a forma de pagamento', async () => {
+    buscarEstabelecimento.mockResolvedValue({ nome: 'Casa Belt' })
+    await abrirFormulario()
+
+    expect(screen.queryByRole('combobox', { name: /^Forma de pagamento/ })).not.toBeInTheDocument()
+  })
+
+  test('mostra só as formas que a loja aceita, com a explicação de que é na retirada', async () => {
+    await abrirFormulario()
+
+    const opcoes = within(formaPagamento()).getAllByRole('option').map((opcao) => opcao.textContent)
+    expect(opcoes).toEqual(['Escolha a forma', 'Pix', 'Cartão de débito'])
+    expect(formaPagamento()).toHaveAccessibleDescription('O pagamento é sempre na retirada.')
+  })
+
+  test('é obrigatória: sem ela, o erro aparece junto do campo, com o foco nele, e nada é salvo', async () => {
+    const usuario = userEvent.setup()
+    await abrirFormulario()
+    await preencherResto(usuario)
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar pedido' }))
+
+    expect(cadastrarPedido).not.toHaveBeenCalled()
+    expect(formaPagamento()).toHaveFocus()
+    expect(formaPagamento()).toHaveAccessibleDescription(/Escolha a forma de pagamento./)
+  })
+
+  test('a forma escolhida vai pelo código ao salvar', async () => {
+    const usuario = userEvent.setup()
+    await abrirFormulario()
+    await preencherResto(usuario)
+    await usuario.selectOptions(formaPagamento(), 'DEBITO')
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar pedido' }))
+
+    expect(cadastrarPedido).toHaveBeenCalledWith(expect.objectContaining({ formaPagamento: 'DEBITO' }))
+  })
+
+  test('com uma forma só, ela já vem escolhida', async () => {
+    buscarEstabelecimento.mockResolvedValue({ nome: 'Casa Belt', formasPagamento: ['DINHEIRO'] })
+    await abrirFormulario()
+
+    expect(formaPagamento()).toHaveValue('DINHEIRO')
   })
 })
