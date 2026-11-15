@@ -90,7 +90,7 @@ function erroDaFoto(foto, erro, salvo) {
   return new FotoNaoEnviadaError(`${MENSAGEM_FOTO[foto]} ${motivo}`, salvo)
 }
 
-// Quem mostra a marca da loja (topo do painel) é avisado quando o Meu estabelecimento é
+// Quem mostra a marca da loja (topo do painel) é avisado quando o Estabelecimento é
 // salvo, para o nome e o logo mudarem na hora em todas as telas.
 const ouvintes = new Set()
 export function ouvirEstabelecimento(aoMudar) {
@@ -100,7 +100,7 @@ export function ouvirEstabelecimento(aoMudar) {
 
 const avisar = (estabelecimento) => ouvintes.forEach((aoMudar) => aoMudar({ nome: estabelecimento.nome, logo: estabelecimento.logo }))
 
-// Nome e logo da loja, os mesmos do Meu estabelecimento. Sem login não há token, e a API não
+// Nome e logo da loja, os mesmos do Estabelecimento. Sem login não há token, e a API não
 // sabe qual é a loja: devolve nulo e a tela mostra só a marca do Zappi.
 // PENDENTE: a collab no login depende de uma rota pública da loja, a combinar com o front.
 export async function buscarMarcaLoja() {

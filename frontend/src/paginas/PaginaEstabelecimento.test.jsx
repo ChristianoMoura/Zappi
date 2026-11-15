@@ -135,7 +135,7 @@ describe('PaginaEstabelecimento (US2, RF03, RF04)', () => {
   test('mostra os dados em cartões com rótulos visíveis (NBR 17225 5.3.1)', async () => {
     const nome = await abrirTela()
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Meu estabelecimento' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Estabelecimento' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Sobre o estabelecimento' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Contato' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Endereço' })).toBeVisible()

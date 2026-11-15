@@ -119,7 +119,7 @@ O estilo de imagem do Zappi é **3D lúdico, com acabamento de massinha brilhant
 - **Topo do painel:** fundo Cacau #3D2B1F só com o logo do Zappi (símbolo e nome) em creme #FDF6EC (contraste 12,51:1). O foco do teclado no topo fica em creme.
 - **Botão da conta (ZAP-178):** no canto direito do topo, o logo da loja num círculo de 40 px (38 px no celular) com borda creme de 2 px, como uma foto de perfil, e a seta que gira ao abrir. Sem logo, as iniciais da loja em branco sobre o ciano profundo (6,16:1); sem os dados da loja, o ícone de pessoa. O logo é decorativo: o botão se chama "Minha conta". O menu abre com o logo em 44 px, o nome da usuária e o nome da loja em #5C5048 (7,4:1), e depois o "Sair".
 - **Login:** logo da loja centralizado e, embaixo, o símbolo do Zappi com o nome ao lado. Sem logo da loja, o login mostra só a marca do Zappi com o slogan.
-- **Origem:** nome e logo vêm do Meu estabelecimento; ao salvar uma troca lá, o botão da conta e o login mudam juntos. Sem logo, o botão da conta usa as iniciais da loja.
+- **Origem:** nome e logo vêm do Estabelecimento; ao salvar uma troca lá, o botão da conta e o login mudam juntos. Sem logo, o botão da conta usa as iniciais da loja.
 
 **Regras para novas imagens:**
 

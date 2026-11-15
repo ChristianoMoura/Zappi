@@ -2,7 +2,7 @@
 // rotas /api/produtos (ZAP-39) e /api/produtos/{id}/foto (ZAP-40). Em produção, o Render
 // repassa /api ao backend; em desenvolvimento, o proxy do Vite faz o mesmo (vite.config.js).
 // As páginas continuam usando as mesmas funções e erros de antes. O token, o 401 e a falta de
-// conexão ficam no clienteApi, o mesmo do Meu estabelecimento.
+// conexão ficam no clienteApi, o mesmo do Estabelecimento.
 
 import { chamarApi, lerArquivoTemporario, ServicoIndisponivelError } from '../autenticacao/clienteApi'
 import { ordenarAlergenos } from './regrasProdutos'

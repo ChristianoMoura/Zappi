@@ -53,7 +53,7 @@ describe('PaginaLogin (US1, RF01, RF02)', () => {
     expect(screen.getByLabelText('Senha')).toBeVisible()
   })
 
-  test('mostra o logo da loja, o mesmo do Meu estabelecimento, com o Zappi embaixo', async () => {
+  test('mostra o logo da loja, o mesmo do Estabelecimento, com o Zappi embaixo', async () => {
     abrirLogin()
 
     expect(await screen.findByRole('img', { name: 'Logo de Casa Belt' })).toBeVisible()

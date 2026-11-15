@@ -313,7 +313,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Arquivos | **Supabase Storage** | Bucket `produtos` (fotos dos produtos) e bucket `estabelecimentos` (logo e capa da loja, ZAP-119); o banco guarda só o caminho; upload só pelo backend; leitura pública |
 | Mensagens | Link **wa.me** | O backend gera o texto e o link; a Lídia clica e envia |
 | Mensagens (futuro) | **WhatsApp Cloud API** (Meta) | Envio automático via HTTPS, com o status informado pela Meta. Fora da entrega (seção 14, item 12) |
-| Endereço pelo CEP | **ViaCEP**, com a **BrasilAPI** como alternativa | No "Meu estabelecimento", o navegador consulta o CEP digitado e preenche rua, bairro, cidade e UF, que continuam editáveis (ZAP-121). Só o CEP do estabelecimento sai do sistema, sem dado de cliente; sem as APIs, a Lídia preenche à mão |
+| Endereço pelo CEP | **ViaCEP**, com a **BrasilAPI** como alternativa | No "Estabelecimento", o navegador consulta o CEP digitado e preenche rua, bairro, cidade e UF, que continuam editáveis (ZAP-121). Só o CEP do estabelecimento sai do sistema, sem dado de cliente; sem as APIs, a Lídia preenche à mão |
 | Testes (backend) | **JUnit 5, Mockito e Testcontainers** (PostgreSQL) | Testes automatizados, incluindo as migrações e as restrições do banco |
 | Testes (frontend) | **Vitest e React Testing Library** (jsdom, user-event e jest-dom) | Testes das telas e das regras do painel, escritos ao lado do código (`*.test.jsx`), com o backend simulado |
 | CI/CD | **GitHub Actions** + deploy automático do **Render** | Build e testes em cada pull request; o Render publica a cada merge na `main`, depois que o CI passar |

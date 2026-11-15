@@ -74,7 +74,7 @@ describe('menu do painel (ZAP-139)', () => {
     renderizarComRotas(rotas, '/categorias')
 
     const links = within(menu()).getAllByRole('link')
-    expect(links.map((l) => l.textContent)).toEqual(['Pedidos', 'Produtos', 'Meu estabelecimento'])
+    expect(links.map((l) => l.textContent)).toEqual(['Pedidos', 'Produtos', 'Estabelecimento'])
     expect(links[1]).toHaveAttribute('aria-current', 'page')
   })
 })

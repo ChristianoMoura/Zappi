@@ -34,10 +34,10 @@ const paraTela = (guardado) => ({ ...guardado, whatsapp: whatsappParaTela(guarda
 const paraGuardar = (tela) => ({ ...tela, nome: tela.nome.trim(), slug: tela.slug.trim(), whatsapp: whatsappParaGuardar(tela.whatsapp), cep: soDigitos(tela.cep) })
 const iniciais = (nome) => (nome.trim().split(/\s+/).map((p) => p[0]).join('').slice(0, 2) || 'Z').toUpperCase()
 
-// Tela "Meu estabelecimento" (US2, RF03, RF04): segue a Referência A aprovada pelo grupo, com
+// Tela "Estabelecimento" (US2, RF03, RF04): segue a Referência A aprovada pelo grupo, com
 // capa, logo da loja e os dados em três cartões. Só nome, link do cardápio e WhatsApp são obrigatórios.
 export function PaginaEstabelecimento() {
-  useTituloPagina('Meu estabelecimento')
+  useTituloPagina('Estabelecimento')
   const [salvo, setSalvo] = useState(null)
   const [dados, setDados] = useState(null)
   const [erros, setErros] = useState({})
@@ -242,7 +242,7 @@ export function PaginaEstabelecimento() {
 
   return (
     <div className={classes.pagina}>
-      <VisuallyHidden component="h1">Meu estabelecimento</VisuallyHidden>
+      <VisuallyHidden component="h1">Estabelecimento</VisuallyHidden>
       <div {...entrada(classes.capaBloco)}>
         <div className={classes.capa}>
           <img src={dados.capa || capaPadrao} alt="" />

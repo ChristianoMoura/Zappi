@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { buscarMarcaLoja, ouvirEstabelecimento } from './servicoEstabelecimento'
 
 // Nome e logo da loja para o topo do painel e o login (collab Casa Belt × Zappi).
-// Fica igual ao Meu estabelecimento e muda assim que ele é salvo. Sem dados, devolve null
+// Fica igual ao Estabelecimento e muda assim que ele é salvo. Sem dados, devolve null
 // e as telas mostram só a marca do Zappi.
 export function useMarcaLoja() {
   const [marca, setMarca] = useState(null)

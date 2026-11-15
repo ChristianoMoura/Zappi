@@ -18,7 +18,7 @@ describe('marca da loja no topo do painel (collab Casa Belt × Zappi)', () => {
     localStorage.clear()
   })
 
-  test('usa o nome e o logo do Meu estabelecimento e muda assim que ele é salvo', async () => {
+  test('usa o nome e o logo do Estabelecimento e muda assim que ele é salvo', async () => {
     const logo = 'https://storage.teste/estabelecimentos/1/logo-abcd1234.webp'
     const respostas = [json(doBackend), json({ ...doBackend, nome: 'Casa Belt Doces', logo })]
     vi.stubGlobal('fetch', vi.fn(async () => respostas.shift()))

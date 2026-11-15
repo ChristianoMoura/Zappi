@@ -1,5 +1,5 @@
 /* Produtos do cardápio (ZAP-41 e ZAP-42): segue o protótipo aprovado, com a mesma base do quadro
-   de pedidos e do Meu estabelecimento (fundo branco com ciano, cacau no texto, mel em destaques) */
+   de pedidos e do Estabelecimento (fundo branco com ciano, cacau no texto, mel em destaques) */
 
 .pagina {
   display: flex;
@@ -551,7 +551,7 @@
   }
 }
 
-/* Aviso flutuante, como no Meu estabelecimento */
+/* Aviso flutuante, como no Estabelecimento */
 .aviso {
   position: fixed;
   top: 80px;
