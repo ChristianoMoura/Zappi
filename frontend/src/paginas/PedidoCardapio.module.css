@@ -470,3 +470,47 @@
     margin-inline: 0;
   }
 }
+
+/* ---------- Produto que saiu do cardápio (ZAP-156) ---------- */
+/* Continua na lista com a foto cinza; o estado aparece em texto, no selo e na mensagem */
+.indisponivel .fotoMini {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.indisponivel h3 {
+  color: var(--secundario);
+}
+
+.seloIndisponivel {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--borda);
+  background: color-mix(in srgb, var(--texto) 6%, var(--cartao));
+  color: var(--texto);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* Claro: #7a3e00 sobre #fff4e5, 8,3:1. Escuro: as cores dos selos de alérgenos, 11:1 */
+.mensagemIndisponivel {
+  margin: 2px 0 0;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--selo-alergeno-fundo, #fff4e5);
+  border: 1px solid var(--selo-alergeno-borda, #f2c48d);
+  color: var(--selo-alergeno-texto, #7a3e00);
+  font-size: 0.9rem;
+}
+
+.mensagemIndisponivel svg {
+  flex: none;
+  margin-top: 2px;
+}
