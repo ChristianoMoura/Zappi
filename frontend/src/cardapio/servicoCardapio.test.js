@@ -28,7 +28,7 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
       const cardapio = await buscarCardapio('casa-belt')
 
       expect(buscar).toHaveBeenCalledWith('/api/cardapio/casa-belt')
-      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp', destacarPromocoes: true, formasPagamento: null })
+      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp', destacarPromocoes: true, formasPagamento: null, endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' } })
       expect(cardapio.produtos[0]).toMatchObject({ preco: 115, descricao: '', foto: '', textoAlternativo: '' })
     })
 
@@ -128,5 +128,15 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
     const cardapio = await buscarCardapio('casa-belt')
 
     expect(cardapio.estabelecimento.formasPagamento).toEqual(['DINHEIRO', 'PIX', 'DEBITO'])
+  })
+
+  test('traz o endereço de retirada da loja (ZAP-185, ZAP-186)', async () => {
+    const endereco = { cep: '01000000', logradouro: 'Rua das Flores', numero: '123', complemento: null, bairro: 'Centro', cidade: 'São Paulo', uf: 'SP' }
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, { ...doBackend, estabelecimento: { ...doBackend.estabelecimento, ...endereco } })))
+    vi.stubEnv('DEV', false)
+
+    const cardapio = await buscarCardapio('casa-belt')
+
+    expect(cardapio.estabelecimento.endereco).toEqual({ ...endereco, complemento: '' })
   })
 })

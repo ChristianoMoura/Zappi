@@ -161,11 +161,11 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Pix', 'Cartão de crédito', 'Cartão de débito'])
     expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
 
-    // O endereço do mapa é fictício e avisa isso; o da loja (casa da Lídia) não vem da API (LGPD)
+    // Sem endereço cadastrado, a retirada é combinada pelo WhatsApp, sem mapa (ZAP-186)
     const retirada = screen.getByRole('region', { name: 'Retirada' })
-    expect(within(retirada).getByText('Endereço ilustrativo')).toBeVisible()
-    expect(within(retirada).getByTitle(/Mapa do local de retirada/)).toHaveAttribute('src', expect.stringContaining('openstreetmap.org'))
-    expect(within(retirada).getByRole('link', { name: /Abrir no mapa/ })).toHaveAttribute('target', '_blank')
+    expect(within(retirada).getByText('Combine o local de retirada pelo WhatsApp.')).toBeVisible()
+    expect(within(retirada).getByRole('link', { name: /Combinar pelo WhatsApp/ })).toHaveAttribute('href', expect.stringContaining('https://wa.me/5511900000000'))
+    expect(within(retirada).queryByTitle(/Mapa do local de retirada/)).not.toBeInTheDocument()
   })
 })
 
@@ -259,5 +259,49 @@ describe('formas de pagamento em "Mais informações" (ZAP-194)', () => {
     const pagamento = await screen.findByRole('region', { name: 'Formas de pagamento' })
     expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Dinheiro', 'Pix', 'Vale-refeição (VR)'])
     expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
+  })
+})
+
+describe('endereço e mapa da retirada (ZAP-186)', () => {
+  const comEndereco = () => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.estabelecimento.endereco = { cep: '01000000', logradouro: 'Rua das Flores', numero: '123', complemento: 'casa 2', bairro: 'Centro', cidade: 'São Paulo', uf: 'SP' }
+    return cardapio
+  }
+  const ENDERECO = 'Rua das Flores, 123, casa 2 · Centro, São Paulo/SP · CEP 01000-000'
+
+  afterEach(() => {
+    vi.clearAllMocks()
+    vi.unstubAllEnvs()
+    localStorage.clear()
+  })
+
+  test('com a chave: endereço por extenso, mapa do Google e o botão para abrir no Google Maps', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_CHAVE', 'chave-teste')
+    buscarCardapio.mockResolvedValue(comEndereco())
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const retirada = await screen.findByRole('region', { name: 'Retirada' })
+    expect(within(retirada).getByText('Rua das Flores, 123, casa 2')).toBeVisible()
+    expect(within(retirada).getByText('Centro, São Paulo/SP')).toBeVisible()
+    expect(within(retirada).getByText('CEP 01000-000')).toBeVisible()
+    const mapa = within(retirada).getByTitle(`Mapa do local de retirada: ${ENDERECO}`)
+    expect(mapa).toHaveAttribute('src', expect.stringMatching(/^https:\/\/www\.google\.com\/maps\/embed\/v1\/place\?key=chave-teste&q=/))
+    expect(mapa).toHaveAttribute('loading', 'lazy')
+    const abrirMapa = within(retirada).getByRole('link', { name: /Abrir no Google Maps/ })
+    expect(abrirMapa).toHaveAttribute('href', expect.stringMatching(/^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/))
+    expect(abrirMapa).toHaveAttribute('target', '_blank')
+    expect(abrirMapa).toHaveTextContent('(abre em outra aba)')
+  })
+
+  test('sem a chave: endereço e o botão, sem o mapa embutido', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_CHAVE', '')
+    buscarCardapio.mockResolvedValue(comEndereco())
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const retirada = await screen.findByRole('region', { name: 'Retirada' })
+    expect(within(retirada).getByText('Rua das Flores, 123, casa 2')).toBeVisible()
+    expect(within(retirada).queryByTitle(/Mapa do local de retirada/)).not.toBeInTheDocument()
+    expect(within(retirada).getByRole('link', { name: /Abrir no Google Maps/ })).toBeVisible()
   })
 })
