@@ -45,12 +45,12 @@ class DadosIniciaisTests {
 	@Test
 	void criaOCardapioDeExemplo() {
 		List<String> produtos = jdbc.queryForList("""
-				select p.sabor from produto p join estabelecimento e on e.id = p.estabelecimento_id
+				select p.nome from produto p join estabelecimento e on e.id = p.estabelecimento_id
 				where e.slug = 'casa-belt' and p.ativo order by p.id
 				""", String.class);
 
-		assertThat(produtos).containsExactly("Brigadeiro de chocolate", "Ninho com morango", "Cento de coxinha",
-				"Coxinha por unidade");
+		assertThat(produtos).containsExactly("Bolo de brigadeiro de chocolate", "Bolo de ninho com morango",
+				"Cento de coxinha", "Coxinha por unidade");
 	}
 
 	@Test
