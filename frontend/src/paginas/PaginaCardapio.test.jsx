@@ -159,7 +159,7 @@ describe('PaginaCardapio (ZAP-105)', () => {
 
     const pagamento = screen.getByRole('region', { name: 'Formas de pagamento' })
     expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Pix', 'Cartão de crédito', 'Cartão de débito'])
-    expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
+    expect(within(pagamento).queryByText('Pagamento na retirada')).not.toBeInTheDocument()
 
     // Sem endereço cadastrado, a retirada é combinada pelo WhatsApp, sem mapa (ZAP-186)
     const retirada = screen.getByRole('region', { name: 'Retirada' })
@@ -250,7 +250,7 @@ describe('formas de pagamento em "Mais informações" (ZAP-194)', () => {
     localStorage.clear()
   })
 
-  test('mostra só as formas que a loja aceita, na ordem da lista, com "Pagamento na retirada"', async () => {
+  test('mostra só as formas que a loja aceita, na ordem da lista, sem repetir "Pagamento na retirada"', async () => {
     const cardapio = structuredClone(CARDAPIO)
     cardapio.estabelecimento.formasPagamento = ['DINHEIRO', 'PIX', 'VR']
     buscarCardapio.mockResolvedValue(cardapio)
@@ -258,7 +258,7 @@ describe('formas de pagamento em "Mais informações" (ZAP-194)', () => {
 
     const pagamento = await screen.findByRole('region', { name: 'Formas de pagamento' })
     expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Dinheiro', 'Pix', 'Vale-refeição (VR)'])
-    expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
+    expect(within(pagamento).queryByText('Pagamento na retirada')).not.toBeInTheDocument()
   })
 })
 

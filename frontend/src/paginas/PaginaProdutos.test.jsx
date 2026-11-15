@@ -58,12 +58,11 @@ describe('Lista de produtos (ZAP-41, RF05, RF06)', () => {
     expect(screen.getByRole('link', { name: 'Cadastrar produto' })).toHaveAttribute('href', '/produtos/novo')
   })
 
-  test('mostra os selos de alérgenos só nos produtos que têm (ZAP-132)', async () => {
+  test('o cartão não mostra os alérgenos; eles ficam no detalhe do produto', async () => {
     await abrirLista()
 
-    const selos = within(screen.getByRole('article', { name: 'Bolo de brigadeiro de chocolate' })).getByRole('list', { name: 'Alérgenos' })
-    expect(within(selos).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Contém glúten', 'Leite e derivados', 'Canela'])
-    expect(within(screen.getByRole('article', { name: 'Coxinha de frango' })).queryByRole('list', { name: 'Alérgenos' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('article', { name: 'Bolo de brigadeiro de chocolate' })).queryByRole('list', { name: 'Alérgenos' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Contém glúten')).not.toBeInTheDocument()
   })
 
   test('excluir pede confirmação, e "Manter produto" não muda nada', async () => {
