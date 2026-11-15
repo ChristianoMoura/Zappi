@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
@@ -6,7 +6,9 @@ import {
   entrarNoServidor,
   LoginBloqueadoError,
   ServicoIndisponivelError,
+  TermosPendentesError,
 } from '../autenticacao/servicoAutenticacao'
+import { buscarTermosVigentes } from '../autenticacao/servicoTermos'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaLogin } from './PaginaLogin'
 
@@ -16,6 +18,12 @@ import { buscarMarcaLoja } from '../estabelecimento/servicoEstabelecimento'
 vi.mock('../autenticacao/servicoAutenticacao', async (importarOriginal) => ({
   ...(await importarOriginal()),
   entrarNoServidor: vi.fn(),
+}))
+
+// A versão vigente dos termos é simulada; sem ela (nulo), a tela fica como antes (ZAP-147)
+vi.mock('../autenticacao/servicoTermos', async (importarOriginal) => ({
+  ...(await importarOriginal()),
+  buscarTermosVigentes: vi.fn(),
 }))
 
 // A marca da loja no login ainda não vem da API (sem token, a loja não é conhecida; ZAP-118)
@@ -43,6 +51,8 @@ async function preencherEEntrar(usuario, email = 'lidia@casabelt.com', senha = '
 describe('PaginaLogin (US1, RF01, RF02)', () => {
   beforeEach(() => {
     entrarNoServidor.mockReset()
+    buscarTermosVigentes.mockReset().mockResolvedValue(null)
+    localStorage.clear()
     buscarMarcaLoja.mockReset().mockResolvedValue({ nome: 'Casa Belt', logo: 'logo.webp' })
   })
 
@@ -115,5 +125,102 @@ describe('PaginaLogin (US1, RF01, RF02)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(mensagem)
     expect(screen.getByLabelText('Senha')).toHaveValue('')
     expect(sessionStorage.getItem('zappi.sessao')).toBeNull()
+  })
+})
+
+describe('aceite dos termos no login (ZAP-143, ZAP-147)', () => {
+  const caixa = () => screen.getByRole('checkbox', { name: /Li e concordo com os Termos de uso e a Política de privacidade/ })
+
+  beforeEach(() => {
+    entrarNoServidor.mockReset().mockResolvedValue({ token: 'token-de-teste', nome: 'Lídia' })
+    buscarMarcaLoja.mockReset().mockResolvedValue(null)
+    buscarTermosVigentes.mockReset().mockResolvedValue({ versao: 1, data: '2026-11-14' })
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  test('sem os termos no backend, não mostra a caixa nem os links, e entra como antes', async () => {
+    const usuario = userEvent.setup()
+    buscarTermosVigentes.mockResolvedValue(null)
+    abrirLogin()
+
+    await preencherEEntrar(usuario)
+
+    await waitFor(() => expect(entrarNoServidor).toHaveBeenCalledWith('lidia@casabelt.com', 'senha-de-teste', null))
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Termos de uso' })).not.toBeInTheDocument()
+  })
+
+  test('mostra a caixa com rótulo visível e os links dos dois textos, também no rodapé', async () => {
+    abrirLogin()
+
+    expect(await screen.findByRole('checkbox', { name: /Li e concordo/ })).not.toBeChecked()
+    expect(caixa()).toHaveAccessibleDescription(/Versão 1/)
+    const rodape = screen.getByRole('navigation', { name: 'Termos e privacidade' })
+    expect(within(rodape).getByRole('link', { name: 'Termos de uso' })).toHaveAttribute('href', '/termos')
+    expect(within(rodape).getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade')
+    expect(screen.getAllByRole('link', { name: 'Termos de uso' })).toHaveLength(2)
+  })
+
+  test('sem marcar a caixa, explica o motivo, leva o foco a ela e não chama o servidor', async () => {
+    const usuario = userEvent.setup()
+    abrirLogin()
+    await screen.findByRole('checkbox', { name: /Li e concordo/ })
+
+    await preencherEEntrar(usuario)
+
+    expect(entrarNoServidor).not.toHaveBeenCalled()
+    expect(caixa()).toHaveFocus()
+    expect(caixa()).toHaveAccessibleDescription(/Para entrar, marque que leu e concorda/)
+  })
+
+  test('com a caixa marcada, o aceite vai junto do login e o aparelho guarda a versão', async () => {
+    const usuario = userEvent.setup()
+    const roteador = abrirLogin()
+    await usuario.click(await screen.findByRole('checkbox', { name: /Li e concordo/ }))
+
+    await preencherEEntrar(usuario)
+
+    await waitFor(() => expect(roteador.state.location.pathname).toBe('/pedidos'))
+    expect(entrarNoServidor).toHaveBeenCalledWith('lidia@casabelt.com', 'senha-de-teste', { versao: 1 })
+    expect(localStorage.getItem('zappi.termos-aceitos')).toBe('1')
+  })
+
+  test('com o lembrete da versão vigente, a caixa não aparece de novo', async () => {
+    const usuario = userEvent.setup()
+    localStorage.setItem('zappi.termos-aceitos', '1')
+    abrirLogin()
+    await screen.findByRole('navigation', { name: 'Termos e privacidade' })
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    await preencherEEntrar(usuario)
+    await waitFor(() => expect(entrarNoServidor).toHaveBeenCalledWith('lidia@casabelt.com', 'senha-de-teste', null))
+  })
+
+  test('com a versão nova, a caixa volta', async () => {
+    localStorage.setItem('zappi.termos-aceitos', '1')
+    buscarTermosVigentes.mockResolvedValue({ versao: 2, data: '2026-12-01' })
+    abrirLogin()
+
+    expect(await screen.findByRole('checkbox', { name: /Li e concordo/ })).toHaveAccessibleDescription(/Versão 2/)
+  })
+
+  test('se o backend pedir o aceite (TERMOS_PENDENTES), a caixa aparece com o foco e a senha continua', async () => {
+    const usuario = userEvent.setup()
+    localStorage.setItem('zappi.termos-aceitos', '1')
+    entrarNoServidor.mockRejectedValueOnce(new TermosPendentesError())
+    abrirLogin()
+    await screen.findByRole('navigation', { name: 'Termos e privacidade' })
+
+    await preencherEEntrar(usuario)
+
+    await waitFor(() => expect(caixa()).toHaveFocus())
+    expect(caixa()).toHaveAccessibleDescription(/ainda não foram aceitos neste aparelho ou mudaram/)
+    expect(screen.getByLabelText('Senha')).toHaveValue('senha-de-teste')
+    expect(sessionStorage.getItem('zappi.sessao')).toBeNull()
+
+    await usuario.click(caixa())
+    await usuario.click(screen.getByRole('button', { name: 'Entrar' }))
+    await waitFor(() => expect(entrarNoServidor).toHaveBeenLastCalledWith('lidia@casabelt.com', 'senha-de-teste', { versao: 1 }))
   })
 })

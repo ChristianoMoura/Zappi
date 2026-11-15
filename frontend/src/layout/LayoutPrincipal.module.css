@@ -190,6 +190,35 @@
   min-height: 44px;
 }
 
+/* Rodapé da caixinha da conta (ZAP-147): links pequenos lado a lado, em #5C5048 (7,79:1 no
+   branco), com 32 px de altura, acima dos 24 × 24 px do WCAG 2.5.8 */
+.rodapeConta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+}
+
+.linkRodapeConta {
+  width: auto;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
+
+  &:hover,
+  &[data-hovered] {
+    color: var(--mantine-color-zappi-7);
+    text-decoration: underline;
+  }
+}
+
+.pontoRodape {
+  color: var(--mantine-color-dimmed);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .setaConta {
     transition: transform 0.2s ease;
