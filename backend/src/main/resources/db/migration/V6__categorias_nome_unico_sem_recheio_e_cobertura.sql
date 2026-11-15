@@ -69,12 +69,14 @@ CREATE INDEX idx_produto_categoria ON produto (categoria_id);
 -- 3. Nome único do produto, sem o campo sabor, com a regra de nomeItem() do painel
 --    (frontend/src/pedidos/regrasPedidos.js, até a ZAP-139): o produto "Bolo" vira "Bolo de " +
 --    sabor em minúsculas; nos outros, o sabor vira o nome ("Salgado" + "Cento de coxinha" vira
---    "Cento de coxinha"). Até 150 caracteres, o limite da tela.
+--    "Cento de coxinha"). Até 150 caracteres, o limite da tela. Vale para todos os produtos:
+--    `sabor` é NOT NULL desde a V1, então o WHERE só deixa explícito que nenhum fica de fora.
 -- ---------------------------------------------------------------------------------------------
 ALTER TABLE produto ALTER COLUMN nome TYPE VARCHAR(150);
 
 UPDATE produto
-SET nome = CASE WHEN nome = 'Bolo' THEN 'Bolo de ' || lower(sabor) ELSE sabor END;
+SET nome = CASE WHEN nome = 'Bolo' THEN 'Bolo de ' || lower(sabor) ELSE sabor END
+WHERE sabor IS NOT NULL;
 
 ALTER TABLE produto DROP COLUMN sabor;
 
