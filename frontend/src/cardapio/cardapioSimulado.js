@@ -21,6 +21,13 @@ const CASA_BELT = {
     whatsapp: '5511900000000',
     logo,
     capa,
+    cep: '01310100',
+    logradouro: 'Avenida Paulista',
+    numero: '1000',
+    complemento: '',
+    bairro: 'Bela Vista',
+    cidade: 'São Paulo',
+    uf: 'SP',
   },
   categorias: [BOLOS, SALGADOS],
   produtos: [

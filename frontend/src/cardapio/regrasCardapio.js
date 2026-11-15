@@ -25,16 +25,28 @@ export function formaEscolhida(loja, escolhida) {
   return loja.formasPagamento.length === 1 ? loja.formasPagamento[0] : ''
 }
 
-// Local de retirada mostrado no mapa de "Mais informações". Por enquanto é um endereço
-// fictício, só para representar o mapa: o banco não tem um ponto de retirada, e a API pública
-// não expõe o endereço da loja, que é a casa da Lídia (LGPD). Quando houver um ponto de
-// retirada cadastrado, ele vem da API no lugar deste.
-export const PONTO_RETIRADA_EXEMPLO = {
-  endereco: 'Rua das Confeiteiras, 120 — Vila Doce, São Paulo/SP',
-  latitude: -23.5505,
-  longitude: -46.6333,
-  ilustrativo: true,
+// Endereço de retirada (ZAP-186): o cadastrado na tela Estabelecimento, que vem no cardápio
+// público (ZAP-185). Completo é rua, número e cidade; sem um deles, devolve nulo e a tela pede
+// para combinar o local pelo WhatsApp. As linhas são como a tela mostra; o texto, numa linha só,
+// vai no título do mapa e na busca do Google Maps
+export function enderecoDaLoja(loja) {
+  const e = loja?.endereco
+  if (!e?.logradouro?.trim() || !e.numero?.trim() || !e.cidade?.trim()) return null
+  const rua = [e.logradouro, e.numero, e.complemento].map((x) => x?.trim()).filter(Boolean).join(', ')
+  const cidade = e.uf?.trim() ? `${e.cidade.trim()}/${e.uf.trim()}` : e.cidade.trim()
+  const lugar = e.bairro?.trim() ? `${e.bairro.trim()}, ${cidade}` : cidade
+  const cep = soDigitos(e.cep)
+  const linhas = [rua, lugar]
+  if (cep.length === 8) linhas.push(`CEP ${cep.slice(0, 5)}-${cep.slice(5)}`)
+  return { linhas, texto: linhas.join(' · '), busca: [rua, lugar, cep.length === 8 ? cep : ''].filter(Boolean).join(', ') }
 }
+
+// Abre o endereço no Google Maps (site ou aplicativo), onde o cliente traça a rota
+export const linkGoogleMaps = (endereco) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco.busca)}`
+
+// Mapa embutido da Maps Embed API; sem a chave (ZAP-184), nulo, e a tela fica sem o mapa
+export const mapaGoogle = (endereco, chave) =>
+  chave ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(chave)}&q=${encodeURIComponent(endereco.busca)}` : null
 
 export const AVISO_ENCOMENDA ='Encomendas com pelo menos 7 dias de antecedência · Retirada, sem entrega'
 

@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import {
   agruparPorCategoria,
+  enderecoDaLoja,
   filtrarProdutos,
+  linkGoogleMaps,
   linkWhatsapp,
+  mapaGoogle,
   mensagemPedido,
   precoTexto,
   secaoPromocoes,
@@ -87,5 +90,38 @@ describe('regras do cardápio público (ZAP-105)', () => {
     expect(secaoPromocoes(categorias, { destacar: false, buscando: false })).toBeNull()
     expect(secaoPromocoes(categorias, { destacar: true, buscando: true })).toBeNull()
     expect(secaoPromocoes([categorias[1]].map((c) => ({ ...c, produtos: [c.produtos[0]] })), { destacar: true, buscando: false })).toBeNull()
+  })
+})
+
+describe('endereço de retirada (ZAP-186)', () => {
+  const COMPLETO = { cep: '01000000', logradouro: 'Rua das Flores', numero: '123', complemento: 'casa 2', bairro: 'Centro', cidade: 'São Paulo', uf: 'SP' }
+
+  test('monta as linhas da tela, o texto numa linha só e a busca do Google Maps', () => {
+    const endereco = enderecoDaLoja({ endereco: COMPLETO })
+
+    expect(endereco.linhas).toEqual(['Rua das Flores, 123, casa 2', 'Centro, São Paulo/SP', 'CEP 01000-000'])
+    expect(endereco.texto).toBe('Rua das Flores, 123, casa 2 · Centro, São Paulo/SP · CEP 01000-000')
+    expect(linkGoogleMaps(endereco)).toBe(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Rua das Flores, 123, casa 2, Centro, São Paulo/SP, 01000000')}`)
+  })
+
+  test('sem complemento, bairro, UF ou CEP, mostra só o que tem', () => {
+    const endereco = enderecoDaLoja({ endereco: { ...COMPLETO, complemento: '', bairro: '  ', uf: '', cep: '' } })
+
+    expect(endereco.linhas).toEqual(['Rua das Flores, 123', 'São Paulo'])
+  })
+
+  test('sem rua, número ou cidade, não há endereço (a tela pede para combinar pelo WhatsApp)', () => {
+    expect(enderecoDaLoja({ endereco: { ...COMPLETO, logradouro: '' } })).toBeNull()
+    expect(enderecoDaLoja({ endereco: { ...COMPLETO, numero: ' ' } })).toBeNull()
+    expect(enderecoDaLoja({ endereco: { ...COMPLETO, cidade: '' } })).toBeNull()
+    expect(enderecoDaLoja({})).toBeNull()
+  })
+
+  test('mapa embutido só com a chave do Google', () => {
+    const endereco = enderecoDaLoja({ endereco: COMPLETO })
+
+    expect(mapaGoogle(endereco, 'chave-teste')).toBe(`https://www.google.com/maps/embed/v1/place?key=chave-teste&q=${encodeURIComponent(endereco.busca)}`)
+    expect(mapaGoogle(endereco, '')).toBeNull()
+    expect(mapaGoogle(endereco, undefined)).toBeNull()
   })
 })

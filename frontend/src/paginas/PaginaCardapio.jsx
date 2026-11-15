@@ -27,9 +27,11 @@ import {
   agruparPorCategoria,
   AVISO_ENCOMENDA,
   filtrarProdutos,
+  enderecoDaLoja,
   formasDaLoja,
+  linkGoogleMaps,
+  mapaGoogle,
   mensagemContato,
-  PONTO_RETIRADA_EXEMPLO,
   REGRAS_ENCOMENDA,
   secaoPromocoes,
   telefoneTexto,
@@ -521,26 +523,44 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
 
 // ---------- Perfil da loja ("Mais informações") ----------
 
-// Mapa do OpenStreetMap, sem chave de API, com o ponto marcado e o link para abrir em tela cheia
-function MapaRetirada({ ponto }) {
-  const margem = 0.004
-  const caixa = [ponto.longitude - margem, ponto.latitude - margem, ponto.longitude + margem, ponto.latitude + margem].join(',')
-  const mapa = `https://www.openstreetmap.org/export/embed.html?bbox=${caixa}&layer=mapnik&marker=${ponto.latitude},${ponto.longitude}`
-  const abrir = `https://www.openstreetmap.org/?mlat=${ponto.latitude}&mlon=${ponto.longitude}#map=17/${ponto.latitude}/${ponto.longitude}`
+// Endereço de retirada (ZAP-186): por extenso, no mapa do Google e com o botão para traçar a rota.
+// Sem endereço completo, pede para combinar o local pelo WhatsApp
+function Retirada({ loja }) {
+  const endereco = enderecoDaLoja(loja)
+  if (!endereco) {
+    return (
+      <>
+        <p className={classes.endereco}>
+          <IconMapPin size={22} aria-hidden />
+          <span>Combine o local de retirada pelo WhatsApp.</span>
+        </p>
+        <BotaoWhatsapp loja={loja} texto={mensagemContato(loja)} rotulo="Combinar pelo WhatsApp" />
+      </>
+    )
+  }
+  // Chave da Maps Embed API (ZAP-184), só no ambiente (Render ou .env.local), nunca no repositório
+  const mapa = mapaGoogle(endereco, import.meta.env.VITE_GOOGLE_MAPS_CHAVE)
   return (
     <>
-      <div className={classes.endereco}>
+      <p className={classes.endereco}>
         <IconMapPin size={22} aria-hidden />
-        <div>
-          <b>{ponto.endereco}</b>
-          {ponto.ilustrativo && <span className={classes.etiqueta}>Endereço ilustrativo</span>}
+        <span>
+          {endereco.linhas.map((linha, indice) => (indice === 0 ? <b key={linha}>{linha}</b> : <span key={linha}>{linha}</span>))}
+        </span>
+      </p>
+      {mapa && (
+        <div className={classes.mapa}>
+          <iframe
+            title={`Mapa do local de retirada: ${endereco.texto}`}
+            src={mapa}
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            tabIndex={-1}
+          />
         </div>
-      </div>
-      <div className={classes.mapa}>
-        <iframe title={`Mapa do local de retirada: ${ponto.endereco}`} src={mapa} loading="lazy" referrerPolicy="no-referrer" />
-      </div>
-      <a className={classes.abrirMapa} href={abrir} target="_blank" rel="noopener noreferrer">
-        Abrir no mapa
+      )}
+      <a className={classes.abrirMapa} href={linkGoogleMaps(endereco)} target="_blank" rel="noopener noreferrer">
+        Abrir no Google Maps
         <IconExternalLink size={18} aria-hidden />
         <span className={classes.somenteLeitor}> (abre em outra aba)</span>
       </a>
@@ -608,7 +628,7 @@ function PerfilLoja({ loja, escuro }) {
         <section aria-labelledby="perfil-retirada">
           <h2 id="perfil-retirada" className={classes.tituloBloco}>Retirada</h2>
           <div className={classes.bloco}>
-            <MapaRetirada ponto={PONTO_RETIRADA_EXEMPLO} />
+            <Retirada loja={loja} />
           </div>
         </section>
         <section aria-labelledby="perfil-contato">
