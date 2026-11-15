@@ -24,9 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class MigracoesTests {
 
-	/** As nove do dicionário de dados (Atividade #14) e a categoria (ZAP-137). */
+	/** As nove do dicionário de dados (Atividade #14), a categoria (ZAP-137) e o aceite dos termos (ZAP-145). */
 	private static final List<String> TABELAS = List.of("estabelecimento", "usuario", "unidade_medida", "produto",
-			"cliente", "pedido", "item_pedido", "mensagem_whatsapp", "log_auditoria", "categoria");
+			"cliente", "pedido", "item_pedido", "mensagem_whatsapp", "log_auditoria", "categoria", "aceite_termos");
 
 	@Autowired
 	private JdbcTemplate jdbc;
@@ -173,6 +173,18 @@ class MigracoesTests {
 				"insert into categoria (estabelecimento_id, nome, ordem) values (?, 'BOLOS', 3)", estabelecimento))
 			.isInstanceOf(DataIntegrityViolationException.class)
 			.hasMessageContaining("uk_categoria_nome_ativa");
+	}
+
+	@Test
+	void clienteTemAVersaoDoConsentimentoOpcional() {
+		assertThat(coluna("cliente", "consentimento_versao")).containsEntry("is_nullable", "YES");
+
+		long estabelecimento = criarEstabelecimento("confeitaria-a");
+		long cliente = criarCliente(estabelecimento, "5511900000001");
+
+		assertThat(jdbc.queryForObject("select consentimento_versao from cliente where id = ?", Integer.class,
+				cliente))
+			.isNull();
 	}
 
 	private Map<String, Object> coluna(String tabela, String coluna) {
