@@ -726,3 +726,9 @@
     }
   }
 }
+
+/* ZAP-169: no card da coluna Entregue, a data da entrega no azul da coluna (8,8:1 sobre o branco) */
+.entregueEm {
+  color: #3a4577;
+  font-weight: 600;
+}

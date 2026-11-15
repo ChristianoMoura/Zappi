@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import {
+  AVANCO,
   colunasVisiveis,
+  dataHoraTexto,
+  podeAnonimizar,
+  podeEditar,
+  VOLTA,
   dataRetiradaCurta,
   dataRetiradaMensagem,
   horaTexto,
@@ -30,8 +35,8 @@ const pedido = (extras) => ({
 
 describe('regras do quadro de pedidos (ZAP-28)', () => {
   test('esconde a coluna Recusado até ligar o filtro (RN04)', () => {
-    expect(colunasVisiveis(false).map((c) => c.nome)).toEqual(['Novo', 'Confirmado', 'Em produção', 'Concluído'])
-    expect(colunasVisiveis(true).map((c) => c.nome)).toContain('Recusado')
+    expect(colunasVisiveis(false).map((c) => c.nome)).toEqual(['Novo', 'Confirmado', 'Em produção', 'Concluído', 'Entregue'])
+    expect(colunasVisiveis(true).map((c) => c.nome)).toEqual(['Novo', 'Confirmado', 'Em produção', 'Concluído', 'Entregue', 'Recusado'])
   })
 
   test('soma os subtotais com o preço congelado (RN10, RN11)', () => {
@@ -50,9 +55,10 @@ describe('regras do quadro de pedidos (ZAP-28)', () => {
     expect(dataRetiradaCurta('2026-11-07', hoje)).toBe('hoje, 07/11')
   })
 
-  test('marca "Retira hoje" só em pedido aceito que ainda não ficou pronto', () => {
+  test('marca "Retira hoje" em pedido aceito que ainda não foi entregue, inclusive o Concluído (ZAP-169)', () => {
     expect(retiraHoje(pedido({ dataRetirada: '2026-11-07', status: STATUS.EM_PRODUCAO }), hoje)).toBe(true)
-    expect(retiraHoje(pedido({ dataRetirada: '2026-11-07', status: STATUS.CONCLUIDO }), hoje)).toBe(false)
+    expect(retiraHoje(pedido({ dataRetirada: '2026-11-07', status: STATUS.CONCLUIDO }), hoje)).toBe(true)
+    expect(retiraHoje(pedido({ dataRetirada: '2026-11-07', status: STATUS.ENTREGUE }), hoje)).toBe(false)
     expect(retiraHoje(pedido({ dataRetirada: '2026-11-07', status: STATUS.RECUSADO }), hoje)).toBe(false)
     expect(retiraHoje(pedido(), hoje)).toBe(false)
   })
@@ -62,6 +68,15 @@ describe('regras do quadro de pedidos (ZAP-28)', () => {
       expect(retiraHoje(pedido({ dataRetirada: `2026-11-07T${hora}`, status: STATUS.CONFIRMADO }), hoje)).toBe(true)
     }
     expect(retiraHoje(pedido({ dataRetirada: '2026-11-08T08:00', status: STATUS.CONFIRMADO }), hoje)).toBe(false)
+  })
+
+  test('Concluído avança para Entregue, e Entregue só volta para Concluído (ZAP-169)', () => {
+    expect(AVANCO[STATUS.CONCLUIDO]).toEqual({ destino: STATUS.ENTREGUE, rotulo: 'Marcar como entregue' })
+    expect(AVANCO[STATUS.ENTREGUE]).toBeUndefined()
+    expect(VOLTA[STATUS.ENTREGUE]).toEqual({ destino: STATUS.CONCLUIDO, rotulo: 'Voltar para concluído' })
+    expect(podeEditar(STATUS.ENTREGUE)).toBe(false)
+    expect(podeAnonimizar(STATUS.ENTREGUE)).toBe(true)
+    expect(dataHoraTexto('2030-01-15T10:30')).toBe('15/01 às 10:30')
   })
 
   test('ordena a coluna pela data de retirada', () => {

@@ -144,6 +144,8 @@ describe('servicoPedidos (ZAP-122)', () => {
     [STATUS.EM_PRODUCAO, avancarPedido, 'concluir'],
     [STATUS.EM_PRODUCAO, voltarPedido, 'voltar-para-confirmado'],
     [STATUS.CONCLUIDO, voltarPedido, 'voltar-para-producao'],
+    [STATUS.CONCLUIDO, avancarPedido, 'entregar'],
+    [STATUS.ENTREGUE, voltarPedido, 'voltar-para-concluido'],
   ])('com o pedido no status %i, escolhe a rota pelo status atual', async (status, acao, rota) => {
     const chamadas = simularBackend(json(200, { ...doBackend, status }), json(200, doBackend))
 
@@ -153,6 +155,15 @@ describe('servicoPedidos (ZAP-122)', () => {
     expect(leitura).toBe('/api/pedidos/1')
     expect(endereco).toBe(`/api/pedidos/1/${rota}`)
     expect(opcoes.method).toBe('POST')
+  })
+
+  it('traz a data e a hora da entrega no horário de quem usa o painel (ZAP-169)', async () => {
+    simularBackend(json(200, { ...doBackend, status: STATUS.ENTREGUE, entregueEm: '2026-11-15T20:30:00Z' }))
+
+    const pedido = await buscarPedido(1)
+
+    expect(pedido.status).toBe(STATUS.ENTREGUE)
+    expect(pedido.entregueEm).toBe(local('2026-11-15T20:30:00Z'))
   })
 
   it('não avança um pedido Novo nem volta um Confirmado', async () => {

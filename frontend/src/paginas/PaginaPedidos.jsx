@@ -177,10 +177,15 @@ export function PaginaPedidos() {
     return agir(acao, () => recusarPedido(pedido.numero, motivo), `${acao} o pedido`)
   }
 
-  // "Iniciar produção" e "Marcar como pronto" (ZAP-77)
+  // "Iniciar produção" e "Marcar como pronto" (ZAP-77) e "Marcar como entregue" (ZAP-169)
+  const AVANCOS = {
+    [STATUS.CONFIRMADO]: ['iniciar', 'iniciar a produção'],
+    [STATUS.EM_PRODUCAO]: ['pronto', 'marcar o pedido como pronto'],
+    [STATUS.CONCLUIDO]: ['entregar', 'marcar o pedido como entregue'],
+  }
   function avancar(pedido) {
-    const pronto = pedido.status === STATUS.EM_PRODUCAO
-    return agir(pronto ? 'pronto' : 'iniciar', () => avancarPedido(pedido.numero), pronto ? 'marcar o pedido como pronto' : 'iniciar a produção')
+    const [acao, oQueFazer] = AVANCOS[pedido.status]
+    return agir(acao, () => avancarPedido(pedido.numero), oQueFazer)
   }
 
   const voltar = (pedido) => agir('voltar', () => voltarPedido(pedido.numero), 'voltar o pedido')

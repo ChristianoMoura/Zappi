@@ -16,8 +16,8 @@ const TIPOS = { CONFIRMACAO: 'Confirmação', RECUSA: 'Recusa', PRONTO: 'Pronto 
 const STATUS_MENSAGEM = { PENDENTE: 'Pendente', ENVIADA: 'Enviada', FALHA: 'Falha' }
 
 // Rotas de avançar e voltar uma coluna, pelo status atual (RN03, ZAP-64)
-const ROTA_AVANCO = { [STATUS.CONFIRMADO]: 'iniciar-producao', [STATUS.EM_PRODUCAO]: 'concluir' }
-const ROTA_VOLTA = { [STATUS.EM_PRODUCAO]: 'voltar-para-confirmado', [STATUS.CONCLUIDO]: 'voltar-para-producao' }
+const ROTA_AVANCO = { [STATUS.CONFIRMADO]: 'iniciar-producao', [STATUS.EM_PRODUCAO]: 'concluir', [STATUS.CONCLUIDO]: 'entregar' }
+const ROTA_VOLTA = { [STATUS.EM_PRODUCAO]: 'voltar-para-confirmado', [STATUS.CONCLUIDO]: 'voltar-para-producao', [STATUS.ENTREGUE]: 'voltar-para-concluido' }
 
 async function chamar(caminho, opcoes) {
   const resposta = await chamarApi(`/pedidos${caminho}`, opcoes)
@@ -77,6 +77,8 @@ function paraTela(pedido) {
     confirmadoEm: dataHoraLocal(pedido.confirmadoEm),
     producaoEm: dataHoraLocal(pedido.producaoEm),
     concluidoEm: dataHoraLocal(pedido.concluidoEm),
+    // Quando a Lídia marcou como entregue (ZAP-169)
+    entregueEm: dataHoraLocal(pedido.entregueEm),
     recusadoEm: dataHoraLocal(pedido.recusadoEm),
     motivoRecusa: opcional(pedido.motivoRecusa),
     cancelado: pedido.cancelado,
@@ -119,10 +121,12 @@ async function moverPedido(numero, rotas) {
   return pedidoDaApi(`/${numero}/${rota}`, { metodo: 'POST' })
 }
 
-// Confirmado → Em produção e Em produção → Concluído, com o aviso de pronto (ZAP-75, ZAP-76)
+// Confirmado → Em produção, Em produção → Concluído (com o aviso de pronto, ZAP-75, ZAP-76) e
+// Concluído → Entregue (ZAP-169)
 export const avancarPedido = (numero) => moverPedido(numero, ROTA_AVANCO)
 
-// Em produção → Confirmado e Concluído → Em produção (ZAP-75, decisão da ZAP-64)
+// Em produção → Confirmado, Concluído → Em produção (ZAP-75, decisão da ZAP-64) e
+// Entregue → Concluído, quando foi marcado por engano (ZAP-169)
 export const voltarPedido = (numero) => moverPedido(numero, ROTA_VOLTA)
 
 // O clique em "Enviar no WhatsApp" marca a mensagem como enviada; reenviar mantém a primeira

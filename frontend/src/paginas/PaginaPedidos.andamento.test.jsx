@@ -17,21 +17,23 @@ const enviada = (tipo) => mensagemDeTeste(tipo, { status: 'Enviada', enviadoEm: 
 const joao = pedidoDeTeste(11, STATUS.CONFIRMADO, 'João Pereira', { mensagens: [enviada('Confirmação')] })
 const beatriz = pedidoDeTeste(9, STATUS.EM_PRODUCAO, 'Beatriz Rocha', { mensagens: [enviada('Confirmação')] })
 const pedro = pedidoDeTeste(8, STATUS.CONCLUIDO, 'Pedro Alves', { mensagens: [enviada('Confirmação'), enviada('Pronto para retirada')] })
-const pedidos = [joao, beatriz, pedro]
+const lia = pedidoDeTeste(7, STATUS.ENTREGUE, 'Lia Moraes', { entregueEm: '2030-01-14T18:10', mensagens: [enviada('Confirmação'), enviada('Pronto para retirada')] })
+const pedidos = [joao, beatriz, pedro, lia]
 
-const PROXIMO = { [STATUS.CONFIRMADO]: STATUS.EM_PRODUCAO, [STATUS.EM_PRODUCAO]: STATUS.CONCLUIDO }
-const ANTERIOR = { [STATUS.EM_PRODUCAO]: STATUS.CONFIRMADO, [STATUS.CONCLUIDO]: STATUS.EM_PRODUCAO }
+const PROXIMO = { [STATUS.CONFIRMADO]: STATUS.EM_PRODUCAO, [STATUS.EM_PRODUCAO]: STATUS.CONCLUIDO, [STATUS.CONCLUIDO]: STATUS.ENTREGUE }
+const ANTERIOR = { [STATUS.EM_PRODUCAO]: STATUS.CONFIRMADO, [STATUS.CONCLUIDO]: STATUS.EM_PRODUCAO, [STATUS.ENTREGUE]: STATUS.CONCLUIDO }
 
 function avancado(numero) {
   const original = pedidos.find((p) => p.numero === numero)
   const status = PROXIMO[original.status]
   const mensagens = status === STATUS.CONCLUIDO ? [...original.mensagens, mensagemDeTeste('Pronto para retirada')] : original.mensagens
-  return { ...original, status, mensagens }
+  const entregueEm = status === STATUS.ENTREGUE ? '2030-01-15T10:30' : undefined
+  return { ...original, status, mensagens, entregueEm }
 }
 
 function voltado(numero) {
   const original = pedidos.find((p) => p.numero === numero)
-  return { ...original, status: ANTERIOR[original.status] }
+  return { ...original, status: ANTERIOR[original.status], entregueEm: undefined }
 }
 
 describe('Andamento do pedido e voltar coluna (ZAP-77, RN03)', () => {
@@ -95,6 +97,44 @@ describe('Andamento do pedido e voltar coluna (ZAP-77, RN03)', () => {
     expect(voltarPedido).toHaveBeenCalledWith(8)
     expect(await within(detalhes).findByText(/Pedido voltou para a coluna Em produção. Lembre de avisar Pedro/)).toBeVisible()
     expect(within(detalhes).getByRole('button', { name: 'Marcar como pronto' })).toBeVisible()
+  })
+
+  test('marca um Concluído como entregue: o card vai para a coluna Entregue com a data da entrega (ZAP-169)', async () => {
+    const usuario = userEvent.setup()
+    const detalhes = await abrirPedido(usuario, 8)
+
+    expect(within(detalhes).getByRole('button', { name: 'Voltar para produção' })).toBeVisible()
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Marcar como entregue' }))
+
+    expect(avancarPedido).toHaveBeenCalledWith(8)
+    const aviso = await within(detalhes).findByText('Pedido entregue e movido para a coluna Entregue.')
+    expect(aviso.closest('[role="status"]')).toHaveFocus()
+    expect(detalhes).toHaveTextContent('Entregue15/01 às 10:30')
+    expect(within(detalhes).getByRole('button', { name: 'Voltar para concluído' })).toBeVisible()
+    expect(within(detalhes).queryByRole('button', { name: 'Marcar como entregue' })).not.toBeInTheDocument()
+    const coluna = screen.getByRole('region', { name: /Entregue/ })
+    expect(within(coluna).getByRole('button', { name: 'Pedido 8, Pedro Alves, entregue em 15/01 às 10:30, R$ 200,00' })).toHaveTextContent('Entregue em 15/01 às 10:30')
+  })
+
+  test('volta um Entregue para Concluído com confirmação, sem o lembrete do aviso de pronto (ZAP-169)', async () => {
+    const usuario = userEvent.setup()
+    const detalhes = await abrirPedido(usuario, 7)
+
+    expect(within(detalhes).queryByRole('button', { name: /Marcar como/ })).not.toBeInTheDocument()
+    expect(within(detalhes).queryByRole('link', { name: 'Editar pedido' })).not.toBeInTheDocument()
+    expect(within(detalhes).getByRole('button', { name: 'Apagar dados do cliente' })).toBeEnabled()
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Voltar para concluído' }))
+
+    const janela = await screen.findByRole('dialog', { name: 'Voltar o pedido #7 para Concluído?' })
+    expect(janela).toHaveTextContent('Ele volta para Concluído, e a data da entrega é apagada.')
+    expect(janela).not.toHaveTextContent(/avise pelo WhatsApp/)
+    expect(within(janela).getByRole('button', { name: 'Manter como está' })).toHaveFocus()
+    await usuario.click(within(janela).getByRole('button', { name: 'Voltar para concluído' }))
+
+    expect(voltarPedido).toHaveBeenCalledWith(7)
+    expect(await within(detalhes).findByText('Pedido voltou para a coluna Concluído.')).toBeVisible()
+    const coluna = screen.getByRole('region', { name: /Concluído/ })
+    expect(within(coluna).getByRole('button', { name: /Pedido 7, Lia Moraes/ })).toBeInTheDocument()
   })
 
   test('avisa quando não consegue marcar como pronto e mantém o pedido em produção', async () => {
