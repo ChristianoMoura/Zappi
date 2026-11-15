@@ -1,7 +1,7 @@
 import { Button, VisuallyHidden } from '@mantine/core'
 import { IconEye, IconEyeOff, IconPencil, IconPhotoOff, IconTrash } from '@tabler/icons-react'
 import { Link } from 'react-router'
-import { emPromocao, precoParaTela, UNIDADES } from './regrasProdutos'
+import { emPromocao, precoParaTela, textoPrecoPromocao, textoSeloPromocao, UNIDADES } from './regrasProdutos'
 import classes from './Produtos.module.css'
 import { SelosAlergenos } from './SelosAlergenos'
 
@@ -42,10 +42,8 @@ export function CartaoProduto({ produto, destaque, aoExcluir, aoTirar, aoVoltar,
         {emPromocao(produto) ? (
           // Promoção (ZAP-161): o risco não é lido pelo leitor de tela, então o "De ... por ..." vai em texto
           <p className={classes.preco}>
-            <span className={classes.seloPromocao}>Promoção</span>
-            <VisuallyHidden>
-              De R$ {precoParaTela(produto.preco)} por R$ {precoParaTela(produto.precoPromocional)}
-            </VisuallyHidden>
+            <span className={classes.seloPromocao} aria-hidden="true">{textoSeloPromocao(produto)}</span>
+            <VisuallyHidden>{textoPrecoPromocao(produto)}</VisuallyHidden>
             <s className={classes.precoAntigo} aria-hidden="true">
               R$ {precoParaTela(produto.preco)}
             </s>

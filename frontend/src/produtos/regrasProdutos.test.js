@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { emPromocao, lerPreco, ordenarAlergenos, precoParaTela, precoVigente, sugerirTextoAlternativo, temPromocaoNaApi, validarProduto, validarPromocao } from './regrasProdutos'
+import { emPromocao, lerPreco, ordenarAlergenos, percentualDesconto, precoParaTela, precoVigente, sugerirTextoAlternativo, temPromocaoNaApi, textoPrecoPromocao, textoSeloPromocao, validarProduto, validarPromocao } from './regrasProdutos'
 
 const produto = (extras) => ({ nome: 'Bolo de brigadeiro de chocolate', categoriaId: '1', unidade: 'KG', preco: '100,00', descricao: '', foto: '', textoAlternativo: '', ...extras })
 
@@ -63,5 +63,23 @@ describe('preço promocional (ZAP-152, ZAP-161)', () => {
     expect(emPromocao({ preco: 100, precoPromocional: null })).toBe(false)
     expect(temPromocaoNaApi({ preco: 100, precoPromocional: null })).toBe(true)
     expect(temPromocaoNaApi({ preco: 100 })).toBe(false)
+  })
+})
+
+describe('percentual de desconto do selo (ZAP-152, decisão de 15/11/2026)', () => {
+  test('é arredondado para baixo, para nunca anunciar mais desconto que o real', () => {
+    expect(percentualDesconto({ preco: 115, precoPromocional: 99.9 })).toBe(13)
+    expect(percentualDesconto({ preco: 100, precoPromocional: 80 })).toBe(20)
+    expect(percentualDesconto({ preco: 100, precoPromocional: 80.01 })).toBe(19)
+    // Conta em centavos: 3,00 por 2,10 é 30% exato, e não 29
+    expect(percentualDesconto({ preco: 3, precoPromocional: 2.1 })).toBe(30)
+    expect(percentualDesconto({ preco: 100, precoPromocional: null })).toBe(0)
+  })
+
+  test('o selo e o leitor de tela levam o percentual; com menos de 1%, só "Promoção"', () => {
+    expect(textoSeloPromocao({ preco: 115, precoPromocional: 99.9 })).toBe('Promoção · 13% de desconto')
+    expect(textoPrecoPromocao({ preco: 115, precoPromocional: 99.9 })).toBe('De R$ 115,00 por R$ 99,90, 13% de desconto')
+    expect(textoSeloPromocao({ preco: 100, precoPromocional: 99.5 })).toBe('Promoção')
+    expect(textoPrecoPromocao({ preco: 100, precoPromocional: 99.5 })).toBe('De R$ 100,00 por R$ 99,50')
   })
 })

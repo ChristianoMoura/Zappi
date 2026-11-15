@@ -92,3 +92,26 @@ export function validarPromocao({ preco, precoPromocional }) {
   else if (!erros.preco && desconto >= antes) erros.precoPromocional = 'O preço com desconto precisa ser menor que o preço antes da promoção.'
   return erros
 }
+
+// Percentual de desconto do selo (ZAP-152, decisão de 15/11/2026): (normal − com desconto) ÷
+// normal × 100, arredondado para baixo, para nunca anunciar um desconto maior que o real (CDC).
+// A conta é feita em centavos, para a vírgula do JavaScript não virar 29,999… e cair para 29.
+export function percentualDesconto(produto) {
+  if (!emPromocao(produto)) return 0
+  const normal = Math.round(produto.preco * 100)
+  const desconto = Math.round(produto.precoPromocional * 100)
+  return normal > 0 ? Math.floor(((normal - desconto) * 100) / normal) : 0
+}
+
+// "Promoção · 13% de desconto"; com menos de 1%, só "Promoção"
+export function textoSeloPromocao(produto) {
+  const percentual = percentualDesconto(produto)
+  return percentual >= 1 ? `Promoção · ${percentual}% de desconto` : 'Promoção'
+}
+
+// O que o leitor de tela ouve no lugar do preço riscado: "De R$ 115,00 por R$ 99,90, 13% de desconto"
+export function textoPrecoPromocao(produto) {
+  const percentual = percentualDesconto(produto)
+  const precos = `De R$ ${precoParaTela(produto.preco)} por R$ ${precoParaTela(produto.precoPromocional)}`
+  return percentual >= 1 ? `${precos}, ${percentual}% de desconto` : precos
+}

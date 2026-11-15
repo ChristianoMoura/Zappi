@@ -86,9 +86,9 @@ describe('aplicar desconto na tela do produto (ZAP-161)', () => {
     await usuario.click(within(secao()).getByRole('button', { name: 'Aplicar desconto' }))
 
     expect(aplicarPromocao).toHaveBeenCalledWith(2, { preco: 115, precoPromocional: 99.9 })
-    expect(await within(secao()).findByText('Promoção', { selector: 'span' })).toBeInTheDocument()
+    expect(await within(secao()).findByText('Promoção · 13% de desconto')).toBeInTheDocument()
     expect(secao()).toHaveTextContent('De R$ 115,00 por R$ 99,90 por kg')
-    expect(screen.getByRole('status')).toHaveTextContent('Bolo de ninho com morango está em promoção: de R$ 115,00 por R$ 99,90.')
+    expect(screen.getByRole('status')).toHaveTextContent('Bolo de ninho com morango está em promoção: de R$ 115,00 por R$ 99,90, 13% de desconto.')
     await waitFor(() => expect(within(secao()).getByRole('button', { name: 'Encerrar promoção' })).toHaveFocus())
   })
 
@@ -152,13 +152,13 @@ describe('aplicar desconto na tela do produto (ZAP-161)', () => {
     expect(salvarProduto).not.toHaveBeenCalled()
   })
 
-  test('a lista de produtos mostra o selo "Promoção", o preço antigo riscado e o "De ... por ..." para o leitor de tela', async () => {
+  test('a lista de produtos mostra o selo com o percentual, o preço antigo riscado e o "De ... por ..." para o leitor de tela', async () => {
     buscarProdutos.mockResolvedValue([emPromocao])
     renderizarComRotas(rotas, '/produtos')
 
     const cartao = await screen.findByRole('article', { name: 'Bolo de ninho com morango' })
-    expect(within(cartao).getByText('Promoção')).toBeInTheDocument()
-    expect(within(cartao).getByText('De R$ 115,00 por R$ 99,90')).toBeInTheDocument()
+    expect(within(cartao).getByText('Promoção · 13% de desconto')).toHaveAttribute('aria-hidden', 'true')
+    expect(within(cartao).getByText('De R$ 115,00 por R$ 99,90, 13% de desconto')).toBeInTheDocument()
     expect(cartao.querySelector('s')).toHaveTextContent('R$ 115,00')
   })
 })
