@@ -1,7 +1,7 @@
 import { Alert, Button, Modal, TextInput } from '@mantine/core'
 import { IconAlertCircle, IconDiscount, IconDiscountOff } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { emPromocao, lerPreco, precoParaTela, UNIDADES, validarPromocao } from './regrasProdutos'
+import { emPromocao, lerPreco, percentualDesconto, precoParaTela, textoSeloPromocao, UNIDADES, validarPromocao } from './regrasProdutos'
 import { aplicarPromocao, encerrarPromocao, PromocaoRecusadaError } from './servicoProdutos'
 import classes from './Produtos.module.css'
 
@@ -59,7 +59,8 @@ export function SecaoPromocao({ produto, aoMudar, aoAvisar }) {
       const atualizado = await aplicarPromocao(produto.id, { preco: lerPreco(campos.preco), precoPromocional: lerPreco(campos.precoPromocional) })
       aoMudar(atualizado)
       setAberta(false)
-      aoAvisar(`${produto.nome} está em promoção: de R$ ${precoParaTela(atualizado.preco)} por R$ ${precoParaTela(atualizado.precoPromocional)}.`)
+      const percentual = percentualDesconto(atualizado)
+      aoAvisar(`${produto.nome} está em promoção: de R$ ${precoParaTela(atualizado.preco)} por R$ ${precoParaTela(atualizado.precoPromocional)}${percentual >= 1 ? `, ${percentual}% de desconto` : ''}.`)
       setTimeout(() => botao.current?.focus())
     } catch (erro) {
       if (erro instanceof PromocaoRecusadaError && (erro.campos.preco || erro.campos.precoPromocional)) {
@@ -126,7 +127,7 @@ export function SecaoPromocao({ produto, aoMudar, aoAvisar }) {
       {ativa ? (
         <>
           <p className={classes.precosPromocao}>
-            <span className={classes.seloPromocao}>Promoção</span>
+            <span className={classes.seloPromocao}>{textoSeloPromocao(produto)}</span>
             <span>
               De <s>R$ {precoParaTela(produto.preco)}</s> por <strong>R$ {precoParaTela(produto.precoPromocional)}</strong> {unidade.selo}
             </span>
