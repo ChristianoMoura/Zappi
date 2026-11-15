@@ -1,5 +1,9 @@
 package br.com.zappi.cardapio;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -7,6 +11,7 @@ import br.com.zappi.armazenamento.ArmazenamentoDeFotos;
 import br.com.zappi.armazenamento.ArmazenamentoDoEstabelecimento;
 import br.com.zappi.cardapio.RespostaCardapio.LojaDoCardapio;
 import br.com.zappi.cardapio.RespostaCardapio.ProdutoDoCardapio;
+import br.com.zappi.categoria.RespostaCategoria;
 import br.com.zappi.estabelecimento.Estabelecimento;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
 import br.com.zappi.estabelecimento.EstabelecimentoRepositorio;
@@ -14,7 +19,8 @@ import br.com.zappi.produto.ProdutoRepositorio;
 
 /**
  * Leitura do cardápio público pelo link da loja (ZAP-104), sem login (RN02). A loja é achada
- * pelo {@code slug}, e só os produtos ativos dela aparecem (RN01, RN14).
+ * pelo {@code slug}, e só os produtos ativos dela aparecem (RN01, RN14), na ordem das categorias
+ * da Lídia (ZAP-136). Categoria sem produto no cardápio não aparece para o cliente.
  */
 @Service
 public class ServicoCardapio {
@@ -43,14 +49,17 @@ public class ServicoCardapio {
 		LojaDoCardapio dadosDaLoja = new LojaDoCardapio(loja.getNome(), loja.getSlug(), loja.getDescricao(),
 				loja.getTelefoneWhatsapp(), fotosDaLoja.enderecoPublico(loja.getLogoCaminho()),
 				fotosDaLoja.enderecoPublico(loja.getCapaCaminho()));
-		return new RespostaCardapio(dadosDaLoja,
-				produtos.findByEstabelecimentoIdAndAtivoTrueOrderByNomeAscSaborAscIdAsc(loja.getId())
-					.stream()
-					.map(produto -> new ProdutoDoCardapio(produto.getId(), produto.getNome(), produto.getSabor(),
-							produto.getUnidadeMedida().getSigla(), produto.getPreco(), produto.getDescricao(),
-							fotosDosProdutos.enderecoPublico(produto.getFotoCaminho()),
-							produto.getFotoTextoAlternativo()))
-					.toList());
+		// As categorias saem dos próprios produtos, que já vêm na ordem delas
+		Map<Long, RespostaCategoria> categorias = new LinkedHashMap<>();
+		List<ProdutoDoCardapio> doCardapio = produtos.listarAtivosNaOrdem(loja.getId())
+			.stream()
+			.map(produto -> new ProdutoDoCardapio(produto.getId(), produto.getNome(),
+					categorias.computeIfAbsent(produto.getCategoria().getId(),
+							id -> RespostaCategoria.de(produto.getCategoria())),
+					produto.getUnidadeMedida().getSigla(), produto.getPreco(), produto.getDescricao(),
+					fotosDosProdutos.enderecoPublico(produto.getFotoCaminho()), produto.getFotoTextoAlternativo()))
+			.toList();
+		return new RespostaCardapio(dadosDaLoja, List.copyOf(categorias.values()), doCardapio);
 	}
 
 }

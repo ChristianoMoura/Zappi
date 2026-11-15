@@ -3,6 +3,7 @@ package br.com.zappi.produto;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
+import br.com.zappi.categoria.Categoria;
 import br.com.zappi.estabelecimento.Estabelecimento;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,11 +34,14 @@ public class Produto {
 	@JoinColumn(name = "unidade_medida_id", nullable = false)
 	private UnidadeMedida unidadeMedida;
 
-	@Column(name = "nome", nullable = false, length = 100)
-	private String nome;
+	/** Obrigatória e da mesma loja (ZAP-136); define a ordem das listas. */
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "categoria_id", nullable = false)
+	private Categoria categoria;
 
-	@Column(name = "sabor", nullable = false, length = 100)
-	private String sabor;
+	/** Nome completo, ex.: "Bolo de brigadeiro de chocolate". Não há mais o campo sabor (ZAP-136). */
+	@Column(name = "nome", nullable = false, length = 150)
+	private String nome;
 
 	@Column(name = "descricao", length = 500)
 	private String descricao;
@@ -72,12 +76,12 @@ public class Produto {
 	}
 
 	/** Produto novo, já ativo no cardápio (ZAP-39). */
-	public Produto(Estabelecimento estabelecimento, UnidadeMedida unidadeMedida, String nome, String sabor,
+	public Produto(Estabelecimento estabelecimento, Categoria categoria, UnidadeMedida unidadeMedida, String nome,
 			String descricao, BigDecimal preco, String fotoTextoAlternativo, Boolean contemGluten,
 			String outrosAlergenos, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.ativo = true;
-		atualizar(unidadeMedida, nome, sabor, descricao, preco, fotoTextoAlternativo, contemGluten, outrosAlergenos,
+		atualizar(categoria, unidadeMedida, nome, descricao, preco, fotoTextoAlternativo, contemGluten, outrosAlergenos,
 				agora);
 	}
 
@@ -85,12 +89,12 @@ public class Produto {
 	 * Troca os dados do produto. Os pedidos antigos não mudam: o item do pedido guarda o
 	 * preço congelado (RN10).
 	 */
-	public void atualizar(UnidadeMedida unidadeMedida, String nome, String sabor, String descricao,
+	public void atualizar(Categoria categoria, UnidadeMedida unidadeMedida, String nome, String descricao,
 			BigDecimal preco, String fotoTextoAlternativo, Boolean contemGluten, String outrosAlergenos,
 			OffsetDateTime agora) {
+		this.categoria = categoria;
 		this.unidadeMedida = unidadeMedida;
 		this.nome = nome;
-		this.sabor = sabor;
 		this.descricao = descricao;
 		this.preco = preco;
 		this.fotoTextoAlternativo = fotoTextoAlternativo;
@@ -140,8 +144,8 @@ public class Produto {
 		return nome;
 	}
 
-	public String getSabor() {
-		return sabor;
+	public Categoria getCategoria() {
+		return categoria;
 	}
 
 	public String getDescricao() {

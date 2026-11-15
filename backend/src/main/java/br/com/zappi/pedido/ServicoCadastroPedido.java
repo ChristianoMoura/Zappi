@@ -74,6 +74,9 @@ public class ServicoCadastroPedido {
 
 	private static final String QUANTIDADE_INTEIRA = "Este produto é vendido por unidade: use um número inteiro.";
 
+	private static final String OBSERVACAO_LONGA = "Use no máximo %d caracteres."
+		.formatted(ItemDaRequisicao.MAXIMO_OBSERVACAO);
+
 	private final PedidoRepositorio pedidos;
 
 	private final ItemPedidoRepositorio itens;
@@ -145,7 +148,7 @@ public class ServicoCadastroPedido {
 		List<ItemDaRequisicao> itensDaRequisicao = requisicao.itens();
 		for (int i = 0; i < itensDaRequisicao.size(); i++) {
 			ItemDaRequisicao item = itensDaRequisicao.get(i);
-			conferirItem(erros, i, item, doCardapio.get(item.produtoId()));
+			conferirItem(erros, i, item, doCardapio.get(item.produtoId()), true);
 		}
 		if (!erros.isEmpty()) {
 			throw new DadosInvalidosException(erros);
@@ -223,7 +226,7 @@ public class ServicoCadastroPedido {
 			ItemPedido existente = correspondentes.get(i);
 			Produto produto = existente != null ? existente.getProduto()
 					: doCardapio.get(itensDaRequisicao.get(i).produtoId());
-			conferirItem(erros, i, itensDaRequisicao.get(i), produto);
+			conferirItem(erros, i, itensDaRequisicao.get(i), produto, existente == null);
 		}
 		if (!erros.isEmpty()) {
 			throw new DadosInvalidosException(erros);
@@ -236,8 +239,7 @@ public class ServicoCadastroPedido {
 			ItemDaRequisicao itemDaRequisicao = itensDaRequisicao.get(i);
 			ItemPedido existente = correspondentes.get(i);
 			if (existente != null) {
-				existente.atualizar(itemDaRequisicao.quantidade(), itemDaRequisicao.recheio(), itemDaRequisicao.cobertura(),
-						itemDaRequisicao.observacao());
+				existente.atualizar(itemDaRequisicao.quantidade(), itemDaRequisicao.observacao());
 				itensDoPedido.add(existente);
 			}
 			else {
@@ -310,8 +312,15 @@ public class ServicoCadastroPedido {
 			.collect(Collectors.toMap(Produto::getId, Function.identity()));
 	}
 
-	/** Produto do cardápio e, se for vendido por unidade, quantidade inteira (RN12). */
-	private static void conferirItem(Map<String, String> erros, int indice, ItemDaRequisicao item, Produto produto) {
+	/**
+	 * Produto do cardápio e, se for vendido por unidade, quantidade inteira (RN12). Item novo tem
+	 * observação de até 300 caracteres; o que já estava no pedido pode manter até 600 (ZAP-136).
+	 */
+	private static void conferirItem(Map<String, String> erros, int indice, ItemDaRequisicao item, Produto produto,
+			boolean novo) {
+		if (novo && item.observacao() != null && item.observacao().length() > ItemDaRequisicao.MAXIMO_OBSERVACAO) {
+			erros.put("itens[%d].observacao".formatted(indice), OBSERVACAO_LONGA);
+		}
 		if (produto == null) {
 			erros.put("itens[%d].produtoId".formatted(indice), PRODUTO_FORA_DO_CARDAPIO);
 			return;
@@ -341,8 +350,7 @@ public class ServicoCadastroPedido {
 	}
 
 	private static ItemPedido novoItem(Pedido pedido, Produto produto, ItemDaRequisicao item) {
-		return new ItemPedido(pedido, produto, produto.getPreco(), item.quantidade(), item.recheio(), item.cobertura(),
-				item.observacao());
+		return new ItemPedido(pedido, produto, produto.getPreco(), item.quantidade(), item.observacao());
 	}
 
 	private static BigDecimal total(List<ItemPedido> itensDoPedido) {

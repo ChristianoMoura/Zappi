@@ -19,6 +19,9 @@ import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.auditoria.AcaoAuditoria;
 import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
+import br.com.zappi.categoria.Categoria;
+import br.com.zappi.categoria.CategoriaRepositorio;
+import br.com.zappi.erro.DadosInvalidosException;
 import br.com.zappi.estabelecimento.Estabelecimento;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 import jakarta.persistence.EntityManager;
@@ -33,7 +36,11 @@ public class ServicoProduto {
 
 	private static final String ENTIDADE = "produto";
 
+	private static final String CATEGORIA_INVALIDA = "Escolha uma categoria da lista.";
+
 	private final ProdutoRepositorio produtos;
+
+	private final CategoriaRepositorio categorias;
 
 	private final UnidadeMedidaRepositorio unidades;
 
@@ -43,19 +50,21 @@ public class ServicoProduto {
 
 	private final ArmazenamentoDeFotos armazenamento;
 
-	public ServicoProduto(ProdutoRepositorio produtos, UnidadeMedidaRepositorio unidades, ServicoAuditoria auditoria,
-			EntityManager entityManager, ArmazenamentoDeFotos armazenamento) {
+	public ServicoProduto(ProdutoRepositorio produtos, CategoriaRepositorio categorias,
+			UnidadeMedidaRepositorio unidades, ServicoAuditoria auditoria, EntityManager entityManager,
+			ArmazenamentoDeFotos armazenamento) {
 		this.produtos = produtos;
+		this.categorias = categorias;
 		this.unidades = unidades;
 		this.auditoria = auditoria;
 		this.entityManager = entityManager;
 		this.armazenamento = armazenamento;
 	}
 
-	/** Só os ativos (RN14), por nome e sabor. */
+	/** Só os ativos (RN14), na ordem das categorias da Lídia e, dentro delas, por nome (ZAP-136). */
 	@Transactional(readOnly = true)
 	public List<RespostaProduto> listar(UsuarioAutenticado usuario) {
-		return produtos.findByEstabelecimentoIdAndAtivoTrueOrderByNomeAscSaborAscIdAsc(usuario.estabelecimentoId())
+		return produtos.listarAtivosNaOrdem(usuario.estabelecimentoId())
 			.stream()
 			.map(this::resposta)
 			.toList();
@@ -69,8 +78,8 @@ public class ServicoProduto {
 	@Transactional
 	public RespostaProduto criar(UsuarioAutenticado usuario, RequisicaoProduto dados) {
 		Produto produto = new Produto(entityManager.getReference(Estabelecimento.class, usuario.estabelecimentoId()),
-				unidade(dados), dados.nome(), dados.sabor(), dados.descricao(), preco(dados), dados.textoAlternativo(),
-				dados.contemGluten(), dados.outrosAlergenos(), agora());
+				categoria(usuario, dados), unidade(dados), dados.nome(), dados.descricao(), preco(dados),
+				dados.textoAlternativo(), dados.contemGluten(), dados.outrosAlergenos(), agora());
 		produtos.saveAndFlush(produto);
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_CRIADO, produto, Map.of("depois", retrato(produto)));
@@ -83,9 +92,10 @@ public class ServicoProduto {
 		if (produto.temFoto() && dados.textoAlternativo() == null) {
 			throw new FotoSemTextoAlternativoException();
 		}
+		Categoria categoria = categoria(usuario, dados);
 		Map<String, Object> antes = retrato(produto);
 
-		produto.atualizar(unidade(dados), dados.nome(), dados.sabor(), dados.descricao(), preco(dados),
+		produto.atualizar(categoria, unidade(dados), dados.nome(), dados.descricao(), preco(dados),
 				dados.textoAlternativo(), dados.contemGluten(), dados.outrosAlergenos(), agora());
 		produtos.flush();
 
@@ -177,6 +187,15 @@ public class ServicoProduto {
 		return dados.preco().setScale(2, RoundingMode.UNNECESSARY);
 	}
 
+	/**
+	 * Categoria ativa da mesma loja (RN01, ZAP-136). Uma de outra loja, excluída ou inexistente
+	 * recebe a mesma resposta, sem revelar que ela existe em outro lugar.
+	 */
+	private Categoria categoria(UsuarioAutenticado usuario, RequisicaoProduto dados) {
+		return categorias.findByIdAndEstabelecimentoIdAndAtivoTrue(dados.categoriaId(), usuario.estabelecimentoId())
+			.orElseThrow(() -> new DadosInvalidosException(Map.of("categoriaId", CATEGORIA_INVALIDA)));
+	}
+
 	private UnidadeMedida unidade(RequisicaoProduto dados) {
 		// A validação da requisição já garante KG ou UN, que existem desde a V1.
 		return unidades.findBySigla(dados.unidade()).orElseThrow();
@@ -195,7 +214,8 @@ public class ServicoProduto {
 	private static Map<String, Object> retrato(Produto produto) {
 		Map<String, Object> campos = new LinkedHashMap<>();
 		campos.put("nome", produto.getNome());
-		campos.put("sabor", produto.getSabor());
+		campos.put("categoriaId", produto.getCategoria().getId());
+		campos.put("categoria", produto.getCategoria().getNome());
 		campos.put("unidade", produto.getUnidadeMedida().getSigla());
 		// Texto com 2 casas, para o log mostrar sempre o mesmo formato (ex.: "100.00")
 		campos.put("preco", produto.getPreco().setScale(2, RoundingMode.UNNECESSARY).toPlainString());

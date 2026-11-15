@@ -3,6 +3,8 @@ package br.com.zappi.produto;
 import java.math.BigDecimal;
 import java.util.Locale;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -12,11 +14,14 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Corpo do cadastro e da edição de produto (RF05, RN13). Os nomes dos campos são os da
- * tela ({@code frontend/src/produtos/servicoProdutos.js}). A foto em si chega na ZAP-40.
+ * tela ({@code frontend/src/produtos/servicoProdutos.js}). A foto em si chega na ZAP-40. O nome
+ * é o nome completo, sem o campo sabor, e a categoria é obrigatória (ZAP-136). Campos a mais,
+ * como o {@code sabor} de uma tela antiga, são ignorados.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record RequisicaoProduto(
-		@NotBlank(message = "Informe o nome.") @Size(max = 100, message = "Use até 100 caracteres.") String nome,
-		@NotBlank(message = "Informe o sabor.") @Size(max = 100, message = "Use até 100 caracteres.") String sabor,
+		@NotBlank(message = "Informe o nome.") @Size(max = 150, message = "Use até 150 caracteres.") String nome,
+		@NotNull(message = "Escolha a categoria do produto.") Long categoriaId,
 		@NotBlank(message = "Escolha a unidade: KG ou UN.")
 		@Pattern(regexp = "KG|UN", message = "Escolha a unidade: KG ou UN.") String unidade,
 		@NotNull(message = "Informe o preço.")
@@ -29,7 +34,6 @@ public record RequisicaoProduto(
 
 	public RequisicaoProduto {
 		nome = obrigatorio(nome);
-		sabor = obrigatorio(sabor);
 		unidade = unidade == null ? null : unidade.trim().toUpperCase(Locale.ROOT);
 		descricao = opcional(descricao);
 		textoAlternativo = opcional(textoAlternativo);

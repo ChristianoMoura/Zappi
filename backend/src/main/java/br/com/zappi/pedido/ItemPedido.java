@@ -43,13 +43,12 @@ public class ItemPedido {
 	@Column(name = "subtotal", nullable = false, precision = 10, scale = 2)
 	private BigDecimal subtotal;
 
-	@Column(name = "recheio", length = 100)
-	private String recheio;
-
-	@Column(name = "cobertura", length = 100)
-	private String cobertura;
-
-	@Column(name = "observacao", length = 300)
+	/**
+	 * Detalhes do item, em todos os produtos. Sem recheio e cobertura desde a ZAP-136: os dos
+	 * pedidos antigos foram copiados para cá, por isso a coluna tem 600 caracteres; item novo
+	 * aceita até 300.
+	 */
+	@Column(name = "observacao", length = 600)
 	private String observacao;
 
 	protected ItemPedido() {
@@ -57,24 +56,22 @@ public class ItemPedido {
 	}
 
 	/** Item novo, com o preço congelado no momento em que entra no pedido (RN10). */
-	public ItemPedido(Pedido pedido, Produto produto, BigDecimal precoUnitario, BigDecimal quantidade, String recheio,
-			String cobertura, String observacao) {
+	public ItemPedido(Pedido pedido, Produto produto, BigDecimal precoUnitario, BigDecimal quantidade,
+			String observacao) {
 		this.pedido = pedido;
 		this.produto = produto;
 		this.precoUnitario = precoUnitario;
-		aplicar(quantidade, recheio, cobertura, observacao);
+		aplicar(quantidade, observacao);
 	}
 
-	/** Muda a quantidade e os detalhes; o preço congelado continua o mesmo (RN10). */
-	public void atualizar(BigDecimal quantidade, String recheio, String cobertura, String observacao) {
-		aplicar(quantidade, recheio, cobertura, observacao);
+	/** Muda a quantidade e a observação; o preço congelado continua o mesmo (RN10). */
+	public void atualizar(BigDecimal quantidade, String observacao) {
+		aplicar(quantidade, observacao);
 	}
 
-	private void aplicar(BigDecimal quantidade, String recheio, String cobertura, String observacao) {
+	private void aplicar(BigDecimal quantidade, String observacao) {
 		// 3 casas, como a coluna (RN12); a validação já barrou mais casas que isso
 		this.quantidade = quantidade.setScale(3, RoundingMode.HALF_UP);
-		this.recheio = recheio;
-		this.cobertura = cobertura;
 		this.observacao = observacao;
 		// subtotal = quantidade × preço congelado, em centavos (RN11)
 		this.subtotal = this.quantidade.multiply(precoUnitario).setScale(2, RoundingMode.HALF_UP);
@@ -102,14 +99,6 @@ public class ItemPedido {
 
 	public BigDecimal getSubtotal() {
 		return subtotal;
-	}
-
-	public String getRecheio() {
-		return recheio;
-	}
-
-	public String getCobertura() {
-		return cobertura;
 	}
 
 	public String getObservacao() {
