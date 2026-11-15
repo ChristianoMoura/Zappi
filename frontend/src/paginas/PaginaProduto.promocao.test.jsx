@@ -165,5 +165,7 @@ describe('aplicar desconto na tela do produto (ZAP-161)', () => {
     expect(within(cartao).queryByText(/Promoção ·/)).not.toBeInTheDocument()
     expect(within(cartao).getByText('De R$ 115,00 por R$ 99,90, 13% de desconto')).toBeInTheDocument()
     expect(cartao.querySelector('s')).toHaveTextContent('R$ 115,00')
+    // Preço com desconto em verde (ajuste de 15/11/2026)
+    expect(within(cartao).getByText('R$ 99,90').className).toMatch(/precoComDesconto/)
   })
 })
