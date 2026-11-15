@@ -313,7 +313,7 @@ class AnonimizacaoClienteTests {
 
 	private ResultActions cadastrar(String nome, String telefone) throws Exception {
 		long brigadeiro = jdbc.queryForObject(
-				"select id from produto where estabelecimento_id = ? and sabor = 'Brigadeiro de chocolate'", Long.class,
+				"select id from produto where estabelecimento_id = ? and nome = 'Bolo de brigadeiro de chocolate'", Long.class,
 				casaBelt);
 		return mockMvc.perform(post("/api/pedidos").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
 			.contentType(MediaType.APPLICATION_JSON)

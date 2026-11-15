@@ -80,7 +80,7 @@ class FotoProdutoTests {
 		casaBelt = ((Number) lidia.get("estabelecimento_id")).longValue();
 		token = servicoToken.gerar(new UsuarioAutenticado(((Number) lidia.get("id")).longValue(), casaBelt));
 		brigadeiro = jdbc.queryForObject(
-				"select id from produto where estabelecimento_id = ? and sabor = 'Brigadeiro de chocolate'", Long.class,
+				"select id from produto where estabelecimento_id = ? and nome = 'Bolo de brigadeiro de chocolate'", Long.class,
 				casaBelt);
 	}
 

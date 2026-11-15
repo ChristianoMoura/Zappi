@@ -21,6 +21,9 @@ import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.autenticacao.CredenciaisInvalidasException;
 import br.com.zappi.autenticacao.LoginBloqueadoException;
 import br.com.zappi.cardapio.EnviosDemaisException;
+import br.com.zappi.categoria.CategoriaComProdutoException;
+import br.com.zappi.categoria.CategoriaNaoEncontradaException;
+import br.com.zappi.categoria.NomeDeCategoriaEmUsoException;
 import br.com.zappi.cliente.ClienteComPedidoEmAbertoException;
 import br.com.zappi.cliente.ClienteJaAnonimizadoException;
 import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
@@ -101,6 +104,26 @@ public class TratadorDeErros {
 	@ResponseStatus(HttpStatus.NOT_FOUND)
 	RespostaErro produtoNaoEncontrado() {
 		return new RespostaErro("PRODUTO_NAO_ENCONTRADO", "Produto não encontrado.");
+	}
+
+	@ExceptionHandler(CategoriaNaoEncontradaException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	RespostaErro categoriaNaoEncontrada(CategoriaNaoEncontradaException erro) {
+		return new RespostaErro("CATEGORIA_NAO_ENCONTRADA", erro.getMessage());
+	}
+
+	/** 409 com a mensagem também em {@code campos.nome}, para a janela mostrar ao lado do campo. */
+	@ExceptionHandler(NomeDeCategoriaEmUsoException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	RespostaErro nomeDeCategoriaEmUso(NomeDeCategoriaEmUsoException erro) {
+		return new RespostaErro("CATEGORIA_NOME_EM_USO", erro.getMessage(), Map.of("nome", erro.getMessage()));
+	}
+
+	/** A categoria ainda tem produto (ZAP-136): a tela mostra a explicação como veio. */
+	@ExceptionHandler(CategoriaComProdutoException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	RespostaErro categoriaComProduto(CategoriaComProdutoException erro) {
+		return new RespostaErro("CATEGORIA_COM_PRODUTO", erro.getMessage());
 	}
 
 	@ExceptionHandler(PedidoNaoEncontradoException.class)

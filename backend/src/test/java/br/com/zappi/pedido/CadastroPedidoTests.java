@@ -72,14 +72,16 @@ class CadastroPedidoTests {
 				"select id, estabelecimento_id from usuario where email = 'lidia@casabelt.com'");
 		casaBelt = ((Number) lidia.get("estabelecimento_id")).longValue();
 		token = servicoToken.gerar(new UsuarioAutenticado(((Number) lidia.get("id")).longValue(), casaBelt));
-		brigadeiro = produto("Brigadeiro de chocolate");
+		brigadeiro = produto("Bolo de brigadeiro de chocolate");
 		coxinha = produto("Coxinha por unidade");
 	}
 
 	@Test
 	void cadastraComONumeroSeguinteEOPrecoDoCardapio() throws Exception {
 		Map<String, Object> pedido = pedido("  Carla Nova  ", CARLA, hoje().plusDays(2),
-				List.of(item(brigadeiro, 1.5, Map.of("recheio", "  ", "cobertura", " Granulado ")),
+				// Recheio e cobertura de uma tela antiga são ignorados (ZAP-136)
+				List.of(item(brigadeiro, 1.5, Map.of("recheio", "Brigadeiro", "cobertura", "Granulado", "observacao",
+						"  Escrever Feliz aniversário  ")),
 						// O preço que a tela manda é ignorado: vale o do cardápio (RN10)
 						item(coxinha, 50, Map.of("precoUnitario", 0.01))));
 		pedido.put("observacao", "  Sem lactose.  ");
@@ -99,8 +101,11 @@ class CadastroPedidoTests {
 			.andExpect(jsonPath("$.itens[0].quantidade").value(1.5))
 			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
 			.andExpect(jsonPath("$.itens[0].subtotal").value(150.00))
-			.andExpect(jsonPath("$.itens[0].recheio").value(nullValue()))
-			.andExpect(jsonPath("$.itens[0].cobertura").value("Granulado"))
+			.andExpect(jsonPath("$.itens[0].produto").value("Bolo de brigadeiro de chocolate"))
+			.andExpect(jsonPath("$.itens[0].sabor").doesNotExist())
+			.andExpect(jsonPath("$.itens[0].recheio").doesNotExist())
+			.andExpect(jsonPath("$.itens[0].cobertura").doesNotExist())
+			.andExpect(jsonPath("$.itens[0].observacao").value("Escrever Feliz aniversário"))
 			.andExpect(jsonPath("$.itens[1].precoUnitario").value(1.25))
 			.andExpect(jsonPath("$.itens[1].subtotal").value(62.50))
 			.andExpect(jsonPath("$.valorTotal").value(212.50))
@@ -219,16 +224,19 @@ class CadastroPedidoTests {
 
 	@Test
 	void soAceitaProdutosAtivosDoCardapio() throws Exception {
-		long excluido = produto("Ninho com morango");
+		long excluido = produto("Bolo de ninho com morango");
 		jdbc.update("update produto set ativo = false where id = ?", excluido);
 		long outraLoja = jdbc.queryForObject("""
 				insert into estabelecimento (nome, slug, telefone_whatsapp)
 				values ('Doces da Ana', 'doces-da-ana-cadastro', '5511900000009') returning id
 				""", Long.class);
 		long deOutraLoja = jdbc.queryForObject("""
-				insert into produto (estabelecimento_id, unidade_medida_id, nome, sabor, preco)
-				values (?, 1, 'Bolo', 'Cenoura', 90.00) returning id
-				""", Long.class, outraLoja);
+				with categoria as (
+				    insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1) returning id
+				)
+				insert into produto (estabelecimento_id, categoria_id, unidade_medida_id, nome, preco)
+				select ?, categoria.id, 1, 'Bolo de cenoura', 90.00 from categoria returning id
+				""", Long.class, outraLoja, outraLoja);
 
 		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()), item(excluido, 1, Map.of()),
 				item(deOutraLoja, 1, Map.of()), item(999_999, 1, Map.of()))))
@@ -270,16 +278,26 @@ class CadastroPedidoTests {
 
 		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 0, Map.of()),
 				item(brigadeiro, 1.2345, Map.of()), item(brigadeiro, 100_000, Map.of()),
-				item(brigadeiro, 1, Map.of("recheio", "x".repeat(101), "observacao", "x".repeat(301))))))
+				item(brigadeiro, 1, Map.of("observacao", "x".repeat(601))))))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.campos['itens[0].quantidade']")
 				.value("A quantidade precisa ser um número maior que zero."))
 			.andExpect(jsonPath("$.campos['itens[1].quantidade']")
 				.value("Use no máximo 3 casas depois da vírgula. Ex.: 1,5"))
 			.andExpect(jsonPath("$.campos['itens[2].quantidade']").value("Confira a quantidade: ela está alta demais."))
-			.andExpect(jsonPath("$.campos['itens[3].recheio']").value("Use no máximo 100 caracteres."))
 			.andExpect(jsonPath("$.campos['itens[3].observacao']").value("Use no máximo 300 caracteres."));
 		nadaFoiGravado();
+	}
+
+	@Test
+	void observacaoDoItemNovoTemAte300Caracteres() throws Exception {
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of("observacao", "x".repeat(301))))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos['itens[0].observacao']").value("Use no máximo 300 caracteres."));
+		nadaFoiGravado();
+
+		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of("observacao", "x".repeat(300))))))
+			.andExpect(status().isCreated());
 	}
 
 	@Test
@@ -317,9 +335,9 @@ class CadastroPedidoTests {
 			.content(json.writeValueAsString(pedido)));
 	}
 
-	private long produto(String sabor) {
-		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and sabor = ?", Long.class,
-				casaBelt, sabor);
+	private long produto(String nome) {
+		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and nome = ?", Long.class,
+				casaBelt, nome);
 	}
 
 	static final String NAVEGADOR = "Navegador de teste";

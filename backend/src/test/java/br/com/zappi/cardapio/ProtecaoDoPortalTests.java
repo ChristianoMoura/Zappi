@@ -64,7 +64,7 @@ class ProtecaoDoPortalTests {
 
 	@BeforeEach
 	void prepara() {
-		brigadeiro = jdbc.queryForObject("select id from produto where sabor = 'Brigadeiro de chocolate'", Long.class);
+		brigadeiro = jdbc.queryForObject("select id from produto where nome = 'Bolo de brigadeiro de chocolate'", Long.class);
 	}
 
 	@AfterEach

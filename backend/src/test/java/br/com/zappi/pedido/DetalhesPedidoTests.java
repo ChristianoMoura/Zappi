@@ -26,7 +26,7 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 
 /**
  * Detalhes do pedido (ZAP-45), a partir do pedido #1 da V2 (Ana, 2 kg de bolo de
- * brigadeiro com recheio e cobertura). Tudo é desfeito no fim de cada teste.
+ * brigadeiro com o recheio e a cobertura antigos na observação, ZAP-136). Tudo é desfeito no fim de cada teste.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -68,13 +68,13 @@ class DetalhesPedidoTests {
 			.andExpect(jsonPath("$.cliente.nome").value("Ana Exemplo"))
 			.andExpect(jsonPath("$.cliente.telefone").value("5511900000001"))
 			.andExpect(jsonPath("$.itens.length()").value(1))
-			.andExpect(jsonPath("$.itens[0].sabor").value("Brigadeiro de chocolate"))
+			.andExpect(jsonPath("$.itens[0].produto").value("Bolo de brigadeiro de chocolate"))
 			.andExpect(jsonPath("$.itens[0].unidade").value("KG"))
 			.andExpect(jsonPath("$.itens[0].quantidade").value(2.0))
 			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
 			.andExpect(jsonPath("$.itens[0].subtotal").value(200.00))
-			.andExpect(jsonPath("$.itens[0].recheio").value("Brigadeiro"))
-			.andExpect(jsonPath("$.itens[0].cobertura").value("Granulado"))
+			.andExpect(jsonPath("$.itens[0].observacao").value("Recheio: Brigadeiro. Cobertura: Granulado."))
+			.andExpect(jsonPath("$.itens[0].recheio").doesNotExist())
 			.andExpect(jsonPath("$.criadoEm").isString())
 			.andExpect(jsonPath("$.mensagens.length()").value(0));
 	}

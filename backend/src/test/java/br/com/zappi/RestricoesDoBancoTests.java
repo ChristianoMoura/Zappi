@@ -235,10 +235,21 @@ class RestricoesDoBancoTests {
 
 	private long criarProduto(long estabelecimento, String preco, String foto, String textoAlternativo) {
 		return jdbc.queryForObject("""
-				insert into produto (estabelecimento_id, unidade_medida_id, nome, sabor, preco, foto_caminho,
+				insert into produto (estabelecimento_id, categoria_id, unidade_medida_id, nome, preco, foto_caminho,
 				                     foto_texto_alternativo)
-				values (?, 1, 'Bolo', 'Teste', ?, ?, ?) returning id
-				""", Long.class, estabelecimento, new BigDecimal(preco), foto, textoAlternativo);
+				values (?, ?, 1, 'Bolo de teste', ?, ?, ?) returning id
+				""", Long.class, estabelecimento, categoria(estabelecimento), new BigDecimal(preco), foto,
+				textoAlternativo);
+	}
+
+	/** A categoria "Bolos" do estabelecimento, criada na primeira vez (ZAP-136). */
+	private long categoria(long estabelecimento) {
+		return jdbc.queryForList("select id from categoria where estabelecimento_id = ?", Long.class, estabelecimento)
+			.stream()
+			.findFirst()
+			.orElseGet(() -> jdbc.queryForObject("""
+					insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1) returning id
+					""", Long.class, estabelecimento));
 	}
 
 	private long criarPedido(long estabelecimento, long cliente, int numero, int status, String motivo) {

@@ -66,7 +66,10 @@ public record RequisicaoPedido(
 
 	/**
 	 * Item pelo id do produto. A quantidade aceita até 3 casas (RN12); produto vendido por
-	 * unidade só aceita número inteiro, conferido no serviço.
+	 * unidade só aceita número inteiro, conferido no serviço. Recheio e cobertura não existem
+	 * mais (ZAP-136): se uma tela antiga mandar, são ignorados. A observação tem até 300
+	 * caracteres em item novo; o item que já estava no pedido pode manter até 600, o tamanho da
+	 * observação dos pedidos antigos com o recheio e a cobertura copiados (conferido no serviço).
 	 */
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record ItemDaRequisicao(@NotNull(message = "Escolha o produto.") Long produtoId,
@@ -75,13 +78,15 @@ public record RequisicaoPedido(
 			@DecimalMax(value = "99999.999", message = "Confira a quantidade: ela está alta demais.")
 			@Digits(integer = 10, fraction = 3, message = "Use no máximo 3 casas depois da vírgula. Ex.: 1,5")
 			BigDecimal quantidade,
-			@Size(max = 100, message = MAXIMO_100) String recheio,
-			@Size(max = 100, message = MAXIMO_100) String cobertura,
-			@Size(max = 300, message = "Use no máximo 300 caracteres.") String observacao) {
+			@Size(max = MAXIMO_OBSERVACAO_ANTIGA, message = "Use no máximo 300 caracteres.") String observacao) {
+
+		/** Observação de item novo (ZAP-136). */
+		static final int MAXIMO_OBSERVACAO = 300;
+
+		/** Tamanho da coluna: observação de item antigo com o recheio e a cobertura copiados. */
+		static final int MAXIMO_OBSERVACAO_ANTIGA = 600;
 
 		public ItemDaRequisicao {
-			recheio = opcional(recheio);
-			cobertura = opcional(cobertura);
 			observacao = opcional(observacao);
 		}
 

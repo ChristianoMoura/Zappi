@@ -17,6 +17,10 @@ public enum AcaoAuditoria {
 	PEDIDO_RECUSADO,
 	PEDIDO_STATUS_ALTERADO,
 	CLIENTE_ANONIMIZADO,
-	PEDIDO_PUBLICO_RECUSADO
+	PEDIDO_PUBLICO_RECUSADO,
+	CATEGORIA_CRIADA,
+	/** Nome ou ordem (ZAP-136). Na ordem, o log guarda a lista de ids antes e depois. */
+	CATEGORIA_EDITADA,
+	CATEGORIA_EXCLUIDA
 
 }

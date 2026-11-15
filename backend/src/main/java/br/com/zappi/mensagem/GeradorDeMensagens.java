@@ -113,12 +113,9 @@ public class GeradorDeMensagens {
 				+ URLEncoder.encode(texto, StandardCharsets.UTF_8).replace("+", "%20");
 	}
 
-	/** "- Bolo de brigadeiro de chocolate (2 kg)", do mesmo jeito que a tela escreve o item. */
+	/** "- Bolo de brigadeiro de chocolate (2 kg)": o nome completo do produto (ZAP-136). */
 	static String linhaDoItem(ItemPedido item) {
-		String produto = item.getProduto().getNome();
-		String sabor = item.getProduto().getSabor();
-		String nome = "Bolo".equals(produto) ? "Bolo de " + sabor.toLowerCase(PORTUGUES) : sabor;
-		return "- " + nome + " (" + quantidade(item) + ")";
+		return "- " + item.getProduto().getNome() + " (" + quantidade(item) + ")";
 	}
 
 	/** KG aceita fração ("1,5 kg"); UN não ("100 un") (RN12). */

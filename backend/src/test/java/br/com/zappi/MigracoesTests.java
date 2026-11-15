@@ -24,14 +24,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class MigracoesTests {
 
+	/** As nove do dicionário de dados (Atividade #14) e a categoria (ZAP-137). */
 	private static final List<String> TABELAS = List.of("estabelecimento", "usuario", "unidade_medida", "produto",
-			"cliente", "pedido", "item_pedido", "mensagem_whatsapp", "log_auditoria");
+			"cliente", "pedido", "item_pedido", "mensagem_whatsapp", "log_auditoria", "categoria");
 
 	@Autowired
 	private JdbcTemplate jdbc;
 
 	@Test
-	void criaAsNoveTabelasComRlsLigado() {
+	void criaAsTabelasComRlsLigado() {
 		List<Map<String, Object>> tabelas = jdbc.queryForList("""
 				select c.relname as tabela, c.relrowsecurity as rls
 				from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -113,11 +114,72 @@ class MigracoesTests {
 		long estabelecimento = criarEstabelecimento("confeitaria-a");
 
 		Map<String, Object> produto = jdbc.queryForMap("""
-				insert into produto (estabelecimento_id, unidade_medida_id, nome, sabor, preco)
-				values (?, 1, 'Bolo', 'Brigadeiro', 100.00) returning contem_gluten, outros_alergenos
-				""", estabelecimento);
+				with categoria as (
+				    insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1) returning id
+				)
+				insert into produto (estabelecimento_id, categoria_id, unidade_medida_id, nome, preco)
+				select ?, categoria.id, 1, 'Bolo de brigadeiro', 100.00 from categoria
+				returning contem_gluten, outros_alergenos
+				""", estabelecimento, estabelecimento);
 
 		assertThat(produto).containsEntry("contem_gluten", null).containsEntry("outros_alergenos", null);
+	}
+
+	@Test
+	void produtoTemCategoriaENomeUnicoSemSabor() {
+		assertThat(coluna("produto", "categoria_id")).containsEntry("is_nullable", "NO");
+		assertThat(coluna("produto", "nome")).containsEntry("character_maximum_length", 150);
+		assertThat(coluna("item_pedido", "observacao")).containsEntry("character_maximum_length", 600);
+		assertThat(jdbc.queryForList("""
+				select table_name || '.' || column_name from information_schema.columns
+				where table_schema = 'public'
+				  and (table_name, column_name) in (('produto', 'sabor'), ('item_pedido', 'recheio'),
+				                                    ('item_pedido', 'cobertura'))
+				""", String.class)).isEmpty();
+	}
+
+	@Test
+	void cardapioDaV2GanhaCategoriasNomesCompletosEORecheioNaObservacao() {
+		assertThat(jdbc.queryForList("""
+				select c.nome || ':' || c.ordem from categoria c join estabelecimento e on e.id = c.estabelecimento_id
+				where e.slug = 'casa-belt' order by c.ordem
+				""", String.class)).containsExactly("Bolos:1", "Salgados:2");
+		assertThat(jdbc.queryForList("""
+				select p.nome || ' > ' || c.nome from produto p join categoria c on c.id = p.categoria_id
+				join estabelecimento e on e.id = p.estabelecimento_id
+				where e.slug = 'casa-belt' order by p.id
+				""", String.class)).containsExactly("Bolo de brigadeiro de chocolate > Bolos",
+						"Bolo de ninho com morango > Bolos", "Cento de coxinha > Salgados",
+						"Coxinha por unidade > Salgados");
+		// Pedido #1 da V2: 2 kg de brigadeiro com recheio "Brigadeiro" e cobertura "Granulado"
+		assertThat(jdbc.queryForObject("""
+				select i.observacao from item_pedido i join pedido p on p.id = i.pedido_id
+				join estabelecimento e on e.id = p.estabelecimento_id
+				where e.slug = 'casa-belt' and p.numero = 1
+				""", String.class)).isEqualTo("Recheio: Brigadeiro. Cobertura: Granulado.");
+	}
+
+	@Test
+	void categoriaNaoRepeteONomeEntreAsAtivasDaLoja() {
+		long estabelecimento = criarEstabelecimento("confeitaria-a");
+		long outro = criarEstabelecimento("confeitaria-b");
+		jdbc.update("insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1)", estabelecimento);
+		// Excluída e de outra loja podem ter o mesmo nome
+		jdbc.update("insert into categoria (estabelecimento_id, nome, ordem, ativo) values (?, 'bolos', 2, false)",
+				estabelecimento);
+		jdbc.update("insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1)", outro);
+
+		assertThatThrownBy(() -> jdbc.update(
+				"insert into categoria (estabelecimento_id, nome, ordem) values (?, 'BOLOS', 3)", estabelecimento))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("uk_categoria_nome_ativa");
+	}
+
+	private Map<String, Object> coluna(String tabela, String coluna) {
+		return jdbc.queryForMap("""
+				select is_nullable, character_maximum_length from information_schema.columns
+				where table_schema = 'public' and table_name = ? and column_name = ?
+				""", tabela, coluna);
 	}
 
 	private long criarEstabelecimento(String slug) {
