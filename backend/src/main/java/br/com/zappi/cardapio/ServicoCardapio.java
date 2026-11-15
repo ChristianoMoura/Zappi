@@ -49,7 +49,7 @@ public class ServicoCardapio {
 			.orElseThrow(EstabelecimentoNaoEncontradoException::new);
 		LojaDoCardapio dadosDaLoja = new LojaDoCardapio(loja.getNome(), loja.getSlug(), loja.getDescricao(),
 				loja.getTelefoneWhatsapp(), fotosDaLoja.enderecoPublico(loja.getLogoCaminho()),
-				fotosDaLoja.enderecoPublico(loja.getCapaCaminho()));
+				fotosDaLoja.enderecoPublico(loja.getCapaCaminho()), loja.isDestacarPromocoes());
 		// As categorias saem dos próprios produtos, que já vêm na ordem delas
 		Map<Long, RespostaCategoria> categorias = new LinkedHashMap<>();
 		List<ProdutoDoCardapio> doCardapio = produtos.listarNoCardapioNaOrdem(loja.getId())
@@ -57,7 +57,8 @@ public class ServicoCardapio {
 			.map(produto -> new ProdutoDoCardapio(produto.getId(), produto.getNome(),
 					categorias.computeIfAbsent(produto.getCategoria().getId(),
 							id -> RespostaCategoria.de(produto.getCategoria())),
-					produto.getUnidadeMedida().getSigla(), produto.getPreco(), produto.getDescricao(),
+					produto.getUnidadeMedida().getSigla(), produto.getPreco(), produto.getPrecoPromocional(),
+					produto.getDescricao(),
 					fotosDosProdutos.enderecoPublico(produto.getFotoCaminho()), produto.getFotoTextoAlternativo()))
 			.toList();
 		return new RespostaCardapio(dadosDaLoja, List.copyOf(categorias.values()), doCardapio);

@@ -188,6 +188,7 @@ public class ServicoEstabelecimento {
 		// Só o caminho no bucket, como na foto do produto (ZAP-119)
 		campos.put("logo", estabelecimento.getLogoCaminho());
 		campos.put("capa", estabelecimento.getCapaCaminho());
+		campos.put("destacarPromocoes", estabelecimento.isDestacarPromocoes());
 		return campos;
 	}
 

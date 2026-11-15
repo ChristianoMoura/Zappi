@@ -38,6 +38,11 @@ public class ServicoProduto {
 
 	private static final String CATEGORIA_INVALIDA = "Escolha uma categoria da lista.";
 
+	private static final String DESCONTO_NAO_MENOR = "O preço com desconto precisa ser menor que o preço antes da promoção.";
+
+	private static final String PRECO_ABAIXO_DO_DESCONTO = "Com a promoção ativa, o preço precisa ser maior que o "
+			+ "preço com desconto. Para baixar mais, encerre a promoção.";
+
 	private final ProdutoRepositorio produtos;
 
 	private final CategoriaRepositorio categorias;
@@ -96,6 +101,10 @@ public class ServicoProduto {
 			throw new FotoSemTextoAlternativoException();
 		}
 		Categoria categoria = categoria(usuario, dados);
+		// Com a promoção ativa, o preço normal continua acima do com desconto (ZAP-152, CDC)
+		if (produto.emPromocao() && preco(dados).compareTo(produto.getPrecoPromocional()) <= 0) {
+			throw new DadosInvalidosException(Map.of("preco", PRECO_ABAIXO_DO_DESCONTO));
+		}
 		Map<String, Object> antes = retrato(produto);
 
 		produto.atualizar(categoria, unidade(dados), dados.nome(), dados.descricao(), preco(dados),
@@ -116,6 +125,46 @@ public class ServicoProduto {
 		Produto produto = encontrar(usuario, id);
 		Map<String, Object> antes = retrato(produto);
 		if (!produto.colocarNoCardapio(noCardapio, agora())) {
+			return resposta(produto);
+		}
+		produtos.flush();
+
+		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
+		return resposta(produto);
+	}
+
+	/**
+	 * Aplica ou troca a promoção (ZAP-152). O preço antes da promoção passa a ser o preço normal
+	 * do produto, e o com desconto precisa ser menor que ele; se não for, nada é gravado. Os
+	 * pedidos que já existem não mudam (RN10). Vai para o log como {@code PRODUTO_EDITADO}, com
+	 * o antes e o depois dos dois preços (ISO 27002 8.16).
+	 */
+	@Transactional
+	public RespostaProduto aplicarPromocao(UsuarioAutenticado usuario, Long id, RequisicaoPromocao dados) {
+		Produto produto = encontrar(usuario, id);
+		BigDecimal preco = duasCasas(dados.preco());
+		BigDecimal precoPromocional = duasCasas(dados.precoPromocional());
+		if (precoPromocional.compareTo(preco) >= 0) {
+			throw new DadosInvalidosException(Map.of("precoPromocional", DESCONTO_NAO_MENOR));
+		}
+		Map<String, Object> antes = retrato(produto);
+
+		produto.aplicarPromocao(preco, precoPromocional, agora());
+		produtos.flush();
+
+		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
+		return resposta(produto);
+	}
+
+	/**
+	 * Encerra a promoção (ZAP-152): apaga o preço com desconto, e o produto volta ao preço
+	 * normal no cardápio e nos pedidos novos. Sem promoção, não muda nada e não grava log.
+	 */
+	@Transactional
+	public RespostaProduto encerrarPromocao(UsuarioAutenticado usuario, Long id) {
+		Produto produto = encontrar(usuario, id);
+		Map<String, Object> antes = retrato(produto);
+		if (!produto.encerrarPromocao(agora())) {
 			return resposta(produto);
 		}
 		produtos.flush();
@@ -205,7 +254,11 @@ public class ServicoProduto {
 
 	/** Sempre com 2 casas; a validação já garante que não há mais que isso. */
 	private static BigDecimal preco(RequisicaoProduto dados) {
-		return dados.preco().setScale(2, RoundingMode.UNNECESSARY);
+		return duasCasas(dados.preco());
+	}
+
+	private static BigDecimal duasCasas(BigDecimal valor) {
+		return valor.setScale(2, RoundingMode.UNNECESSARY);
 	}
 
 	/**
@@ -240,6 +293,9 @@ public class ServicoProduto {
 		campos.put("unidade", produto.getUnidadeMedida().getSigla());
 		// Texto com 2 casas, para o log mostrar sempre o mesmo formato (ex.: "100.00")
 		campos.put("preco", produto.getPreco().setScale(2, RoundingMode.UNNECESSARY).toPlainString());
+		// Nulo no log é "sem promoção" (ZAP-152)
+		campos.put("precoPromocional", produto.emPromocao()
+				? produto.getPrecoPromocional().setScale(2, RoundingMode.UNNECESSARY).toPlainString() : null);
 		campos.put("descricao", produto.getDescricao());
 		campos.put("foto", produto.getFotoCaminho());
 		campos.put("textoAlternativo", produto.getFotoTextoAlternativo());

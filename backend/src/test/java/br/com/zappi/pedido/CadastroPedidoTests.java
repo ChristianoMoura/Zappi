@@ -3,11 +3,13 @@ package br.com.zappi.pedido;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -134,6 +136,30 @@ class CadastroPedidoTests {
 			.containsEntry("ip_origem", "127.0.0.1")
 			.containsEntry("user_agent", NAVEGADOR)
 			.extractingByKey("criado_em").isNotNull();
+	}
+
+	@Test
+	void produtoEmPromocaoEntraComOPrecoComDesconto() throws Exception {
+		jdbc.update("update produto set preco_promocional = 80.00 where id = ?", brigadeiro);
+
+		cadastrar(pedido("Carla", CARLA, hoje().plusDays(2),
+				// O preço que a tela manda continua ignorado: vale o com desconto (RN10, ZAP-152)
+				List.of(item(brigadeiro, 1.5, Map.of("precoUnitario", 100.00)), item(coxinha, 10, Map.of()))))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.itens[0].precoUnitario").value(80.00))
+			.andExpect(jsonPath("$.itens[0].subtotal").value(120.00))
+			.andExpect(jsonPath("$.itens[1].precoUnitario").value(1.25))
+			.andExpect(jsonPath("$.valorTotal").value(132.50));
+
+		// Encerrada a promoção pela tela do produto, o pedido que já existe não muda (RN10)
+		mockMvc.perform(delete("/api/produtos/" + brigadeiro + "/promocao")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)).andExpect(status().isOk());
+		assertThat(jdbc.queryForObject("""
+				select i.preco_unitario from item_pedido i join pedido p on p.id = i.pedido_id
+				where p.estabelecimento_id = ? and p.numero = 3 and i.produto_id = ?
+				""", BigDecimal.class, casaBelt, brigadeiro)).isEqualByComparingTo("80.00");
+		cadastrar(pedido("Carla", CARLA, hoje().plusDays(2), List.of(item(brigadeiro, 1, Map.of()))))
+			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00));
 	}
 
 	@Test

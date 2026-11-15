@@ -79,6 +79,23 @@ public class ControladorProduto {
 	}
 
 	/**
+	 * Aplica a promoção (ZAP-152): o {@code preco} passa a ser o preço normal, e o produto é
+	 * cobrado pelo {@code precoPromocional} nos pedidos novos.
+	 */
+	@PostMapping("/{id}/promocao")
+	public RespostaProduto aplicarPromocao(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Long id, @Valid @RequestBody RequisicaoPromocao dados) {
+		return servico.aplicarPromocao(usuario, id, dados);
+	}
+
+	/** Encerra a promoção (ZAP-152): o produto volta ao preço normal. */
+	@DeleteMapping("/{id}/promocao")
+	public RespostaProduto encerrarPromocao(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Long id) {
+		return servico.encerrarPromocao(usuario, id);
+	}
+
+	/**
 	 * Envia ou troca a foto (ZAP-40), em {@code multipart/form-data} com os campos
 	 * {@code arquivo} e {@code textoAlternativo}.
 	 */

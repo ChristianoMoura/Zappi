@@ -138,6 +138,42 @@ public class Produto {
 		return true;
 	}
 
+	/**
+	 * Aplica a promoção (ZAP-152): {@code preco} é o preço antes da promoção e passa a ser o
+	 * preço normal do produto; {@code precoPromocional} é o preço com desconto, que o serviço já
+	 * conferiu ser maior que zero e menor que o normal. Aplicar de novo troca os dois.
+	 */
+	public void aplicarPromocao(BigDecimal preco, BigDecimal precoPromocional, OffsetDateTime agora) {
+		this.preco = preco;
+		this.precoPromocional = precoPromocional;
+		this.atualizadoEm = agora;
+	}
+
+	/**
+	 * Encerra a promoção (ZAP-152): o preço com desconto, que é temporário, é apagado, e o
+	 * produto volta ao preço normal. Devolve {@code false} quando não havia promoção.
+	 */
+	public boolean encerrarPromocao(OffsetDateTime agora) {
+		if (!emPromocao()) {
+			return false;
+		}
+		this.precoPromocional = null;
+		this.atualizadoEm = agora;
+		return true;
+	}
+
+	public boolean emPromocao() {
+		return precoPromocional != null;
+	}
+
+	/**
+	 * Preço cobrado em pedido novo: o com desconto, com a promoção ativa, ou o normal
+	 * (ZAP-152, RN10).
+	 */
+	public BigDecimal getPrecoVigente() {
+		return emPromocao() ? precoPromocional : preco;
+	}
+
 	/** Foto nova, sempre com o texto alternativo (RN15, ZAP-40). */
 	public void trocarFoto(String caminho, String textoAlternativo, OffsetDateTime agora) {
 		this.fotoCaminho = caminho;

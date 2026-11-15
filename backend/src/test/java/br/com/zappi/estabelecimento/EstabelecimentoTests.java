@@ -129,6 +129,44 @@ class EstabelecimentoTests {
 	}
 
 	@Test
+	void destaqueDasPromocoesComecaLigadoEVemNaResposta() throws Exception {
+		comToken(get(ROTA), tokenDaLidia).andExpect(jsonPath("$.destacarPromocoes").value(true));
+	}
+
+	@Test
+	void desligaELigaODestaqueDasPromocoesERegistraNoLog() throws Exception {
+		Map<String, Object> dados = casaBelt();
+		dados.put("destacarPromocoes", false);
+
+		comToken(put(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.destacarPromocoes").value(false));
+
+		assertThat(destacarPromocoes()).isFalse();
+		assertThat(jdbc.queryForMap("""
+				select detalhes -> 'antes' ->> 'destacarPromocoes' as antes,
+				       detalhes -> 'depois' ->> 'destacarPromocoes' as depois
+				from log_auditoria where acao = 'ESTABELECIMENTO_EDITADO' and entidade_id = ?
+				""", casaBelt)).containsEntry("antes", "true").containsEntry("depois", "false");
+
+		dados.put("destacarPromocoes", true);
+		comToken(put(ROTA), tokenDaLidia, dados).andExpect(jsonPath("$.destacarPromocoes").value(true));
+		assertThat(destacarPromocoes()).isTrue();
+	}
+
+	@Test
+	void semODestaqueNoCorpoAOpcaoContinuaComoEstava() throws Exception {
+		jdbc.update("update estabelecimento set destacar_promocoes = false where id = ?", casaBelt);
+
+		// casaBelt() não manda o campo, como a tela de antes da ZAP-152
+		comToken(put(ROTA), tokenDaLidia, casaBelt())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.destacarPromocoes").value(false));
+
+		assertThat(destacarPromocoes()).isFalse();
+	}
+
+	@Test
 	void tiraOsSeparadoresEGuardaOsOpcionaisVaziosComoNulo() throws Exception {
 		Map<String, Object> dados = casaBelt();
 		dados.put("whatsapp", "+55 (11) 98888-7777");
@@ -294,6 +332,11 @@ class EstabelecimentoTests {
 				from log_auditoria
 				where acao = 'ESTABELECIMENTO_EDITADO' and entidade = 'estabelecimento' and entidade_id = ?
 				""", casaBelt);
+	}
+
+	private boolean destacarPromocoes() {
+		return jdbc.queryForObject("select destacar_promocoes from estabelecimento where id = ?", Boolean.class,
+				casaBelt);
 	}
 
 	private long quantidadeDeEdicoesNoLog() {

@@ -74,6 +74,32 @@ class CardapioPublicoTests {
 	}
 
 	@Test
+	void mostraOPrecoComDescontoEODestaqueDasPromocoes() throws Exception {
+		jdbc.update("update produto set preco_promocional = 99.90 where estabelecimento_id = ? "
+				+ "and nome = 'Bolo de ninho com morango'", casaBelt);
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.estabelecimento.destacarPromocoes").value(true))
+			.andExpect(jsonPath("$.produtos[0].preco").value(100.00))
+			.andExpect(jsonPath("$.produtos[0].precoPromocional").value(nullValue()))
+			.andExpect(jsonPath("$.produtos[1].nome").value("Bolo de ninho com morango"))
+			.andExpect(jsonPath("$.produtos[1].preco").value(115.00))
+			.andExpect(jsonPath("$.produtos[1].precoPromocional").value(99.90));
+	}
+
+	@Test
+	void semODestaqueOPrecoComDescontoContinuaNoProduto() throws Exception {
+		jdbc.update("update produto set preco_promocional = 99.90 where estabelecimento_id = ? "
+				+ "and nome = 'Bolo de ninho com morango'", casaBelt);
+		jdbc.update("update estabelecimento set destacar_promocoes = false where id = ?", casaBelt);
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(jsonPath("$.estabelecimento.destacarPromocoes").value(false))
+			.andExpect(jsonPath("$.produtos[1].precoPromocional").value(99.90));
+	}
+
+	@Test
 	void soMostraOsProdutosAtivos() throws Exception {
 		jdbc.update("update produto set ativo = false where estabelecimento_id = ? and nome = 'Bolo de ninho com morango'",
 				casaBelt);

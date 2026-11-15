@@ -5,11 +5,12 @@ import br.com.zappi.armazenamento.ArmazenamentoDoEstabelecimento;
 /**
  * Estabelecimento como a tela "Estabelecimento" usa, com os nomes de campo dela (ZAP-37).
  * {@code logo} e {@code capa} são os endereços públicos das fotos no Storage (ZAP-119), ou
- * nulos sem foto.
+ * nulos sem foto. {@code destacarPromocoes} é a opção de mostrar a seção "Promoções" no topo do
+ * cardápio (ZAP-152).
  */
 public record RespostaEstabelecimento(String nome, String slug, String descricao, String whatsapp,
 		String emailContato, String cep, String logradouro, String numero, String complemento, String bairro,
-		String cidade, String uf, String logo, String capa) {
+		String cidade, String uf, String logo, String capa, boolean destacarPromocoes) {
 
 	static RespostaEstabelecimento de(Estabelecimento estabelecimento, ArmazenamentoDoEstabelecimento armazenamento) {
 		return new RespostaEstabelecimento(estabelecimento.getNome(), estabelecimento.getSlug(),
@@ -18,7 +19,8 @@ public record RespostaEstabelecimento(String nome, String slug, String descricao
 				estabelecimento.getNumero(), estabelecimento.getComplemento(), estabelecimento.getBairro(),
 				estabelecimento.getCidade(), estabelecimento.getUf(),
 				armazenamento.enderecoPublico(estabelecimento.getLogoCaminho()),
-				armazenamento.enderecoPublico(estabelecimento.getCapaCaminho()));
+				armazenamento.enderecoPublico(estabelecimento.getCapaCaminho()),
+				estabelecimento.isDestacarPromocoes());
 	}
 
 }
