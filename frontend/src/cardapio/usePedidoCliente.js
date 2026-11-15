@@ -62,5 +62,8 @@ export function usePedidoCliente(slug) {
     setPedido((atual) => ({ ...atual, [campo]: valor }))
   }, [])
 
-  return { pedido, adicionar, mudarItem, remover, mudar }
+  // Depois do envio (ZAP-110), o pedido guardado neste navegador é apagado
+  const limpar = useCallback(() => setPedido({ ...PEDIDO_VAZIO }), [])
+
+  return { pedido, adicionar, mudarItem, remover, mudar, limpar }
 }

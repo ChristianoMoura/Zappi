@@ -2,6 +2,10 @@ import {
   IconAlertCircle,
   IconBan,
   IconCalendarEvent,
+  IconCircleCheck,
+  IconClock,
+  IconCreditCard,
+  IconSend,
   IconChevronLeft,
   IconInfoCircle,
   IconMinus,
@@ -11,10 +15,17 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
+import { useTermosVigentes } from '../autenticacao/useTermosVigentes'
 import { juntar } from '../cardapio/juntarClasses'
 import { linkWhatsapp } from '../cardapio/regrasCardapio'
+import { EnviosDemaisError, enviarPedido, PedidoRecusadoError } from '../cardapio/servicoCardapio'
 import {
+  CLIENTE_VAZIO,
+  LIMITE_NOME,
+  mascaraWhatsapp,
+  montarEnvio,
+  validarCliente,
   dataCurta,
   dataMinima,
   dataPorExtenso,
@@ -23,7 +34,6 @@ import {
   contagemDosItens,
   itensDoPedido,
   LIMITES,
-  mensagemDoPedido,
   mudarQuantidade,
   passo,
   quantidadeTexto,
@@ -236,6 +246,70 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
   )
 }
 
+// ---------- Pedido recebido (ZAP-110) ----------
+
+// Depois do envio: o número do pedido, a data e a hora da retirada, o aviso de que ainda falta a
+// confirmação e o pagamento na retirada. O foco vai para o título. Sem os dados (página recarregada
+// ou aberta direto), mostra só a confirmação geral.
+export function PedidoRecebido({ loja, escuro }) {
+  useTituloPagina(`Pedido enviado · ${loja.nome}`)
+  useTopoAoAbrir()
+  const { state } = useLocation()
+  const titulo = useRef(null)
+  useEffect(() => {
+    titulo.current?.focus()
+  }, [])
+  const cardapio = `/cardapio/${loja.slug}`
+  return (
+    <div className={classes.pagina}>
+      <TopoPagina titulo="Pedido recebido" voltarPara={cardapio} />
+      <main className={juntar(classes.coluna, classes.recebido)}>
+        <span className={classes.seloRecebido}>
+          <IconCircleCheck size={40} aria-hidden />
+        </span>
+        <h2 ref={titulo} tabIndex={-1}>
+          Pedido enviado!
+        </h2>
+        {state?.numero && (
+          <p className={classes.numeroPedido}>
+            Número do pedido
+            <b>#{state.numero}</b>
+          </p>
+        )}
+        <div className={classes.caixaRecebido}>
+          {state?.data && state?.hora && (
+            <p>
+              <IconCalendarEvent size={22} aria-hidden />
+              <span>
+                Retirada: <b>{dataPorExtenso(state.data)}, às {horaTexto(state.hora)}</b>
+              </span>
+            </p>
+          )}
+          <p>
+            <IconClock size={22} aria-hidden />
+            <span>{NAO_CONFIRMADO}</span>
+          </p>
+          <p>
+            <IconCreditCard size={22} aria-hidden />
+            <span>O pagamento é na retirada. Não há entrega.</span>
+          </p>
+        </div>
+        <div className={classes.acoesRecebido}>
+          <Link to={cardapio} className={base.botaoContorno}>
+            Voltar ao cardápio
+          </Link>
+          <a className={classes.principal} href={linkWhatsapp(loja.whatsapp, state?.numero ? `Olá! Enviei o pedido #${state.numero} pelo cardápio da ${loja.nome} no Zappi.` : `Olá! Enviei um pedido pelo cardápio da ${loja.nome} no Zappi.`)} target="_blank" rel="noopener noreferrer">
+            <span>Falar com a loja</span>
+            <span className={somenteLeitor}> (abre o WhatsApp)</span>
+          </a>
+        </div>
+        {state?.numero && <p className={classes.dica}>Guarde o número do pedido para falar com a loja.</p>}
+        <Rodape escuro={escuro} />
+      </main>
+    </div>
+  )
+}
+
 // ---------- Seu pedido ----------
 
 const nomeDoItem = (item) => item.produto?.nome ?? item.nome ?? 'Produto indisponível'
@@ -269,17 +343,32 @@ function ItemIndisponivel({ item, aoRemover }) {
   )
 }
 
-const ORDEM_DOS_ERROS = ['itens', 'data', 'hora', 'observacao']
+const ORDEM_DOS_ERROS = ['itens', 'data', 'hora', 'observacao', 'nome', 'whatsapp', 'aceite']
+
+// Campos que o backend devolve no 400 (ZAP-109) e o campo da tela onde o erro aparece
+const CAMPOS_DO_BACKEND = { 'cliente.nome': 'nome', 'cliente.telefone': 'whatsapp', consentimentoLgpd: 'aceite', dataRetirada: 'data', observacao: 'observacao' }
+
+const NAO_CONFIRMADO = 'Seu pedido ainda não está confirmado. A loja vai avaliar e responder pelo WhatsApp.'
 
 export function SeuPedido({ loja, produtos, montagem, escuro }) {
   useTituloPagina(`Seu pedido · ${loja.nome}`)
   useTopoAoAbrir()
-  const { pedido, mudarItem, remover, mudar } = montagem
+  const { pedido, mudarItem, remover, mudar, limpar } = montagem
+  const navegar = useNavigate()
+  const termos = useTermosVigentes()
   const [erros, setErros] = useState({})
   const [aviso, setAviso] = useState('')
+  // Nome e WhatsApp ficam só aqui, sem ir para o pedido guardado no navegador (LGPD, ZAP-110)
+  const [cliente, setCliente] = useState(CLIENTE_VAZIO)
+  const [enviando, setEnviando] = useState(false)
+  const [alerta, setAlerta] = useState('')
   const dataRef = useRef(null)
   const horaRef = useRef(null)
   const observacaoRef = useRef(null)
+  const nomeRef = useRef(null)
+  const whatsappRef = useRef(null)
+  const aceiteRef = useRef(null)
+  const alertaRef = useRef(null)
   const cardapio = `/cardapio/${loja.slug}`
   const todos = itensDoPedido(pedido.itens, produtos)
   const itens = todos.filter((item) => item.disponivel)
@@ -297,14 +386,53 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
     setAviso(`${nomeDoItem(item)} removido do pedido.`)
   }
 
-  function enviar(evento) {
-    const novos = validarPedido(pedido, produtos)
-    setErros(novos)
+  function mudarCliente(campo, valor) {
+    setCliente((atual) => ({ ...atual, [campo]: valor }))
+    setErros((atuais) => ({ ...atuais, [campo]: undefined }))
+  }
+
+  const camposComFoco = { data: dataRef, hora: horaRef, observacao: observacaoRef, nome: nomeRef, whatsapp: whatsappRef, aceite: aceiteRef }
+  function focarPrimeiro(novos) {
     const primeiro = ORDEM_DOS_ERROS.find((campo) => novos[campo])
-    if (primeiro) {
-      evento.preventDefault()
-      const campos = { data: dataRef, hora: horaRef, observacao: observacaoRef }
-      campos[primeiro]?.current?.focus()
+    if (primeiro) camposComFoco[primeiro]?.current?.focus()
+    return Boolean(primeiro)
+  }
+
+  function mostrarAlerta(texto) {
+    setAlerta(texto)
+    setTimeout(() => alertaRef.current?.focus())
+  }
+
+  // Envia pelo Zappi (ZAP-109, ZAP-110): o pedido entra como Novo no quadro da loja. Erros junto do
+  // campo, com o foco no primeiro (NBR 17225 5.3.3); limite de envios e falhas no alerta do topo.
+  async function enviar() {
+    if (enviando) return
+    const novos = { ...validarPedido(pedido, produtos), ...validarCliente(cliente) }
+    setErros(novos)
+    setAlerta('')
+    if (novos.itens) {
+      mostrarAlerta(novos.itens)
+      return
+    }
+    if (focarPrimeiro(novos)) return
+    setEnviando(true)
+    try {
+      const numero = await enviarPedido(loja.slug, montarEnvio(pedido, produtos, cliente, termos?.versao))
+      limpar()
+      navegar(`/cardapio/${loja.slug}/recebido`, { replace: true, state: { numero, data: pedido.data, hora: pedido.hora } })
+    } catch (erro) {
+      setEnviando(false)
+      if (erro instanceof PedidoRecusadoError) {
+        const doBackend = Object.fromEntries(
+          Object.entries(erro.campos).filter(([campo]) => CAMPOS_DO_BACKEND[campo]).map(([campo, mensagem]) => [CAMPOS_DO_BACKEND[campo], mensagem]),
+        )
+        setErros(doBackend)
+        if (!focarPrimeiro(doBackend)) mostrarAlerta(erro.message)
+      } else if (erro instanceof EnviosDemaisError) {
+        mostrarAlerta(erro.message)
+      } else {
+        mostrarAlerta('Não foi possível enviar o pedido agora. Confira sua internet e tente de novo em alguns minutos.')
+      }
     }
   }
 
@@ -329,7 +457,6 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
     )
   }
 
-  const valido = Object.keys(validarPedido(pedido, produtos)).length === 0
   const erroDe = (campo) => (erros[campo] ? `erro-${campo}` : undefined)
 
   return (
@@ -337,6 +464,12 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
       <TopoPagina titulo="Seu pedido" voltarPara={cardapio} />
 
       <main className={classes.coluna}>
+        {alerta && (
+          <p ref={alertaRef} className={classes.alertaEnvio} role="alert" tabIndex={-1}>
+            <IconAlertCircle size={22} aria-hidden />
+            <span>{alerta}</span>
+          </p>
+        )}
         <section className={classes.cartao} aria-labelledby="titulo-itens">
           <header>
             <h2 id="titulo-itens">Itens</h2>
@@ -463,13 +596,105 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
           </div>
         </section>
 
+        {/* Identificação e consentimento (ZAP-110, RN16): nome e WhatsApp, a caixa dos termos e a
+            finalidade em linguagem simples. Os links aparecem quando o backend tem os termos (ZAP-146). */}
+        <section className={classes.cartao} aria-labelledby="titulo-dados">
+          <header>
+            <h2 id="titulo-dados">Seus dados</h2>
+            <small>A loja usa para confirmar o pedido com você.</small>
+          </header>
+          <div className={classes.corpo}>
+            <div className={classes.doisCampos}>
+              <div className={classes.campo}>
+                <label htmlFor="cliente-nome">
+                  <b>Nome</b>
+                </label>
+                <input
+                  ref={nomeRef}
+                  id="cliente-nome"
+                  value={cliente.nome}
+                  onChange={(e) => mudarCliente('nome', e.currentTarget.value)}
+                  maxLength={LIMITE_NOME}
+                  autoComplete="name"
+                  aria-invalid={Boolean(erros.nome)}
+                  aria-describedby={erroDe('nome')}
+                />
+                {erros.nome && (
+                  <p className={classes.erro} id="erro-nome">
+                    <IconAlertCircle size={20} aria-hidden />
+                    {erros.nome}
+                  </p>
+                )}
+              </div>
+              <div className={classes.campo}>
+                <label htmlFor="cliente-whatsapp">
+                  <b>WhatsApp</b>
+                </label>
+                <input
+                  ref={whatsappRef}
+                  id="cliente-whatsapp"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  placeholder="(11) 90000-0000"
+                  value={cliente.whatsapp}
+                  onChange={(e) => mudarCliente('whatsapp', mascaraWhatsapp(e.currentTarget.value))}
+                  aria-invalid={Boolean(erros.whatsapp)}
+                  aria-describedby={erroDe('whatsapp')}
+                />
+                {erros.whatsapp && (
+                  <p className={classes.erro} id="erro-whatsapp">
+                    <IconAlertCircle size={20} aria-hidden />
+                    {erros.whatsapp}
+                  </p>
+                )}
+              </div>
+            </div>
+            {/* Campo invisível contra robôs (ZAP-103): fora da tela, da ordem de foco e do leitor de tela */}
+            <div className={classes.robo} aria-hidden="true">
+              <label>
+                Site
+                <input tabIndex={-1} autoComplete="off" name="site" value={cliente.site} onChange={(e) => mudarCliente('site', e.currentTarget.value)} />
+              </label>
+            </div>
+            <label className={juntar(classes.consentimento, erros.aceite && classes.consentimentoInvalido)}>
+              <input
+                ref={aceiteRef}
+                type="checkbox"
+                checked={cliente.aceite}
+                onChange={(e) => mudarCliente('aceite', e.currentTarget.checked)}
+                aria-invalid={Boolean(erros.aceite)}
+                aria-describedby={juntar('finalidade-dados', erroDe('aceite'))}
+              />
+              <span>
+                Li e concordo com os{' '}
+                {termos ? <Link to="/termos">Termos de uso</Link> : 'Termos de uso'} e a{' '}
+                {termos ? <Link to="/privacidade">Política de privacidade</Link> : 'Política de privacidade'}.
+              </span>
+            </label>
+            <p className={classes.dica} id="finalidade-dados">
+              Seu nome e seu WhatsApp ficam com a loja só para confirmar este pedido e avisar quando ele estiver pronto.
+            </p>
+            {erros.aceite && (
+              <p className={classes.erro} id="erro-aceite">
+                <IconAlertCircle size={20} aria-hidden />
+                {erros.aceite}
+              </p>
+            )}
+          </div>
+        </section>
+
         <section className={classes.cartao} aria-labelledby="titulo-total">
           <div className={classes.corpo}>
             <div className={classes.linhaTotal}>
               <h2 id="titulo-total">Total</h2>
               <b>{moeda(total)}</b>
             </div>
-            <p className={classes.detalhe}>Valor estimado. A loja confirma o pedido e o valor pelo WhatsApp. Pagamento na retirada, sem entrega.</p>
+            <p className={classes.detalhe}>Valor estimado, já com os descontos. Pagamento na retirada, sem entrega.</p>
+            <p className={classes.naoConfirmado}>
+              <IconInfoCircle size={20} aria-hidden />
+              <span>{NAO_CONFIRMADO}</span>
+            </p>
           </div>
         </section>
         <Rodape escuro={escuro} />
@@ -477,19 +702,24 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
 
       <footer className={classes.baixo}>
         <div className={classes.baixoConteudo}>
-          {/* Com tudo certo, o link abre o WhatsApp com o pedido pronto; sem data ou hora, mostra os erros */}
-          <a
-            className={classes.principal}
-            href={valido ? linkWhatsapp(loja.whatsapp, mensagemDoPedido(loja, pedido, produtos)) : '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={enviar}
-          >
-            <span>Enviar pelo WhatsApp</span>
-            <b>{moeda(total)}</b>
-            <span className={somenteLeitor}> (abre o WhatsApp)</span>
-          </a>
-          <small>O pedido só vale depois da confirmação da loja. Pagamento na retirada.</small>
+          {/* O pedido vai direto para o quadro da loja (ZAP-110), no lugar do WhatsApp da ZAP-107 */}
+          <button type="button" className={classes.principal} onClick={enviar} aria-disabled={enviando || undefined}>
+            {enviando ? (
+              <span>
+                <span className={classes.girandoBotao} aria-hidden="true" />
+                Enviando pedido…
+              </span>
+            ) : (
+              <>
+                <span>
+                  <IconSend size={22} aria-hidden />
+                  Enviar pedido
+                </span>
+                <b>{moeda(total)}</b>
+              </>
+            )}
+          </button>
+          <small>O pedido vai direto para a loja. Ele só vale depois da confirmação dela.</small>
         </div>
       </footer>
 
