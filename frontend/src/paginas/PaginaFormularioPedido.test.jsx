@@ -5,6 +5,7 @@ import { STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos, cadastrarPedido } from '../pedidos/servicoPedidos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
 import { buscarEstabelecimento } from '../estabelecimento/servicoEstabelecimento'
+import { escolherData } from '../testes/escolherData'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { pedidoDeTeste, usarTela } from '../testes/pedidosDeTeste'
 import { PaginaFormularioPedido } from './PaginaFormularioPedido'
@@ -141,7 +142,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Produto/ }), '1')
     await usuario.type(campo(/^Quantidade/), '2')
     await usuario.type(campo(/^Observação do item/), 'Tema unicórnio')
-    await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(5))
+    await escolherData(usuario, /^Data de retirada/, daqui(5))
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '14:30')
     await usuario.type(screen.getByRole('textbox', { name: /^Observações do pedido/ }), 'Aniversário')
 
@@ -166,7 +167,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     await preencherCliente(usuario)
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Produto/ }), '1')
     await usuario.type(campo(/^Quantidade/), '2')
-    await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(3))
+    await escolherData(usuario, /^Data de retirada/, daqui(3))
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '10:00')
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar pedido' }))
@@ -200,7 +201,7 @@ describe('Cadastro de pedido (ZAP-89, US7, RF13)', () => {
     await preencherCliente(usuario)
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Produto/ }), '4')
     await usuario.type(campo(/^Quantidade/), '50')
-    await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(3))
+    await escolherData(usuario, /^Data de retirada/, daqui(3))
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '10:00')
     // Enquanto isso, a coxinha saiu do cardápio
     buscarProdutos.mockResolvedValue([produtos[0], { ...produtos[1], noCardapio: false }])
@@ -250,7 +251,7 @@ describe('forma de pagamento no cadastro de pedido (ZAP-190, ZAP-193)', () => {
     await preencherCliente(usuario)
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Produto/ }), '1')
     await usuario.type(campo(/^Quantidade/), '2')
-    await usuario.type(screen.getByLabelText(/^Data de retirada/), daqui(5))
+    await escolherData(usuario, /^Data de retirada/, daqui(5))
     await usuario.selectOptions(screen.getByRole('combobox', { name: /^Horário de retirada/ }), '14:30')
   }
 

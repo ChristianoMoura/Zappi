@@ -615,10 +615,7 @@ function PerfilLoja({ loja, escuro }) {
                     <span className={classes.iconePagamento}>
                       <IconeFormaPagamento codigo={codigo} />
                     </span>
-                    <span>
-                      <b>{nomeFormaPagamento(codigo)}</b>
-                      <small>Pagamento na retirada</small>
-                    </span>
+                    <b>{nomeFormaPagamento(codigo)}</b>
                   </li>
                 )
               })}
