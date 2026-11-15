@@ -145,6 +145,19 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       }
     })
 
+    test('com a forma de pagamento no backend, os detalhes dizem qual é, e "Não informada" no pedido antigo (ZAP-193)', async () => {
+      const usuario = userEvent.setup()
+      buscarPedidos.mockResolvedValue([
+        pedido(15, STATUS.NOVO, 'Ana Souza', { formaPagamento: 'PIX' }),
+        pedido(16, STATUS.NOVO, 'Bia Lopes', { formaPagamento: null }),
+      ])
+
+      expect(await abrirPedido(usuario, 15)).toHaveTextContent('Pagamento na retiradaPix')
+      await usuario.click(screen.getByRole('button', { name: 'Fechar detalhes' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      expect(await abrirPedido(usuario, 16)).toHaveTextContent('Pagamento na retiradaNão informada')
+    })
+
     test('cada coluna tem a lista de cards com rolagem própria, que recebe o foco pelo Tab e tem o nome da coluna (ZAP-165)', async () => {
       const usuario = userEvent.setup()
       buscarPedidos.mockResolvedValue([...pedidos, pedido(13, STATUS.NOVO, 'Bruno Lima'), pedido(14, STATUS.NOVO, 'Davi Melo')])

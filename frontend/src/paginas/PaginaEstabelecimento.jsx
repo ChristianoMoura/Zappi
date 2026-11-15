@@ -1,7 +1,9 @@
 import { Alert, Button, Checkbox, Loader, NativeSelect, Textarea, TextInput, VisuallyHidden } from '@mantine/core'
-import { IconAlertCircle, IconBuildingStore, IconCamera, IconCheck, IconDeviceFloppy, IconMapPin, IconPhone } from '@tabler/icons-react'
+import { IconAlertCircle, IconBuildingStore, IconCamera, IconCash, IconCheck, IconDeviceFloppy, IconMapPin, IconPhone } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import capaPadrao from '../assets/capa-estabelecimento.webp'
+import { FORMAS_PAGAMENTO, ordenarFormas } from '../comum/formasPagamento'
+import { IconeFormaPagamento } from '../comum/IconeFormaPagamento'
 import {
   LIMITES,
   mascaraCep,
@@ -28,7 +30,7 @@ import classes from './PaginaEstabelecimento.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
 // Ordem dos campos na tela, usada para levar o foco ao primeiro erro (NBR 17225 5.1.4)
-const ORDEM = ['nome', 'descricao', 'slug', 'whatsapp', 'emailContato', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf']
+const ORDEM = ['nome', 'descricao', 'slug', 'whatsapp', 'emailContato', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'formasPagamento']
 
 const paraTela = (guardado) => ({ ...guardado, whatsapp: whatsappParaTela(guardado.whatsapp) })
 const paraGuardar = (tela) => ({ ...tela, nome: tela.nome.trim(), slug: tela.slug.trim(), whatsapp: whatsappParaGuardar(tela.whatsapp), cep: soDigitos(tela.cep) })
@@ -211,6 +213,12 @@ export function PaginaEstabelecimento() {
     }
   }
 
+  // Marca ou desmarca uma forma de pagamento, mantendo a ordem da lista (ZAP-193)
+  function marcarForma(codigo, marcada) {
+    const atuais = dados.formasPagamento.filter((c) => c !== codigo)
+    mudar('formasPagamento', ordenarFormas(marcada ? [...atuais, codigo] : atuais))
+  }
+
   function desfazer() {
     setDados(salvo)
     setErros({})
@@ -235,6 +243,9 @@ export function PaginaEstabelecimento() {
     maxLength: LIMITES[campo],
     classNames: { label: classes.rotulo, input: classes.campo, error: classes.erroCampo, description: classes.dica },
   })
+
+  // Seção "Formas de pagamento" (ZAP-193): só quando o backend já manda o campo (ZAP-192)
+  const comPagamento = Array.isArray(dados.formasPagamento)
 
   let ordem = 0
   // Entrada suave em sequência: junta a classe do bloco com a da animação
@@ -275,7 +286,7 @@ export function PaginaEstabelecimento() {
       </div>
 
       <form
-        className={classes.cartoes}
+        className={`${classes.cartoes} ${comPagamento ? classes.comPagamento : ''}`.trim()}
         noValidate
         onSubmit={(evento) => {
           evento.preventDefault()
@@ -397,6 +408,50 @@ export function PaginaEstabelecimento() {
             />
           </div>
         </section>
+
+        {/* Formas de pagamento aceitas (ZAP-190, ZAP-193). Grupo com legenda visível e o erro junto
+            dele (NBR 17225 5.3.1, 5.3.3); todas vêm marcadas no começo, e pelo menos uma precisa ficar. */}
+        {comPagamento && (
+          <section aria-labelledby="secao-pagamento" {...entrada(`${classes.cartao} ${classes.areaPagamento}`)}>
+            <h2 id="secao-pagamento" className={classes.tituloCartao}>
+              <span className={classes.icone}><IconCash size={24} aria-hidden /></span>
+              Formas de pagamento
+            </h2>
+            <fieldset className={classes.grupo} aria-describedby={`pagamento-dica${erros.formasPagamento ? ' pagamento-erro' : ''}`} aria-invalid={erros.formasPagamento ? true : undefined}>
+              <legend className={classes.rotulo}>
+                Formas que a loja aceita <span className={classes.obrigatorio}>(escolha pelo menos uma)</span>
+              </legend>
+              <p id="pagamento-dica" className={classes.dica}>
+                O cliente escolhe uma delas ao fazer o pedido. O pagamento é sempre na retirada.
+              </p>
+              <div className={classes.formas}>
+                {FORMAS_PAGAMENTO.map(({ codigo, nome }, indice) => (
+                  <Checkbox
+                    key={codigo}
+                    id={`estabelecimento-pagamento-${codigo}`}
+                    ref={indice === 0 ? (el) => { refs.current.formasPagamento = el } : undefined}
+                    label={
+                      <span className={classes.formaRotulo}>
+                        <IconeFormaPagamento codigo={codigo} className={classes.formaIcone} />
+                        {nome}
+                      </span>
+                    }
+                    checked={dados.formasPagamento.includes(codigo)}
+                    onChange={(e) => marcarForma(codigo, e.currentTarget.checked)}
+                    size="md"
+                    className={classes.forma}
+                  />
+                ))}
+              </div>
+              {erros.formasPagamento && (
+                <p id="pagamento-erro" className={`${classes.erroCampo} ${classes.erroGrupo}`}>
+                  <IconAlertCircle size={18} aria-hidden />
+                  {erros.formasPagamento}
+                </p>
+              )}
+            </fieldset>
+          </section>
+        )}
 
         <div className={classes.acoes}>
           <Button

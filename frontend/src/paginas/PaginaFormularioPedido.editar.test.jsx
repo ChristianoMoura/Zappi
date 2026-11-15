@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedido, buscarPedidos, editarPedido } from '../pedidos/servicoPedidos'
 import { buscarProdutos } from '../produtos/servicoProdutos'
+import { buscarEstabelecimento } from '../estabelecimento/servicoEstabelecimento'
 import { pedidoDeTeste, usarTela } from '../testes/pedidosDeTeste'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaFormularioPedido } from './PaginaFormularioPedido'
@@ -12,6 +13,8 @@ import { PaginaPedidos } from './PaginaPedidos'
 // O backend é simulado aqui para os testes não dependerem da ZAP-90 e da ZAP-39
 vi.mock('../pedidos/servicoPedidos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarPedidos: vi.fn(), buscarPedido: vi.fn(), editarPedido: vi.fn() }))
 vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarProdutos: vi.fn() }))
+// As formas de pagamento vêm do Estabelecimento (ZAP-193); sem o campo, o formulário segue como antes
+vi.mock('../estabelecimento/servicoEstabelecimento', async (importarOriginal) => ({ ...(await importarOriginal()), buscarEstabelecimento: vi.fn() }))
 
 
 // O cardápio já subiu o brigadeiro para R$ 120; o pedido foi feito a R$ 100
@@ -44,6 +47,7 @@ describe('Edição de pedido (ZAP-91, RF14, RN21)', () => {
   beforeEach(() => {
     usarTela(true)
     buscarProdutos.mockReset().mockResolvedValue(produtos)
+    buscarEstabelecimento.mockReset().mockResolvedValue({ nome: 'Casa Belt' })
     buscarPedidos.mockReset().mockResolvedValue(todos)
     buscarPedido.mockReset().mockImplementation(async (numero) => todos.find((p) => p.numero === numero))
     editarPedido.mockReset().mockImplementation(async (numero) => todos.find((p) => p.numero === numero))
@@ -149,5 +153,45 @@ describe('Edição de pedido (ZAP-91, RF14, RN21)', () => {
     await usuario.click(screen.getByRole('button', { name: 'Salvar alterações' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar o pedido agora')
+  })
+})
+
+describe('forma de pagamento na edição de pedido (ZAP-193, RN10)', () => {
+  beforeEach(() => {
+    usarTela(true)
+    buscarProdutos.mockReset().mockResolvedValue(produtos)
+    editarPedido.mockReset().mockImplementation(async (numero) => todos.find((p) => p.numero === numero))
+  })
+
+  afterEach(() => usarTela(false))
+
+  test('a forma que a loja deixou de aceitar continua no pedido, marcada como tal', async () => {
+    const usuario = userEvent.setup()
+    const comVr = comCliente(12, STATUS.NOVO, { formaPagamento: 'VR' })
+    buscarPedido.mockReset().mockResolvedValue(comVr)
+    buscarPedidos.mockReset().mockResolvedValue([comVr])
+    buscarEstabelecimento.mockReset().mockResolvedValue({ nome: 'Casa Belt', formasPagamento: ['PIX'] })
+    await abrirEdicao(12)
+
+    const forma = screen.getByRole('combobox', { name: /^Forma de pagamento/ })
+    expect(forma).toHaveValue('VR')
+    expect(within(forma).getByRole('option', { name: 'Vale-refeição (VR) (a loja não aceita mais)' })).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    expect(editarPedido.mock.calls[0][1].formaPagamento).toBe('VR')
+  })
+
+  test('pedido antigo, sem forma, pede a escolha ao salvar', async () => {
+    const usuario = userEvent.setup()
+    const antigo = comCliente(12, STATUS.NOVO, { formaPagamento: null })
+    buscarPedido.mockReset().mockResolvedValue(antigo)
+    buscarPedidos.mockReset().mockResolvedValue([antigo])
+    buscarEstabelecimento.mockReset().mockResolvedValue({ nome: 'Casa Belt', formasPagamento: ['PIX', 'DINHEIRO'] })
+    await abrirEdicao(12)
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+
+    expect(editarPedido).not.toHaveBeenCalled()
+    expect(screen.getByRole('combobox', { name: /^Forma de pagamento/ })).toHaveFocus()
   })
 })

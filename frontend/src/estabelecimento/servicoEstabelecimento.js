@@ -13,6 +13,7 @@ import {
   ServicoIndisponivelError,
   SessaoExpiradaError,
 } from '../autenticacao/clienteApi'
+import { ordenarFormas } from '../comum/formasPagamento'
 
 export { ServicoIndisponivelError, SessaoExpiradaError } from '../autenticacao/clienteApi'
 export class LinkEmUsoError extends Error {}
@@ -69,6 +70,10 @@ function paraTela(estabelecimento) {
   // Destaque das promoções no cardápio (ZAP-152, ZAP-161): só existe quando o backend já manda o
   // campo (ZAP-160); sem ele, a tela não mostra a opção
   if (typeof estabelecimento?.destacarPromocoes === 'boolean') tela.destacarPromocoes = estabelecimento.destacarPromocoes
+  // Formas de pagamento aceitas (ZAP-190, ZAP-193): lista de códigos, só quando o backend já manda
+  // o campo (ZAP-192). Formato esperado: "formasPagamento": ["DINHEIRO", "PIX", "CREDITO",
+  // "DEBITO", "VR"]. Sem ele, a tela não mostra a seção nem o campo do pedido.
+  if (Array.isArray(estabelecimento?.formasPagamento)) tela.formasPagamento = ordenarFormas(estabelecimento.formasPagamento)
   return tela
 }
 
@@ -122,6 +127,7 @@ export async function buscarEstabelecimento() {
 export async function salvarEstabelecimento(dados) {
   const corpo = Object.fromEntries(CAMPOS.map((campo) => [campo, dados[campo] ?? '']))
   if (typeof dados.destacarPromocoes === 'boolean') corpo.destacarPromocoes = dados.destacarPromocoes
+  if (Array.isArray(dados.formasPagamento)) corpo.formasPagamento = ordenarFormas(dados.formasPagamento)
   let salvo = paraTela(await chamar('', { metodo: 'PUT', json: corpo }))
 
   for (const foto of FOTOS) {

@@ -815,3 +815,15 @@
     min-width: 0;
   }
 }
+
+/* Forma de pagamento nos detalhes, com o ícone em DarkCyan (ZAP-193) */
+.formaPagamento {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  & svg {
+    flex: none;
+    color: var(--mantine-color-zappi-6);
+  }
+}

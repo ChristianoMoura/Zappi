@@ -83,6 +83,9 @@ function paraTela(pedido) {
     motivoRecusa: opcional(pedido.motivoRecusa),
     cancelado: pedido.cancelado,
     mensagens: (pedido.mensagens ?? []).map(mensagemParaTela),
+    // Forma de pagamento combinada (ZAP-190, ZAP-193): o código, ou nulo no pedido de antes dela.
+    // Só existe quando o backend já manda o campo (ZAP-192); sem ele, a tela não mostra a linha.
+    ...('formaPagamento' in pedido ? { formaPagamento: pedido.formaPagamento ?? null } : {}),
   }
 }
 

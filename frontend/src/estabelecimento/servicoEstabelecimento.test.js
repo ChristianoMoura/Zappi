@@ -71,6 +71,19 @@ describe('servicoEstabelecimento (ZAP-118 e ZAP-120)', () => {
     expect(opcoes.headers.Authorization).toBe('Bearer jwt-de-teste')
   })
 
+  it('formas de pagamento (ZAP-193): só existem quando o backend manda, na ordem da lista, e vão no PUT', async () => {
+    simularBackend(json(200, doBackend))
+    expect(await buscarEstabelecimento()).not.toHaveProperty('formasPagamento')
+
+    simularBackend(json(200, { ...doBackend, formasPagamento: ['VR', 'PIX', 'OUTRA'] }))
+    expect((await buscarEstabelecimento()).formasPagamento).toEqual(['PIX', 'VR'])
+
+    const chamadas = simularBackend(json(200, { ...doBackend, formasPagamento: ['DINHEIRO', 'PIX'] }))
+    const salvo = await salvarEstabelecimento({ ...naTela, formasPagamento: ['PIX', 'DINHEIRO'] })
+    expect(JSON.parse(chamadas()[0][1].body).formasPagamento).toEqual(['DINHEIRO', 'PIX'])
+    expect(salvo.formasPagamento).toEqual(['DINHEIRO', 'PIX'])
+  })
+
   it('sem foto nova, salva só com um PUT dos campos de texto', async () => {
     const chamadas = simularBackend(json(200, { ...doBackend, nome: 'Casa Belt Doces', logo: LOGO }))
 
