@@ -14,8 +14,17 @@ export const COLUNAS = [
   { status: STATUS.RECUSADO, nome: 'Recusado', cor: '#b42318' },
 ]
 
-export const colunasVisiveis = (mostrarRecusados) =>
-  COLUNAS.filter((coluna) => coluna.status !== STATUS.RECUSADO || mostrarRecusados)
+// Filtro do quadro (ZAP-179): em "Todos", os pedidos em andamento; Entregue e Recusado ficam
+// ocultos e aparecem escolhendo o status no filtro (RN04)
+export const OCULTOS_EM_TODOS = [STATUS.ENTREGUE, STATUS.RECUSADO]
+export const colunasVisiveis = (filtro = null) =>
+  filtro ? COLUNAS.filter((coluna) => coluna.status === filtro) : COLUNAS.filter((coluna) => !OCULTOS_EM_TODOS.includes(coluna.status))
+
+// O status do filtro vem do endereço (?status=3); qualquer outro valor vale como "Todos"
+export function statusDoFiltro(texto) {
+  const numero = Number(texto)
+  return COLUNAS.some((coluna) => coluna.status === numero) ? numero : null
+}
 
 // Na mesma coluna, quem retira antes aparece primeiro
 export const pedidosDaColuna = (pedidos, status) =>

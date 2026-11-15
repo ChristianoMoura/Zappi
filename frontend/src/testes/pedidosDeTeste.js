@@ -37,16 +37,17 @@ export function usarTela(grande) {
   }))
 }
 
-export const renderizarQuadro = () => renderizarComRotas([{ path: '/pedidos', Component: PaginaPedidos }], '/pedidos')
+// `caminho` pode trazer o filtro do quadro, como /pedidos?status=6 (ZAP-179)
+export const renderizarQuadro = (caminho = '/pedidos') => renderizarComRotas([{ path: '/pedidos', Component: PaginaPedidos }], caminho)
 
-export function abrirQuadro() {
-  renderizarQuadro()
+export function abrirQuadro(caminho) {
+  renderizarQuadro(caminho)
   return screen.findByRole('heading', { level: 1, name: 'Pedidos' })
 }
 
 // Abre o quadro e os detalhes do pedido `numero`; devolve o painel de detalhes
-export async function abrirPedido(usuario, numero) {
-  renderizarQuadro()
+export async function abrirPedido(usuario, numero, caminho) {
+  renderizarQuadro(caminho)
   await usuario.click(await screen.findByRole('button', { name: new RegExp(`Pedido ${numero},`) }))
   return screen.findByRole('dialog', { name: `Pedido #${numero}` })
 }
