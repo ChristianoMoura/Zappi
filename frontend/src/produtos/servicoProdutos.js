@@ -30,6 +30,8 @@ function paraTela(produto) {
     outrosAlergenos: produto.outrosAlergenos ?? '',
     // Categoria do produto (ZAP-136): id e nome
     categoria: produto.categoria ?? null,
+    // Fora do cardápio por um tempo, sem excluir (ZAP-151). Sem o campo, está no cardápio.
+    noCardapio: produto.noCardapio ?? true,
   }
 }
 
@@ -42,7 +44,8 @@ async function enviarFoto(id, enderecoTemporario, textoAlternativo) {
   return chamar(`/${id}/foto`, { metodo: 'POST', formulario })
 }
 
-// Só os ativos (RN14), na ordem das categorias definida pela Lídia e, dentro delas, por nome
+// Todos os não excluídos (RN14), no cardápio e fora dele (ZAP-151), na ordem das categorias
+// definida pela Lídia e, dentro delas, por nome
 export async function buscarProdutos() {
   return (await chamar('')).map(paraTela)
 }
@@ -88,4 +91,14 @@ export async function salvarProduto(dados) {
 // Exclusão lógica (RN14): o produto some do cardápio, mas continua nos pedidos antigos
 export async function excluirProduto(id) {
   await chamar(`/${id}`, { metodo: 'DELETE' })
+}
+
+// Tirar do cardápio por um tempo e voltar com ele (ZAP-151, ZAP-154): o produto continua na tela
+// de produtos, mas não aparece no cardápio público nem entra em pedido novo
+export async function tirarDoCardapio(id) {
+  return paraTela(await chamar(`/${id}/tirar-do-cardapio`, { metodo: 'POST' }))
+}
+
+export async function voltarAoCardapio(id) {
+  return paraTela(await chamar(`/${id}/voltar-ao-cardapio`, { metodo: 'POST' }))
 }

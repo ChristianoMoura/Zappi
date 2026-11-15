@@ -7,6 +7,8 @@ import {
   salvarProduto,
   ServicoIndisponivelError,
   SessaoExpiradaError,
+  tirarDoCardapio,
+  voltarAoCardapio,
 } from './servicoProdutos'
 
 const bolos = { id: 1, nome: 'Bolos' }
@@ -38,7 +40,7 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
   it('lista os produtos com o token e troca os nulos por texto vazio', async () => {
     const chamadas = simularBackend(json(200, [doBackend]))
 
-    await expect(buscarProdutos()).resolves.toEqual([{ ...doBackend, descricao: '', foto: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '' }])
+    await expect(buscarProdutos()).resolves.toEqual([{ ...doBackend, descricao: '', foto: '', textoAlternativo: '', alergenos: [], outrosAlergenos: '', noCardapio: true }])
     const [[endereco, opcoes]] = chamadas()
     expect(endereco).toBe('/api/produtos')
     expect(opcoes.headers.Authorization).toBe('Bearer jwt-de-teste')
@@ -128,6 +130,18 @@ describe('servicoProdutos (ZAP-39 e ZAP-40)', () => {
 
     const [[endereco, opcoes]] = chamadas()
     expect(`${opcoes.method} ${endereco}`).toBe('DELETE /api/produtos/1')
+  })
+
+  it('tira do cardápio e volta com ele pelas rotas da ZAP-154', async () => {
+    const chamadas = simularBackend(json(200, { ...doBackend, noCardapio: false }), json(200, { ...doBackend, noCardapio: true }))
+
+    await expect(tirarDoCardapio(1)).resolves.toMatchObject({ id: 1, noCardapio: false })
+    await expect(voltarAoCardapio(1)).resolves.toMatchObject({ id: 1, noCardapio: true })
+
+    expect(chamadas().map(([endereco, opcoes]) => `${opcoes.method} ${endereco}`)).toEqual([
+      'POST /api/produtos/1/tirar-do-cardapio',
+      'POST /api/produtos/1/voltar-ao-cardapio',
+    ])
   })
 
   it('sem conexão, avisa que o serviço está indisponível', async () => {

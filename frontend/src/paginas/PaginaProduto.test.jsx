@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { buscarCategorias } from '../categorias/servicoCategorias'
 import { ALERGENOS } from '../produtos/regrasProdutos'
-import { buscarProduto, buscarProdutos, salvarProduto } from '../produtos/servicoProdutos'
+import { buscarProduto, buscarProdutos, salvarProduto, tirarDoCardapio, voltarAoCardapio } from '../produtos/servicoProdutos'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaProduto } from './PaginaProduto'
 import { PaginaProdutos } from './PaginaProdutos'
@@ -14,6 +14,8 @@ vi.mock('../produtos/servicoProdutos', async (importarOriginal) => ({
   buscarProdutos: vi.fn(),
   buscarProduto: vi.fn(),
   salvarProduto: vi.fn(),
+  tirarDoCardapio: vi.fn(),
+  voltarAoCardapio: vi.fn(),
 }))
 vi.mock('../categorias/servicoCategorias', async (importarOriginal) => ({ ...(await importarOriginal()), buscarCategorias: vi.fn() }))
 
@@ -191,6 +193,43 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     await usuario.click(screen.getByRole('button', { name: 'Salvar alterações' }))
     expect(salvarProduto).toHaveBeenCalledWith(expect.objectContaining({ id: 1, preco: 110 }))
     expect(await screen.findByText('Alterações salvas.')).toBeVisible()
+  })
+
+  test('ao editar, mostra se o produto está no cardápio e tira depois de confirmar, sem salvar o formulário (ZAP-155)', async () => {
+    tirarDoCardapio.mockReset().mockResolvedValue({ ...brigadeiro, noCardapio: false })
+    const usuario = userEvent.setup()
+    await abrir('/produtos/1')
+
+    expect(screen.getByText('No cardápio')).toBeVisible()
+    await usuario.click(screen.getByRole('button', { name: 'Tirar do cardápio' }))
+    const janela = await screen.findByRole('dialog', { name: 'Tirar Bolo de brigadeiro de chocolate do cardápio?' })
+    await usuario.click(within(janela).getByRole('button', { name: 'Tirar do cardápio' }))
+
+    expect(tirarDoCardapio).toHaveBeenCalledWith(1)
+    expect(await screen.findByText('Fora do cardápio')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Voltar ao cardápio' })).toBeVisible()
+    expect(salvarProduto).not.toHaveBeenCalled()
+  })
+
+  test('produto fora do cardápio volta com um clique na tela do produto (ZAP-155)', async () => {
+    buscarProduto.mockResolvedValue({ ...brigadeiro, noCardapio: false })
+    voltarAoCardapio.mockReset().mockResolvedValue({ ...brigadeiro, noCardapio: true })
+    const usuario = userEvent.setup()
+    await abrir('/produtos/1')
+
+    expect(screen.getByText('Fora do cardápio')).toBeVisible()
+    await usuario.click(screen.getByRole('button', { name: 'Voltar ao cardápio' }))
+
+    expect(voltarAoCardapio).toHaveBeenCalledWith(1)
+    expect(await screen.findByText('No cardápio')).toBeVisible()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('ao cadastrar, não mostra se o produto está no cardápio: ele entra no cardápio', async () => {
+    await abrir('/produtos/novo')
+
+    expect(screen.queryByText('No cardápio')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tirar do cardápio' })).not.toBeInTheDocument()
   })
 
   test('cancelar volta para a lista sem salvar', async () => {

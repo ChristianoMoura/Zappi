@@ -53,12 +53,6 @@
   font-size: 1rem;
 }
 
-.contagem {
-  margin: -8px 0 0;
-  color: var(--mantine-color-dimmed);
-  font-size: 1rem;
-}
-
 /* ZAP-41: cartões dos produtos */
 .grade {
   display: grid;
@@ -197,6 +191,59 @@
   & :global(.mantine-Button-section[data-position='left']) {
     margin-inline-end: 6px;
   }
+}
+
+/* ZAP-155: "Tirar do cardápio" ou "Voltar ao cardápio" ao lado de "Editar"; "Excluir" fica na
+   linha de baixo, sozinho, longe do toque sem querer. Os rótulos podem quebrar em duas linhas. */
+.acoes :global(.mantine-Button-root) {
+  height: auto;
+  min-height: 48px;
+  padding-block: 6px;
+}
+
+.acoes :global(.mantine-Button-label) {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.excluirLinha {
+  grid-column: 1 / -1;
+}
+
+/* Produto fora do cardápio: foto apagada e o selo em texto (NBR 17225 5.11.2). O selo tem
+   #3d2b1f sobre #f3efea, 11:1. */
+.foraDoCardapio .foto {
+  filter: grayscale(0.85);
+  opacity: 0.7;
+}
+
+.seloFora {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3efea;
+  border: 1px solid #b9aa9c;
+  color: #3d2b1f;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+/* Na tela do produto: se ele está no cardápio, com o botão de trocar */
+.situacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #d9cbbe;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 1.05rem;
 }
 
 .vazio {

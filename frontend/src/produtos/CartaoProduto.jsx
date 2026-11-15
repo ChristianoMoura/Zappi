@@ -1,5 +1,5 @@
 import { Button } from '@mantine/core'
-import { IconPencil, IconPhotoOff, IconTrash } from '@tabler/icons-react'
+import { IconEye, IconEyeOff, IconPencil, IconPhotoOff, IconTrash } from '@tabler/icons-react'
 import { Link } from 'react-router'
 import { precoParaTela, UNIDADES } from './regrasProdutos'
 import classes from './Produtos.module.css'
@@ -7,11 +7,17 @@ import { SelosAlergenos } from './SelosAlergenos'
 
 // Cartão de um produto do cardápio (ZAP-41): foto com texto alternativo (NBR 17225 5.9.1), o nome
 // do produto (ZAP-139, sem o sabor), preço com a unidade, os alérgenos (ZAP-132) e as ações de
-// editar e excluir. Fica dentro da seção da categoria, por isso o nome é um título de nível 3.
-export function CartaoProduto({ produto, destaque, aoExcluir }) {
+// editar, tirar ou voltar ao cardápio (ZAP-155) e excluir. Fica dentro da seção da categoria, por
+// isso o nome é um título de nível 3. Fora do cardápio, o estado aparece em texto, no selo, e não
+// só pela foto apagada (NBR 17225 5.11.2).
+export function CartaoProduto({ produto, destaque, aoExcluir, aoTirar, aoVoltar, ocupado }) {
   const nome = produto.nome
+  const fora = produto.noCardapio === false
   return (
-    <article className={`${classes.produto} ${destaque ? classes.chegou : ''}`} aria-labelledby={`produto-${produto.id}`}>
+    <article
+      className={`${classes.produto} ${destaque ? classes.chegou : ''} ${fora ? classes.foraDoCardapio : ''}`}
+      aria-labelledby={`produto-${produto.id}`}
+    >
       {produto.foto ? (
         <div className={classes.foto}>
           <img src={produto.foto} alt={produto.textoAlternativo} />
@@ -23,6 +29,12 @@ export function CartaoProduto({ produto, destaque, aoExcluir }) {
         </div>
       )}
       <div className={classes.info}>
+        {fora && (
+          <span className={classes.seloFora}>
+            <IconEyeOff size={16} aria-hidden />
+            Fora do cardápio
+          </span>
+        )}
         <h3 id={`produto-${produto.id}`} className={classes.sabor} tabIndex={-1}>
           {nome}
         </h3>
@@ -44,7 +56,32 @@ export function CartaoProduto({ produto, destaque, aoExcluir }) {
         >
           Editar
         </Button>
-        <Button variant="subtle" color="#b42318" className={classes.excluir} onClick={() => aoExcluir(produto)} leftSection={<IconTrash size={22} aria-hidden />} aria-label={`Excluir ${nome}`}>
+        {fora ? (
+          <Button
+            id={`estado-${produto.id}`}
+            className={classes.editar}
+            onClick={() => aoVoltar(produto)}
+            loading={ocupado}
+            loaderProps={{ type: 'dots' }}
+            leftSection={<IconEye size={22} aria-hidden />}
+            aria-label={`Voltar ${nome} ao cardápio`}
+          >
+            Voltar ao cardápio
+          </Button>
+        ) : (
+          <Button
+            id={`estado-${produto.id}`}
+            variant="outline"
+            color="#5c5048"
+            className={classes.editar}
+            onClick={() => aoTirar(produto)}
+            leftSection={<IconEyeOff size={22} aria-hidden />}
+            aria-label={`Tirar ${nome} do cardápio`}
+          >
+            Tirar do cardápio
+          </Button>
+        )}
+        <Button variant="subtle" color="#b42318" className={`${classes.excluir} ${classes.excluirLinha}`} onClick={() => aoExcluir(produto)} leftSection={<IconTrash size={22} aria-hidden />} aria-label={`Excluir ${nome}`}>
           Excluir
         </Button>
       </div>

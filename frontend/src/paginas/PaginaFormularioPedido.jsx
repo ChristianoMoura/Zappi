@@ -13,6 +13,11 @@ import formulario from '../produtos/Produtos.module.css'
 import classes from '../pedidos/NovoPedido.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
+// Só os produtos que estão no cardápio podem ser escolhidos (ZAP-155). O item que já estava no
+// pedido continua, com o preço da época, mesmo se o produto saiu do cardápio (RN10).
+const soDoCardapio = (lista) => lista.filter((p) => p.noCardapio !== false)
+const FORA_DO_CARDAPIO = 'Este produto não está mais no cardápio. Escolha outro.'
+
 const VAZIO = () => ({ clienteNome: '', clienteWhatsapp: '', consentimentoLgpd: false, itens: [itemVazio()], dataRetirada: '', horaRetirada: '', observacao: '' })
 
 // Cadastro (ZAP-89, RF13) e edição (ZAP-91, RF14) de pedido pela Lídia: ela registra ou corrige a
@@ -43,7 +48,7 @@ export function PaginaFormularioPedido() {
     Promise.all([buscarProdutos(), editando ? buscarPedido(Number(numero)) : null])
       .then(([cardapio, salvo]) => {
         if (!ativo) return
-        setProdutos(cardapio)
+        setProdutos(soDoCardapio(cardapio))
         if (!editando) return
         if (!podeEditar(salvo.status)) {
           setErroCarregar('Este pedido já foi encerrado e não pode mais ser editado.')
@@ -118,7 +123,8 @@ export function PaginaFormularioPedido() {
   }
 
   async function salvar() {
-    const novosErros = validarPedido(dados, produtos, new Date(), pedido?.dataRetirada ?? null)
+    // Sem a data de hoje, a regra usa a hora atual
+    const novosErros = validarPedido(dados, produtos, undefined, pedido?.dataRetirada ?? null)
     setErros(novosErros)
     setErroSalvar('')
     const primeiro = ordemDosCampos(dados.itens).find((campo) => novosErros[campo])
@@ -137,7 +143,28 @@ export function PaginaFormularioPedido() {
       }
     } catch {
       setSalvando(false)
+      // O produto pode ter saído do cardápio com o formulário aberto: o backend recusa, e o erro
+      // aparece junto do item, com o foco nele (ZAP-155)
+      const fora = await itensForaDoCardapio()
+      if (fora.length) {
+        setErros((atuais) => ({ ...atuais, ...Object.fromEntries(fora.map((campo) => [campo, FORA_DO_CARDAPIO])) }))
+        setTimeout(() => refs.current[fora[0]]?.focus())
+        return
+      }
       setErroSalvar('Não foi possível salvar o pedido agora. Tente novamente em alguns minutos.')
+    }
+  }
+
+  // Busca o cardápio de novo e devolve os campos dos itens com produto que não está mais nele
+  async function itensForaDoCardapio() {
+    try {
+      const atual = soDoCardapio(await buscarProdutos())
+      setProdutos(atual)
+      return dados.itens
+        .filter((item) => item.produtoId && item.produtoId !== CONGELADO && !atual.some((p) => String(p.id) === String(item.produtoId)))
+        .map((item) => `item-${item.chave}-produto`)
+    } catch {
+      return []
     }
   }
 
