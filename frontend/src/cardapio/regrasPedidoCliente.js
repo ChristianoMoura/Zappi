@@ -21,9 +21,26 @@ export function quantidadeTexto(produto, quantidade) {
 
 export const subtotal = (produto, quantidade) => arredondar(produto.preco * quantidade)
 
-// Itens do pedido com o produto do cardápio; itens de produtos que saíram do cardápio somem (RN14)
+// Itens do pedido com o produto do cardápio. Os de produtos que saíram do cardápio (RN14, ZAP-151)
+// não entram no total nem na mensagem enviada à loja
 export function itensComProduto(itens, produtos) {
   return itens.map((item) => ({ ...item, produto: produtos.find((p) => p.id === item.produtoId) })).filter((item) => item.produto)
+}
+
+// Todos os itens, na ordem do pedido, marcando os indisponíveis (ZAP-156): eles continuam na tela,
+// com o nome e a foto guardados ao adicionar, até o cliente remover. Se o produto voltar ao
+// cardápio, o item volta ao normal.
+export function itensDoPedido(itens, produtos) {
+  return itens.map((item) => {
+    const produto = produtos.find((p) => p.id === item.produtoId)
+    return produto ? { ...item, produto, disponivel: true } : { ...item, produto: null, disponivel: false }
+  })
+}
+
+// "2 itens" ou "2 itens · 1 indisponível"
+export function contagemDosItens(disponiveis, indisponiveis) {
+  const texto = `${disponiveis} ${disponiveis === 1 ? 'item' : 'itens'}`
+  return indisponiveis ? `${texto} · ${indisponiveis} ${indisponiveis === 1 ? 'indisponível' : 'indisponíveis'}` : texto
 }
 
 export const totalDoPedido = (itens, produtos) =>

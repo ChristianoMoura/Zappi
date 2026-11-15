@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import {
+  contagemDosItens,
   dataMinima,
   dataPorExtenso,
   dataRetiradaISO,
   hojeEmSaoPaulo,
   HORARIOS,
   horaTexto,
+  itensDoPedido,
   mensagemDoPedido,
   mudarQuantidade,
   quantidadeTexto,
@@ -80,5 +82,14 @@ describe('regras da montagem do pedido pelo cliente (ZAP-107)', () => {
     expect(texto).toContain('Retirada: terça-feira, 17/11, às 15h30')
     expect(texto).toContain('Observação do pedido: Aniversário de 5 anos')
     expect(texto).toContain('Total estimado: R$ 175,00')
+  })
+
+  test('marca os itens de produto que saiu do cardápio e conta os indisponíveis (ZAP-156)', () => {
+    const marcados = itensDoPedido([{ chave: 1, produtoId: 1, quantidade: 1 }, { chave: 2, produtoId: 9, quantidade: 1, nome: 'Torta' }], produtos)
+    expect(marcados.map((item) => item.disponivel)).toEqual([true, false])
+    expect(marcados[1].produto).toBeNull()
+    expect(contagemDosItens(2, 0)).toBe('2 itens')
+    expect(contagemDosItens(1, 1)).toBe('1 item · 1 indisponível')
+    expect(contagemDosItens(1, 2)).toBe('1 item · 2 indisponíveis')
   })
 })

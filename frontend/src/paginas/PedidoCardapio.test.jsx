@@ -62,6 +62,8 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(await screen.findByText('Bolo de brigadeiro de chocolate adicionado ao pedido.')).toBeVisible()
     expect(screen.getByRole('link', { name: /Ver pedido · 1 item/ })).toHaveTextContent('R$ 150,00')
     expect(guardado().itens[0]).toMatchObject({ produtoId: 1, quantidade: 1.5, observacao: 'Escrever Feliz aniversário' })
+    // Nome, foto e unidade guardados para o item continuar reconhecível se sair do cardápio (ZAP-156)
+    expect(guardado().itens[0]).toMatchObject({ nome: 'Bolo de brigadeiro de chocolate', foto: '', unidade: 'KG' })
     expect(guardado().itens[0]).not.toHaveProperty('recheio')
   })
 
@@ -179,5 +181,60 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(within(itens).queryByText(/^Recheio:/)).not.toBeInTheDocument()
     expect(guardado().itens[0]).not.toHaveProperty('recheio')
     expect(guardado().itens[0]).not.toHaveProperty('cobertura')
+  })
+
+  test('produto que saiu do cardápio continua no pedido, indisponível e fora do total (ZAP-156)', async () => {
+    localStorage.setItem(
+      'zappi.pedido.casa-belt',
+      JSON.stringify({
+        itens: [
+          { chave: 1, produtoId: 1, quantidade: 1, observacao: '' },
+          { chave: 2, produtoId: 9, quantidade: 1.5, observacao: '', nome: 'Bolo de ninho com morango', foto: 'ninho.jpg', unidade: 'KG' },
+        ],
+        data: '',
+        hora: '',
+        observacao: '',
+      }),
+    )
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    const itens = await screen.findByRole('region', { name: 'Itens' })
+    expect(within(itens).getByText(/1 item · 1 indisponível/)).toBeVisible()
+    const indisponivel = within(itens).getByRole('heading', { level: 3, name: 'Bolo de ninho com morango' }).closest('li')
+    expect(within(indisponivel).getByText('Indisponível')).toBeVisible()
+    expect(within(indisponivel).getByText('1,5 kg')).toBeVisible()
+    expect(within(indisponivel).getByText('Este produto saiu do cardápio. Ele não entra no pedido nem no total.')).toBeVisible()
+    expect(within(indisponivel).queryByRole('button', { name: 'Aumentar quantidade' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Total' })).toHaveTextContent('R$ 100,00')
+
+    await usuario.click(within(indisponivel).getByRole('button', { name: 'Remover Bolo de ninho com morango' }))
+
+    expect(screen.getByText('Bolo de ninho com morango removido do pedido.')).toBeVisible()
+    expect(guardado().itens.map((item) => item.produtoId)).toEqual([1])
+    expect(within(itens).getByText(/^1 item ·/)).toBeVisible()
+  })
+
+  test('o item indisponível não vai na mensagem do WhatsApp (ZAP-156)', async () => {
+    localStorage.setItem(
+      'zappi.pedido.casa-belt',
+      JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 2 }, { chave: 2, produtoId: 9, quantidade: 1, nome: 'Torta de limão', unidade: 'UN' }], data: dataMinima(), hora: '15:30', observacao: '' }),
+    )
+    abrir('/cardapio/casa-belt/pedido')
+
+    const enviar = await screen.findByRole('link', { name: /Enviar pelo WhatsApp/ })
+    const texto = new URL(enviar.getAttribute('href')).searchParams.get('text')
+    expect(texto).toContain('Bolo de brigadeiro de chocolate')
+    expect(texto).not.toContain('Torta de limão')
+    expect(screen.queryByText(/não vai junto/)).not.toBeInTheDocument()
+  })
+
+  test('item guardado antes da mudança, sem o nome, aparece como "Produto indisponível" (ZAP-156)', async () => {
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 9, quantidade: 1 }], data: '', hora: '', observacao: '' }))
+    abrir('/cardapio/casa-belt/pedido')
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Produto indisponível' })).toBeVisible()
+    expect(screen.getByText(/0 itens · 1 indisponível/)).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Seu pedido está vazio' })).not.toBeInTheDocument()
   })
 })

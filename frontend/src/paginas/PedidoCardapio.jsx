@@ -1,5 +1,6 @@
 import {
   IconAlertCircle,
+  IconBan,
   IconCalendarEvent,
   IconChevronLeft,
   IconInfoCircle,
@@ -19,7 +20,8 @@ import {
   dataPorExtenso,
   HORARIOS,
   horaTexto,
-  itensComProduto,
+  contagemDosItens,
+  itensDoPedido,
   LIMITES,
   mensagemDoPedido,
   mudarQuantidade,
@@ -121,10 +123,15 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
   }
 
   function adicionar() {
+    // O nome, a foto e a unidade ficam guardados para o item continuar reconhecível se o produto
+    // sair do cardápio (ZAP-156)
     montagem.adicionar({
       produtoId: produto.id,
       quantidade,
       observacao: observacao.trim(),
+      nome: produto.nome,
+      foto: produto.foto,
+      unidade: produto.unidade,
     })
     navegar(cardapio, { state: { aviso: `${produto.nome} adicionado ao pedido.` } })
   }
@@ -230,6 +237,37 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
 
 // ---------- Seu pedido ----------
 
+const nomeDoItem = (item) => item.produto?.nome ?? item.nome ?? 'Produto indisponível'
+
+// Produto que saiu do cardápio depois de entrar no pedido (ZAP-156): continua na lista, com a foto
+// cinza, o selo "Indisponível" e a mensagem, sem mudar a quantidade e fora do total. O estado
+// aparece em texto, e não só pela foto (NBR 17225 5.11.2).
+function ItemIndisponivel({ item, aoRemover }) {
+  const nome = nomeDoItem(item)
+  const quantidade = item.unidade ? quantidadeTexto({ unidade: item.unidade }, item.quantidade) : null
+  return (
+    <li className={juntar(classes.item, classes.indisponivel)}>
+      <Foto produto={{ foto: item.foto ?? '' }} className={classes.fotoMini} decorativa />
+      <div className={classes.dados}>
+        <span className={classes.seloIndisponivel}>
+          <IconBan size={16} aria-hidden />
+          Indisponível
+        </span>
+        <h3>{nome}</h3>
+        {quantidade && <span className={classes.detalhe}>{quantidade}</span>}
+        <p className={classes.mensagemIndisponivel}>
+          <IconInfoCircle size={18} aria-hidden />
+          <span>Este produto saiu do cardápio. Ele não entra no pedido nem no total.</span>
+        </p>
+        <button type="button" className={classes.remover} onClick={aoRemover} aria-label={`Remover ${nome}`}>
+          <IconTrash size={18} aria-hidden />
+          Remover
+        </button>
+      </div>
+    </li>
+  )
+}
+
 const ORDEM_DOS_ERROS = ['itens', 'data', 'hora', 'observacao']
 
 export function SeuPedido({ loja, produtos, montagem, escuro }) {
@@ -242,7 +280,9 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
   const horaRef = useRef(null)
   const observacaoRef = useRef(null)
   const cardapio = `/cardapio/${loja.slug}`
-  const itens = itensComProduto(pedido.itens, produtos)
+  const todos = itensDoPedido(pedido.itens, produtos)
+  const itens = todos.filter((item) => item.disponivel)
+  const indisponiveis = todos.length - itens.length
   const total = totalDoPedido(pedido.itens, produtos)
   const minima = dataMinima()
 
@@ -253,7 +293,7 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
 
   function tirar(item) {
     remover(item.chave)
-    setAviso(`${item.produto.nome} removido do pedido.`)
+    setAviso(`${nomeDoItem(item)} removido do pedido.`)
   }
 
   function enviar(evento) {
@@ -267,7 +307,7 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
     }
   }
 
-  if (itens.length === 0) {
+  if (todos.length === 0) {
     return (
       <div className={classes.pagina}>
         <TopoPagina titulo="Seu pedido" voltarPara={cardapio} />
@@ -300,11 +340,12 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
           <header>
             <h2 id="titulo-itens">Itens</h2>
             <small>
-              {itens.length} {itens.length === 1 ? 'item' : 'itens'} · <Link to={cardapio}>Adicionar mais produtos</Link>
+              {contagemDosItens(itens.length, indisponiveis)} · <Link to={cardapio}>Adicionar mais produtos</Link>
             </small>
           </header>
           <ul className={classes.itens}>
-            {itens.map((item) => {
+            {todos.map((item) => {
+              if (!item.disponivel) return <ItemIndisponivel key={item.chave} item={item} aoRemover={() => tirar(item)} />
               const { produto } = item
               return (
                 <li key={item.chave} className={classes.item}>
