@@ -5,7 +5,9 @@ import {
   linkWhatsapp,
   mensagemPedido,
   precoTexto,
+  secaoPromocoes,
   telefoneTexto,
+  textoPrecoLido,
   unidadeTexto,
 } from './regrasCardapio'
 
@@ -65,5 +67,25 @@ describe('regras do cardápio público (ZAP-105)', () => {
       'Olá! Vi o cardápio da Casa Belt no Zappi e quero encomendar: Bolo de brigadeiro de chocolate (R$ 100,00 por kg).',
     )
     expect(mensagemPedido(loja, produtos[0], '  Escrever Feliz aniversário ')).toMatch(/\. Observação: Escrever Feliz aniversário$/)
+  })
+
+  test('promoção: o preço vigente é o com desconto, e o leitor de tela ouve o "De ... por ..." (ZAP-162)', () => {
+    const ninho = { id: 2, nome: 'Bolo de ninho', unidade: 'KG', preco: 115, precoPromocional: 100 }
+    expect(precoTexto(ninho)).toBe('R$ 100,00')
+    expect(textoPrecoLido(ninho)).toBe('De R$ 115,00 por R$ 100,00 por kg, 13% de desconto')
+    expect(textoPrecoLido({ ...ninho, precoPromocional: 114.5 })).toBe('De R$ 115,00 por R$ 114,50 por kg')
+  })
+
+  test('seção Promoções: só com o destaque ligado, sem busca e com produto em promoção, na ordem das categorias (ZAP-162)', () => {
+    const categorias = [
+      { id: 2, titulo: 'Salgados', produtos: [{ id: 3, preco: 120, precoPromocional: 99 }] },
+      { id: 1, titulo: 'Bolos', produtos: [{ id: 1, preco: 100, precoPromocional: null }, { id: 2, preco: 115, precoPromocional: 100 }] },
+    ]
+    const secao = secaoPromocoes(categorias, { destacar: true, buscando: false })
+    expect(secao).toMatchObject({ id: 'promocoes', titulo: 'Promoções', promocoes: true })
+    expect(secao.produtos.map((p) => p.id)).toEqual([3, 2])
+    expect(secaoPromocoes(categorias, { destacar: false, buscando: false })).toBeNull()
+    expect(secaoPromocoes(categorias, { destacar: true, buscando: true })).toBeNull()
+    expect(secaoPromocoes([categorias[1]].map((c) => ({ ...c, produtos: [c.produtos[0]] })), { destacar: true, buscando: false })).toBeNull()
   })
 })

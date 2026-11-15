@@ -28,7 +28,7 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
       const cardapio = await buscarCardapio('casa-belt')
 
       expect(buscar).toHaveBeenCalledWith('/api/cardapio/casa-belt')
-      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp' })
+      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp', destacarPromocoes: true })
       expect(cardapio.produtos[0]).toMatchObject({ preco: 115, descricao: '', foto: '', textoAlternativo: '' })
     })
 
