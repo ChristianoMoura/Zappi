@@ -1,0 +1,124 @@
+/* Sino de notificações (ZAP-175) */
+
+.sino {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Contador: vermelho de erro do projeto com texto branco, 6,13:1 (NBR 17225 5.11.2). A borda
+   separa o número do fundo (creme no menu lateral, cacau no topo do celular). */
+.contador {
+  display: inline-block;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #b42318;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--cor-volta-contador, #fef9f1);
+}
+
+/* Sobre o sino (menu recolhido e topo do celular) */
+.sino .contador {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+}
+
+/* Topo do celular: mesmo jeito do botão da conta, em creme sobre o cacau */
+.botaoTopo {
+  --cor-volta-contador: #3d2b1f;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  color: #fdf6ec;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: rgb(253 246 236 / 0.14);
+  }
+}
+
+.caixinha {
+  max-width: calc(100vw - 16px);
+  padding: 6px;
+}
+
+.titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--mantine-color-text);
+}
+
+.estado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 14px;
+  font-size: 0.95rem;
+  /* Texto secundário: 7,4:1 sobre o branco */
+  color: #5c5048;
+}
+
+.erro {
+  color: #b42318;
+}
+
+.tentarDeNovo {
+  min-height: 44px;
+  font-weight: 600;
+}
+
+.item {
+  min-height: 44px;
+  padding: 10px 12px;
+  white-space: normal;
+
+  & :global(.mantine-Menu-itemLabel) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Nova: fundo ciano claro, além do selo em texto (não só pela cor) */
+  &[data-nova] {
+    background: #e6f4f4;
+  }
+
+  &[data-nova]:hover,
+  &[data-nova][data-hovered] {
+    background: #d3ecec;
+  }
+}
+
+.texto {
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: var(--mantine-color-text);
+}
+
+/* Ciano profundo com branco: 6,16:1 */
+.nova {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--mantine-color-zappi-7);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+  vertical-align: 1px;
+}
+
+.quando {
+  font-size: 0.8rem;
+  color: #5c5048;
+}

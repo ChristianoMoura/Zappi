@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Group, Menu, NavLink, Stack, Text, UnstyledButton } from '@mantine/core'
+import { ActionIcon, AppShell, Group, Menu, NavLink, Stack, Text, UnstyledButton, VisuallyHidden } from '@mantine/core'
 import { useLocalStorage, useMediaQuery } from '@mantine/hooks'
 import { IconChevronDown, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout, IconUserCircle } from '@tabler/icons-react'
 import { useState } from 'react'
@@ -8,6 +8,8 @@ import nome from '../assets/zappi-nome-creme.svg'
 import simbolo from '../assets/zappi-simbolo-creme.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
 import { iniciaisDaLoja, useMarcaLoja } from '../estabelecimento/useMarcaLoja'
+import { SinoNotificacoes } from '../notificacoes/SinoNotificacoes'
+import { useNotificacoes } from '../notificacoes/useNotificacoes'
 import { caminhosDoItem, itensMenu } from './menu'
 import { useOndaAoClicar } from './useOndaAoClicar'
 import classes from './LayoutPrincipal.module.css'
@@ -20,6 +22,7 @@ export function LayoutPrincipal() {
   const telaGrande = useMediaQuery('(min-width: 48em)', false, { getInitialValueInEffect: false })
   const [recolhido, setRecolhido] = useLocalStorage({ key: 'zappi.menu-recolhido', defaultValue: false })
   const marca = useMarcaLoja()
+  const notificacoes = useNotificacoes()
   useOndaAoClicar()
 
   const ativo = (caminho) => pathname.startsWith(caminho)
@@ -70,41 +73,59 @@ export function LayoutPrincipal() {
               <img src={nome} alt="Zappi" className={classes.marcaNome} />
             </span>
           </div>
-          {/* Conta no canto superior direito, como na Referência A: o "Sair" fica no menu. O logo
-              da loja fica no botão, como uma foto de perfil (ZAP-178) */}
-          <Menu position="bottom-end" width={260} shadow="md" radius="md">
-            <Menu.Target>
-              <UnstyledButton className={classes.botaoConta} aria-label="Minha conta" data-onda>
-                <AvatarLoja marca={marca} />
-                <IconChevronDown size={18} stroke={2.5} aria-hidden className={classes.setaConta} />
-              </UnstyledButton>
-            </Menu.Target>
-            <Menu.Dropdown>
-              {(nomeUsuaria || marca) && (
-                <>
-                  <div className={classes.cabecalhoConta}>
-                    <AvatarLoja marca={marca} grande />
-                    <div className={classes.textoConta}>
-                      {nomeUsuaria && <span className={classes.nomeConta}>{nomeUsuaria}</span>}
-                      {marca && <span className={classes.lojaConta}>{marca.nome}</span>}
+          <Group gap={6} wrap="nowrap">
+            {/* No celular, o sino de notificações fica no topo, ao lado da conta (ZAP-175) */}
+            {!telaGrande && notificacoes.disponivel && (
+              <SinoNotificacoes variante="topo" quantidade={notificacoes.quantidade} aoVer={notificacoes.zerar} />
+            )}
+            {/* Conta no canto superior direito, como na Referência A: o "Sair" fica no menu. O logo
+                da loja fica no botão, como uma foto de perfil (ZAP-178) */}
+            <Menu position="bottom-end" width={260} shadow="md" radius="md">
+              <Menu.Target>
+                <UnstyledButton className={classes.botaoConta} aria-label="Minha conta" data-onda>
+                  <AvatarLoja marca={marca} />
+                  <IconChevronDown size={18} stroke={2.5} aria-hidden className={classes.setaConta} />
+                </UnstyledButton>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {(nomeUsuaria || marca) && (
+                  <>
+                    <div className={classes.cabecalhoConta}>
+                      <AvatarLoja marca={marca} grande />
+                      <div className={classes.textoConta}>
+                        {nomeUsuaria && <span className={classes.nomeConta}>{nomeUsuaria}</span>}
+                        {marca && <span className={classes.lojaConta}>{marca.nome}</span>}
+                      </div>
                     </div>
-                  </div>
-                  <Menu.Divider />
-                </>
-              )}
-              <Menu.Item leftSection={<IconLogout size={22} aria-hidden />} onClick={sair} className={classes.itemConta}>
-                Sair
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+                    <Menu.Divider />
+                  </>
+                )}
+                <Menu.Item leftSection={<IconLogout size={22} aria-hidden />} onClick={sair} className={classes.itemConta}>
+                  Sair
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
         </Group>
       </AppShell.Header>
+
+      {/* Aviso discreto ao leitor de tela quando chega notificação nova (ZAP-175) */}
+      <VisuallyHidden aria-live="polite">{notificacoes.aviso}</VisuallyHidden>
 
       {/* Só um dos dois menus existe por vez, para o teclado e o leitor de
           tela não passarem por um menu escondido. */}
       {telaGrande && (
       <AppShell.Navbar p={recolhido ? 'xs' : 'md'} component="nav" id="menu-principal" aria-label="Menu principal" className={`${classes.menuLateral} ${classes.moldura}`}>
         <Stack gap="xs">
+          {/* Notificações acima de Pedidos (ZAP-175) */}
+          {notificacoes.disponivel && (
+            <SinoNotificacoes
+              variante={recolhido ? 'recolhido' : 'lateral'}
+              quantidade={notificacoes.quantidade}
+              aoVer={notificacoes.zerar}
+              classeItem={classes.itemMenu}
+            />
+          )}
           {itensMenu.map((item) =>
             item.filhos ? (
               <GrupoMenu key={item.rotulo} item={item} recolhido={recolhido} ativo={ativo} aberto={grupoAberto(item)} aoAbrir={(valor) => abrirGrupo(item, valor)} />
