@@ -158,7 +158,7 @@ describe('PaginaCardapio (ZAP-105)', () => {
     expect(buscarCardapio).toHaveBeenCalledTimes(1)
 
     const pagamento = screen.getByRole('region', { name: 'Formas de pagamento' })
-    expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Pix', 'Crédito', 'Débito'])
+    expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Pix', 'Cartão de crédito', 'Cartão de débito'])
     expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
 
     // O endereço do mapa é fictício e avisa isso; o da loja (casa da Lídia) não vem da API (LGPD)
@@ -241,5 +241,23 @@ describe('Promoção no cardápio público (ZAP-162)', () => {
     abrir('/cardapio/casa-belt/pedido')
 
     expect(await screen.findByRole('region', { name: 'Total' })).toHaveTextContent('R$ 150,00')
+  })
+})
+
+describe('formas de pagamento em "Mais informações" (ZAP-194)', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test('mostra só as formas que a loja aceita, na ordem da lista, com "Pagamento na retirada"', async () => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.estabelecimento.formasPagamento = ['DINHEIRO', 'PIX', 'VR']
+    buscarCardapio.mockResolvedValue(cardapio)
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const pagamento = await screen.findByRole('region', { name: 'Formas de pagamento' })
+    expect(within(pagamento).getAllByRole('listitem').map((item) => item.querySelector('b').textContent)).toEqual(['Dinheiro', 'Pix', 'Vale-refeição (VR)'])
+    expect(within(pagamento).getAllByText('Pagamento na retirada')).toHaveLength(3)
   })
 })

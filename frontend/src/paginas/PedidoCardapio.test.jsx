@@ -297,3 +297,90 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(screen.queryByRole('heading', { name: 'Seu pedido está vazio' })).not.toBeInTheDocument()
   })
 })
+
+describe('forma de pagamento no "Seu pedido" (ZAP-194)', () => {
+  const comFormas = (formasPagamento) => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.estabelecimento.formasPagamento = formasPagamento
+    return cardapio
+  }
+  const guardar = (extra = {}) =>
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: dataMinima(), hora: '15:30', observacao: '', ...extra }))
+  async function preencherDados(usuario) {
+    await usuario.type(await screen.findByRole('textbox', { name: 'Nome' }), 'Ana')
+    await usuario.type(screen.getByRole('textbox', { name: 'WhatsApp' }), '11987654321')
+    await usuario.click(screen.getByRole('checkbox', { name: /Li e concordo/ }))
+  }
+
+  beforeEach(() => {
+    window.scrollTo = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test('sem escolher, não envia: erro junto do grupo e foco na primeira opção', async () => {
+    buscarCardapio.mockResolvedValue(comFormas(['DINHEIRO', 'PIX', 'CREDITO']))
+    guardar()
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await preencherDados(usuario)
+    const grupo = screen.getByRole('group', { name: 'Como você vai pagar?' })
+    expect(within(grupo).getAllByRole('radio').map((r) => r.closest('label').textContent)).toEqual(['Dinheiro', 'Pix', 'Cartão de crédito'])
+    expect(screen.queryByText('O pagamento é na retirada.')).not.toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
+
+    expect(screen.getByText('Escolha como você vai pagar.')).toBeVisible()
+    expect(within(grupo).getByRole('radio', { name: 'Dinheiro' })).toHaveFocus()
+    expect(enviarPedido).not.toHaveBeenCalled()
+  })
+
+  test('a forma escolhida fica guardada, vai no envio e aparece no "Pedido recebido"', async () => {
+    buscarCardapio.mockResolvedValue(comFormas(['DINHEIRO', 'PIX']))
+    enviarPedido.mockResolvedValue(130)
+    guardar()
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await preencherDados(usuario)
+    await usuario.click(screen.getByRole('radio', { name: 'Pix' }))
+    expect(guardado().formaPagamento).toBe('PIX')
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
+
+    expect(enviarPedido).toHaveBeenCalledWith('casa-belt', expect.objectContaining({ formaPagamento: 'PIX' }))
+    expect(await screen.findByText(/na retirada\. Não há entrega\./)).toHaveTextContent('Pagamento: Pix, na retirada. Não há entrega.')
+  })
+
+  test('forma que a loja deixou de aceitar é apagada e o cliente escolhe de novo', async () => {
+    buscarCardapio.mockResolvedValue(comFormas(['DINHEIRO', 'PIX']))
+    guardar({ formaPagamento: 'VR' })
+    abrir('/cardapio/casa-belt/pedido')
+
+    const grupo = await screen.findByRole('group', { name: 'Como você vai pagar?' })
+    expect(within(grupo).getAllByRole('radio').some((r) => r.checked)).toBe(false)
+  })
+
+  test('com uma forma só, ela já vem marcada', async () => {
+    buscarCardapio.mockResolvedValue(comFormas(['PIX']))
+    guardar()
+    abrir('/cardapio/casa-belt/pedido')
+    expect(await screen.findByRole('radio', { name: 'Pix' })).toBeChecked()
+  })
+
+  test('sem as formas na API (backend antigo), não pergunta a forma e envia como antes', async () => {
+    buscarCardapio.mockResolvedValue(comFormas(undefined))
+    enviarPedido.mockResolvedValue(131)
+    guardar()
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await preencherDados(usuario)
+    expect(screen.queryByRole('group', { name: 'Como você vai pagar?' })).not.toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
+
+    expect(enviarPedido.mock.calls[0][1]).not.toHaveProperty('formaPagamento')
+  })
+})

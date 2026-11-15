@@ -11,13 +11,19 @@ export const REGRAS_ENCOMENDA = [
   { icone: 'confirmacao', titulo: 'Confirmação', texto: 'O pedido vale depois da confirmação da loja pelo WhatsApp.' },
 ]
 
-// Formas de pagamento aceitas na retirada (RN19: o sistema não registra pagamento). Fixas por
-// enquanto: o cadastro da loja não tem esse campo.
-export const FORMAS_PAGAMENTO = [
-  { id: 'pix', nome: 'Pix' },
-  { id: 'credito', nome: 'Crédito' },
-  { id: 'debito', nome: 'Débito' },
-]
+// Formas de pagamento aceitas na retirada (RN19: o sistema não registra pagamento). Vêm do
+// cadastro da loja (ZAP-193, ZAP-194), na ordem da lista. Sem o campo na API (backend antigo), a
+// tela mostra as três de antes e o pedido não pergunta a forma.
+const FORMAS_SEM_CADASTRO = ['PIX', 'CREDITO', 'DEBITO']
+export const formasDaLoja = (loja) => loja.formasPagamento ?? FORMAS_SEM_CADASTRO
+export const pedeFormaPagamento = (loja) => Array.isArray(loja.formasPagamento) && loja.formasPagamento.length > 0
+
+// A escolha do pedido só vale se a loja ainda aceita a forma; com uma forma só, ela já vem escolhida
+export function formaEscolhida(loja, escolhida) {
+  if (!pedeFormaPagamento(loja)) return ''
+  if (loja.formasPagamento.includes(escolhida)) return escolhida
+  return loja.formasPagamento.length === 1 ? loja.formasPagamento[0] : ''
+}
 
 // Local de retirada mostrado no mapa de "Mais informações". Por enquanto é um endereço
 // fictício, só para representar o mapa: o banco não tem um ponto de retirada, e a API pública

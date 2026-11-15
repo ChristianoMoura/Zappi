@@ -28,7 +28,7 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
       const cardapio = await buscarCardapio('casa-belt')
 
       expect(buscar).toHaveBeenCalledWith('/api/cardapio/casa-belt')
-      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp', destacarPromocoes: true })
+      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp', destacarPromocoes: true, formasPagamento: null })
       expect(cardapio.produtos[0]).toMatchObject({ preco: 115, descricao: '', foto: '', textoAlternativo: '' })
     })
 
@@ -119,5 +119,14 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
       vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('rede') }))
       await expect(enviarPedido('casa-belt', {})).rejects.toBeInstanceOf(ServicoIndisponivelError)
     })
+  })
+
+  test('traz as formas de pagamento da loja na ordem da lista, só com códigos conhecidos (ZAP-194)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, { ...doBackend, estabelecimento: { ...doBackend.estabelecimento, formasPagamento: ['DEBITO', 'XYZ', 'PIX', 'DINHEIRO'] } })))
+    vi.stubEnv('DEV', false)
+
+    const cardapio = await buscarCardapio('casa-belt')
+
+    expect(cardapio.estabelecimento.formasPagamento).toEqual(['DINHEIRO', 'PIX', 'DEBITO'])
   })
 })

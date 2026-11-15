@@ -5,6 +5,7 @@
 // PENDENTE (ZAP-104): enquanto a rota não existir no backend, o modo de desenvolvimento mostra
 // um cardápio simulado (cardapioSimulado.js). Em produção, nunca há simulação.
 
+import { ordenarFormas } from '../comum/formasPagamento'
 import { ordenarAlergenos } from '../produtos/regrasProdutos'
 
 export class CardapioNaoEncontradoError extends Error {}
@@ -55,6 +56,8 @@ function paraTela(resposta) {
       capa: estabelecimento?.capa ?? '',
       // Seção "Promoções" no topo do cardápio, ligada por padrão (ZAP-160, ZAP-162)
       destacarPromocoes: estabelecimento?.destacarPromocoes !== false,
+      // Formas de pagamento aceitas (ZAP-192, ZAP-194); nulo sem o campo na API
+      formasPagamento: Array.isArray(estabelecimento?.formasPagamento) ? ordenarFormas(estabelecimento.formasPagamento) : null,
     },
     produtos: (produtos ?? []).map((p) => ({
       id: p.id,
