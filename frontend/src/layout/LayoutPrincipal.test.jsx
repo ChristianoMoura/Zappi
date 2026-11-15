@@ -1,6 +1,6 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { usarTela } from '../testes/pedidosDeTeste'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { LayoutPrincipal } from './LayoutPrincipal'
@@ -76,5 +76,69 @@ describe('menu do painel (ZAP-139)', () => {
     const links = within(menu()).getAllByRole('link')
     expect(links.map((l) => l.textContent)).toEqual(['Pedidos', 'Produtos', 'Meu estabelecimento'])
     expect(links[1]).toHaveAttribute('aria-current', 'page')
+  })
+})
+
+const json = (corpo) => new Response(JSON.stringify(corpo), { status: 200, headers: { 'Content-Type': 'application/json' } })
+const loja = (extra = {}) => ({ nome: 'Casa Belt', slug: 'casa-belt', whatsapp: '5511900000000', ...extra })
+const topo = () => screen.getByRole('banner')
+const botaoConta = () => screen.getByRole('button', { name: 'Minha conta' })
+
+describe('topo com só a marca do Zappi e o logo da loja na conta (ZAP-178)', () => {
+  beforeEach(() => {
+    sessionStorage.setItem('zappi.sessao', JSON.stringify({ token: 'jwt-de-teste', nome: 'Lídia' }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    sessionStorage.clear()
+    localStorage.clear()
+    usarTela(false)
+  })
+
+  test('o topo não mostra mais o nome da loja nem o "×"; o logo da loja fica no botão da conta', async () => {
+    const logo = 'https://storage.teste/estabelecimentos/1/logo-abcd1234.webp'
+    vi.stubGlobal('fetch', vi.fn(async () => json(loja({ logo }))))
+    usarTela(true)
+    renderizarComRotas(rotas, '/pedidos')
+
+    await waitFor(() => expect(botaoConta().querySelector('img')).toHaveAttribute('src', logo))
+    expect(within(topo()).getByRole('img', { name: 'Zappi' })).toBeInTheDocument()
+    expect(within(topo()).queryByText('Casa Belt')).not.toBeInTheDocument()
+    expect(within(topo()).queryByText('×')).not.toBeInTheDocument()
+    // O logo é decorativo: o leitor de tela continua ouvindo só "Minha conta"
+    expect(botaoConta().querySelector('img')).toHaveAttribute('alt', '')
+  })
+
+  test('sem logo, o botão mostra as iniciais da loja', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(loja())))
+    renderizarComRotas(rotas, '/pedidos')
+
+    expect(await within(botaoConta()).findByText('CB')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  test('sem os dados da loja, o botão continua com o ícone de pessoa', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 503 })))
+    renderizarComRotas(rotas, '/pedidos')
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(botaoConta().querySelector('svg.tabler-icon-user-circle')).toBeInTheDocument()
+    expect(within(botaoConta()).queryByText('CB')).not.toBeInTheDocument()
+  })
+
+  test('o menu da conta mostra o logo, o nome da usuária e o da loja, e depois o Sair', async () => {
+    const usuario = userEvent.setup()
+    vi.stubGlobal('fetch', vi.fn(async () => json(loja())))
+    renderizarComRotas(rotas, '/pedidos')
+    await within(botaoConta()).findByText('CB')
+
+    await usuario.click(botaoConta())
+    const menuConta = await screen.findByRole('menu')
+
+    expect(within(menuConta).getByText('Lídia')).toBeInTheDocument()
+    expect(within(menuConta).getByText('Casa Belt')).toBeInTheDocument()
+    expect(within(menuConta).getByText('CB')).toBeInTheDocument()
+    expect(within(menuConta).getByRole('menuitem', { name: 'Sair' })).toBeInTheDocument()
+    expect(botaoConta()).toHaveAttribute('aria-expanded', 'true')
   })
 })

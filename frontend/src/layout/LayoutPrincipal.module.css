@@ -51,7 +51,7 @@
   }
 }
 
-/* Topo na cor Cacau com a collab Casa Belt × Zappi em creme (tamanhos ajustados pelo grupo
+/* Topo na cor Cacau só com a marca do Zappi em creme (ZAP-178; tamanhos ajustados pelo grupo
    no protótipo). Contraste do creme sobre o cacau: 12,51:1. O foco vira creme aqui dentro. */
 .topo {
   --zappi-cor-foco: #fdf6ec;
@@ -65,41 +65,6 @@
   align-items: center;
   gap: 5px;
   min-width: 0;
-}
-
-.seloLoja {
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
-  /* Ciano profundo: branco sobre ele dá 6,16:1; sobre o DarkCyan, só 4,15:1 (NBR 17225 5.11.2) */
-  background: var(--mantine-color-zappi-7);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.nomeLoja {
-  font-weight: 700;
-  font-size: 1.5rem;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.vezes {
-  font-size: 1.25rem;
-  font-weight: 300;
-  line-height: 1;
-  opacity: 0.75;
-  margin: 0 3px;
 }
 
 .marcaZappi {
@@ -121,17 +86,8 @@
   display: block;
 }
 
-/* Celular: a mesma collab, um pouco menor, para caber com o botão da conta */
+/* Celular: a marca um pouco menor, para caber com o botão da conta */
 @media (max-width: 48em) {
-  .seloLoja {
-    width: 36px;
-    height: 36px;
-  }
-
-  .nomeLoja {
-    font-size: 1.15rem;
-  }
-
   .marcaSimbolo {
     height: 34px;
   }
@@ -168,10 +124,65 @@
   }
 }
 
-.nomeConta {
+/* Logo da loja no botão da conta (ZAP-178), com a borda creme para destacar do cacau */
+.avatarLoja {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fdf6ec;
+  /* Ciano profundo: branco sobre ele dá 6,16:1; sobre o DarkCyan, só 4,15:1 (NBR 17225 5.11.2) */
+  background: var(--mantine-color-zappi-7);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
   font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* No menu aberto, sobre o branco, a borda é a linha creme do painel */
+.avatarGrande {
+  width: 44px;
+  height: 44px;
+  font-size: 1rem;
+  border-color: #ead9c2;
+}
+
+@media (max-width: 48em) {
+  .avatarLoja:not(.avatarGrande) {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* Cabeçalho do menu da conta: logo, nome da usuária e nome da loja */
+.cabecalhoConta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 8px;
+}
+
+.textoConta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nomeConta {
+  font-size: 1rem;
   font-weight: 600;
   color: var(--mantine-color-text);
+  overflow-wrap: anywhere;
+}
+
+/* Texto secundário: 7,4:1 sobre o branco */
+.lojaConta {
+  font-size: 0.875rem;
+  color: #5c5048;
+  overflow-wrap: anywhere;
 }
 
 .itemConta {

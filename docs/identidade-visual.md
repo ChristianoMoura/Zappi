@@ -116,9 +116,10 @@ O estilo de imagem do Zappi é **3D lúdico, com acabamento de massinha brilhant
 
 **Collab com a loja (Casa Belt × Zappi):** o painel mostra que o Zappi é usado em parceria com a loja.
 
-- **Topo do painel:** fundo Cacau #3D2B1F; selo redondo com o logo da loja, o nome da loja, um "×" e o logo do Zappi, tudo em creme #FDF6EC (contraste 12,51:1). O foco do teclado no topo fica em creme.
+- **Topo do painel:** fundo Cacau #3D2B1F só com o logo do Zappi (símbolo e nome) em creme #FDF6EC (contraste 12,51:1). O foco do teclado no topo fica em creme.
+- **Botão da conta (ZAP-178):** no canto direito do topo, o logo da loja num círculo de 40 px (38 px no celular) com borda creme de 2 px, como uma foto de perfil, e a seta que gira ao abrir. Sem logo, as iniciais da loja em branco sobre o ciano profundo (6,16:1); sem os dados da loja, o ícone de pessoa. O logo é decorativo: o botão se chama "Minha conta". O menu abre com o logo em 44 px, o nome da usuária e o nome da loja em #5C5048 (7,4:1), e depois o "Sair".
 - **Login:** logo da loja centralizado e, embaixo, o símbolo do Zappi com o nome ao lado. Sem logo da loja, o login mostra só a marca do Zappi com o slogan.
-- **Origem:** nome e logo vêm do Meu estabelecimento; ao salvar uma troca lá, o topo e o login mudam juntos. Sem logo, o topo usa as iniciais da loja.
+- **Origem:** nome e logo vêm do Meu estabelecimento; ao salvar uma troca lá, o botão da conta e o login mudam juntos. Sem logo, o botão da conta usa as iniciais da loja.
 
 **Regras para novas imagens:**
 
@@ -229,6 +230,7 @@ Todas as decisões foram tomadas pelo grupo em 02/11/2026, na ZAP-34, em rodadas
 | Etapa | Decisão |
 | --- | --- |
 | Ilustração em alta | Ilustração do login ampliada 2× (Topaz) e servida em três tamanhos, em 08/11/2026, aprovada pelo grupo em protótipo de comparação |
+| Logo da loja na conta | Em 15/11/2026, o grupo aprovou em protótipo tirar o logo, o nome da loja e o "×" do topo, que fica só com o Zappi, e levar o logo da loja para o botão da conta, como foto de perfil (ZAP-178). O login não muda |
 | Collab Casa Belt × Zappi | Em 08/11/2026, o grupo escolheu em protótipo o topo na cor Cacau #3D2B1F com "Casa Belt × Zappi" em creme (logo e nome da loja primeiro) e, no login, o logo da loja centralizado com o Zappi embaixo, nome ao lado do símbolo. Tamanhos ajustados pelo grupo: topo 68 px, logo da loja 44, nome 24, × 20, símbolo do Zappi 44 e nome 24; no login, logo da loja 108, símbolo 40 e nome 36. O logo e o nome vêm do Meu estabelecimento |
 | Fundo creme | Em 08/11/2026, o grupo pediu o creme #FDF6EC do login como fundo das telas internas. Para o topo e o menu, comparou em protótipo 7 tons (3 mais claros, 1 igual e 3 mais escuros) e escolheu o Creme suave #FEF9F1; testou também tirar a linha entre o topo e o menu e decidiu mantê-la. Cartões e campos continuam brancos. Contrastes no creme: cacau 12,51:1, secundário 7,26:1, erro 6,13:1 |
 | Telas internas | Fundo branco com ciano dentro do app, menu lateral recolhível e efeitos de interatividade (ZAP-37, tela Meu estabelecimento, Referência A com capa; o check de "campo confirmado" foi retirado a pedido do grupo) |
