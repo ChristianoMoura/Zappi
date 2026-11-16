@@ -135,7 +135,7 @@ class RestricoesDoBancoTests {
 	}
 
 	@ParameterizedTest
-	@ValueSource(ints = { 0, 6 })
+	@ValueSource(ints = { 0, 7 })
 	void recusaStatusDePedidoForaDoIntervalo(int status) {
 		long confeitaria = criarEstabelecimento("confeitaria-a");
 		long cliente = criarCliente(confeitaria, TELEFONE);
