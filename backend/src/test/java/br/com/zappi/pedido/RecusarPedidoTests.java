@@ -187,7 +187,16 @@ class RecusarPedidoTests {
 		recusar(2, MOTIVO)
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.codigo").value("TRANSICAO_NAO_PERMITIDA"))
-			.andExpect(jsonPath("$.mensagem").value("Pedidos concluídos ou já recusados não podem ser recusados nem cancelados."));
+			.andExpect(jsonPath("$.mensagem")
+				.value("Pedidos concluídos, entregues ou já recusados não podem ser recusados nem cancelados."));
+
+		// Entregue também não é cancelado (RN03, ZAP-60)
+		jdbc.update("update pedido set status = 6, entregue_em = now() where estabelecimento_id = ? and numero = 2",
+				casaBelt);
+		recusar(2, MOTIVO).andExpect(status().isConflict())
+			.andExpect(jsonPath("$.codigo").value("TRANSICAO_NAO_PERMITIDA"));
+		assertThat(jdbc.queryForObject("select status from pedido where estabelecimento_id = ? and numero = 2",
+				Integer.class, casaBelt)).isEqualTo(6);
 
 		recusar(1, MOTIVO).andExpect(status().isOk());
 		recusar(1, "Outro motivo.").andExpect(status().isConflict());

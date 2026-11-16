@@ -110,11 +110,17 @@ public class Pedido {
 		this.atualizadoEm = agora;
 	}
 
-	/** Só Novo, Confirmado e Em produção podem ser editados (ZAP-90). */
+	/** Só Novo, Confirmado e Em produção podem ser editados (ZAP-90, RN21). */
 	public void exigirEditavel() {
-		if (status == StatusPedido.CONCLUIDO || status == StatusPedido.RECUSADO) {
-			throw new TransicaoNaoPermitidaException("Pedidos concluídos ou recusados não podem ser editados.");
+		if (encerrado()) {
+			throw new TransicaoNaoPermitidaException(
+					"Pedidos concluídos, entregues ou recusados não podem ser editados.");
 		}
+	}
+
+	/** Concluído, Entregue e Recusado: o pedido não é mais editado nem cancelado (RN03, RN21). */
+	private boolean encerrado() {
+		return status == StatusPedido.CONCLUIDO || status == StatusPedido.ENTREGUE || status == StatusPedido.RECUSADO;
 	}
 
 	/** O cliente só pode ser trocado enquanto o pedido está Novo (ZAP-90). */
@@ -192,6 +198,25 @@ public class Pedido {
 		this.atualizadoEm = agora;
 	}
 
+	/**
+	 * Concluído → Entregue, quando o cliente retira, gravando {@code entregue_em} com a hora do
+	 * clique (RN03, RN06, ZAP-60).
+	 */
+	public void entregar(OffsetDateTime agora) {
+		exigir(StatusPedido.CONCLUIDO, "Só pedidos concluídos podem ser marcados como entregues.");
+		this.status = StatusPedido.ENTREGUE;
+		this.entregueEm = agora;
+		this.atualizadoEm = agora;
+	}
+
+	/** Volta de Entregue para Concluído, apagando {@code entregue_em} (RN06, ZAP-60). */
+	public void voltarParaConcluido(OffsetDateTime agora) {
+		exigir(StatusPedido.ENTREGUE, "Só pedidos entregues podem voltar para concluído.");
+		this.status = StatusPedido.CONCLUIDO;
+		this.entregueEm = null;
+		this.atualizadoEm = agora;
+	}
+
 	private void exigir(StatusPedido origem, String mensagem) {
 		if (status != origem) {
 			throw new TransicaoNaoPermitidaException(mensagem);
@@ -200,12 +225,13 @@ public class Pedido {
 
 	/**
 	 * Recusa (Novo) ou cancela (Confirmado ou Em produção) o pedido, com o motivo obrigatório,
-	 * gravando {@code recusado_em} (RN03, RN05, RN06, ZAP-64). Concluído e Recusado não mudam.
+	 * gravando {@code recusado_em} (RN03, RN05, RN06, ZAP-64). Concluído, Entregue e Recusado não
+	 * mudam (ZAP-60).
 	 */
 	public void recusar(String motivo, OffsetDateTime agora) {
-		if (status == StatusPedido.CONCLUIDO || status == StatusPedido.RECUSADO) {
+		if (encerrado()) {
 			throw new TransicaoNaoPermitidaException(
-					"Pedidos concluídos ou já recusados não podem ser recusados nem cancelados.");
+					"Pedidos concluídos, entregues ou já recusados não podem ser recusados nem cancelados.");
 		}
 		this.status = StatusPedido.RECUSADO;
 		this.motivoRecusa = motivo;

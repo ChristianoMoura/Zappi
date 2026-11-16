@@ -13,8 +13,9 @@ import br.com.zappi.mensagem.MensagemWhatsapp;
 
 /**
  * Pedido como a tela usa (ZAP-44). O número ({@code #1}) identifica o pedido no
- * estabelecimento (RN09); o status vai como número, 1 a 5 (RN03). As datas de cada etapa
- * (RN06) vêm preenchidas só quando o pedido passou por ela.
+ * estabelecimento (RN09); o status vai como número, 1 a 6 (RN03). As datas de cada etapa
+ * (RN06) vêm preenchidas só quando o pedido passou por ela; {@code entregueEm}, só no Entregue
+ * (ZAP-60).
  *
  * @param cancelado {@code true} quando o pedido recusado já tinha sido confirmado: a tela
  *        mostra "Motivo do cancelamento" (ZAP-64)
@@ -27,14 +28,15 @@ import br.com.zappi.mensagem.MensagemWhatsapp;
 public record RespostaPedido(Integer numero, int status, LocalDateTime dataRetirada, String observacao,
 		BigDecimal valorTotal, ClienteDoPedido cliente, List<ItemDoPedido> itens, OffsetDateTime criadoEm,
 		OffsetDateTime confirmadoEm, OffsetDateTime producaoEm, OffsetDateTime concluidoEm,
-		OffsetDateTime recusadoEm, String motivoRecusa, boolean cancelado,
+		OffsetDateTime entregueEm, OffsetDateTime recusadoEm, String motivoRecusa, boolean cancelado,
 		@JsonInclude(JsonInclude.Include.NON_NULL) List<MensagemDoPedido> mensagens,
 		@JsonInclude(JsonInclude.Include.NON_NULL) Boolean avisoDeProntoEnviado) {
 
 	/** A mesma resposta, informando se o aviso de pronto já tinha sido enviado. */
 	RespostaPedido comAvisoDeProntoEnviado(boolean enviado) {
 		return new RespostaPedido(numero, status, dataRetirada, observacao, valorTotal, cliente, itens, criadoEm,
-				confirmadoEm, producaoEm, concluidoEm, recusadoEm, motivoRecusa, cancelado, mensagens, enviado);
+				confirmadoEm, producaoEm, concluidoEm, entregueEm, recusadoEm, motivoRecusa, cancelado, mensagens,
+				enviado);
 	}
 
 	/** Pedido com os itens e as mensagens geradas, para a listagem e os detalhes. */
@@ -44,7 +46,8 @@ public record RespostaPedido(Integer numero, int status, LocalDateTime dataRetir
 		return new RespostaPedido(pedido.getNumero(), pedido.getStatus().getCodigo(), pedido.getDataRetirada(),
 				pedido.getObservacao(), pedido.getValorTotal(), ClienteDoPedido.de(pedido.getCliente()),
 				itens.stream().map(ItemDoPedido::de).toList(), pedido.getCriadoEm(), pedido.getConfirmadoEm(),
-				pedido.getProducaoEm(), pedido.getConcluidoEm(), pedido.getRecusadoEm(), pedido.getMotivoRecusa(),
+				pedido.getProducaoEm(), pedido.getConcluidoEm(), pedido.getEntregueEm(), pedido.getRecusadoEm(),
+				pedido.getMotivoRecusa(),
 				cancelado,
 				mensagens == null ? null : mensagens.stream().map(m -> MensagemDoPedido.de(m, anonimizado)).toList(),
 				null);

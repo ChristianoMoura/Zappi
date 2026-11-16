@@ -31,7 +31,10 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 @Service
 public class ServicoAnonimizacaoCliente {
 
-	/** Com pedido nestes status, a Lídia ainda precisa do nome e do WhatsApp do cliente. */
+	/**
+	 * Com pedido nestes status, a Lídia ainda precisa do nome e do WhatsApp do cliente. Concluído,
+	 * Entregue e Recusado contam como encerrados (RN17, ZAP-60).
+	 */
 	private static final Set<StatusPedido> EM_ABERTO = EnumSet.of(StatusPedido.NOVO, StatusPedido.CONFIRMADO,
 			StatusPedido.EM_PRODUCAO);
 

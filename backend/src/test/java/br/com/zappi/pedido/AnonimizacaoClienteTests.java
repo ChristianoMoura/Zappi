@@ -206,6 +206,19 @@ class AnonimizacaoClienteTests {
 	}
 
 	@Test
+	void anonimizaComPedidoEntregueQuePodeVoltarParaConcluido() throws Exception {
+		// Entregue conta como encerrado (RN17, ZAP-60), e Concluído também: a volta continua valendo
+		concluirPedido1();
+		acao(1, "entregar").andExpect(status().isOk());
+
+		anonimizar(1).andExpect(status().isOk()).andExpect(jsonPath("$.status").value(6));
+
+		acao(1, "voltar-para-concluido").andExpect(status().isOk()).andExpect(jsonPath("$.status").value(4));
+		assertThat(jdbc.queryForObject("select anonimizado_em from cliente where id = ?", Object.class, ana))
+			.isNotNull();
+	}
+
+	@Test
 	void bloqueiaComPedidoEmAberto() throws Exception {
 		for (String etapa : List.of("status = 1", "status = 2, confirmado_em = now()",
 				"status = 3, confirmado_em = now(), producao_em = now()")) {
