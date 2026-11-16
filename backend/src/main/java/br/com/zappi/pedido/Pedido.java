@@ -83,6 +83,10 @@ public class Pedido {
 	@Column(name = "concluido_em")
 	private OffsetDateTime concluidoEm;
 
+	/** Quando a Lídia marcou o pedido como entregue (RN06, ZAP-60). Só existe no Entregue. */
+	@Column(name = "entregue_em")
+	private OffsetDateTime entregueEm;
+
 	@Column(name = "atualizado_em", nullable = false)
 	private OffsetDateTime atualizadoEm;
 
@@ -276,6 +280,10 @@ public class Pedido {
 
 	public OffsetDateTime getConcluidoEm() {
 		return concluidoEm;
+	}
+
+	public OffsetDateTime getEntregueEm() {
+		return entregueEm;
 	}
 
 	public OffsetDateTime getAtualizadoEm() {
