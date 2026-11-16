@@ -121,6 +121,19 @@ public class ControladorPedido {
 		return acoes.voltarParaProducao(usuario, numero);
 	}
 
+	/** Concluído → Entregue, quando o cliente retira (ZAP-60, ZAP-168). */
+	@PostMapping("/{numero}/entregar")
+	public RespostaPedido entregar(@AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable Integer numero) {
+		return acoes.entregar(usuario, numero);
+	}
+
+	/** Volta de Entregue para Concluído, quando foi marcado por engano (ZAP-60, ZAP-168). */
+	@PostMapping("/{numero}/voltar-para-concluido")
+	public RespostaPedido voltarParaConcluido(@AuthenticationPrincipal UsuarioAutenticado usuario,
+			@PathVariable Integer numero) {
+		return acoes.voltarParaConcluido(usuario, numero);
+	}
+
 	/**
 	 * Marca a mensagem como enviada quando a Lídia clica em "Enviar no WhatsApp" (ZAP-50).
 	 * Chamar de novo ao reenviar não dá erro e mantém a data do primeiro envio.

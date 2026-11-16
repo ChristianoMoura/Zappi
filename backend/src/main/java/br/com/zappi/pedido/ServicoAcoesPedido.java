@@ -182,6 +182,26 @@ public class ServicoAcoesPedido {
 	}
 
 	/**
+	 * Concluído → Entregue, quando o cliente retira, gravando {@code entregue_em} com a hora do
+	 * clique (ZAP-60, ZAP-168). Não gera mensagem.
+	 */
+	@Transactional
+	public RespostaPedido entregar(UsuarioAutenticado usuario, Integer numero) {
+		mudarStatus(usuario, numero, pedido -> pedido.entregar(OffsetDateTime.now(ZoneOffset.UTC)));
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
+	 * Volta de Entregue para Concluído, apagando {@code entregue_em}, quando foi marcado por
+	 * engano (ZAP-60, ZAP-168). Não gera mensagem.
+	 */
+	@Transactional
+	public RespostaPedido voltarParaConcluido(UsuarioAutenticado usuario, Integer numero) {
+		mudarStatus(usuario, numero, pedido -> pedido.voltarParaConcluido(OffsetDateTime.now(ZoneOffset.UTC)));
+		return consulta.detalhar(usuario, numero);
+	}
+
+	/**
 	 * Mudança de status sem mensagem: bloqueia o pedido, aplica a transição e registra
 	 * {@code PEDIDO_STATUS_ALTERADO} com o status anterior e o novo (RN08, ISO 27002 8.16).
 	 */

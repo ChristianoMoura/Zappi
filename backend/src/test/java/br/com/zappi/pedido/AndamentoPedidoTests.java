@@ -25,7 +25,8 @@ import br.com.zappi.seguranca.ServicoToken;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 
 /**
- * Iniciar produção e voltar coluna (ZAP-75), a partir do pedido #1 da V2 posto em cada etapa.
+ * Iniciar produção e voltar coluna (ZAP-75), marcar como entregue e voltar para concluído
+ * (ZAP-168), a partir do pedido #1 da V2 posto em cada etapa.
  * Nenhuma dessas mudanças gera mensagem. Tudo é desfeito no fim de cada teste.
  */
 @SpringBootTest
@@ -136,6 +137,54 @@ class AndamentoPedidoTests {
 	}
 
 	@Test
+	void marcaOConcluidoComoEntregue() throws Exception {
+		etapa("status = 4, confirmado_em = now(), producao_em = now(), concluido_em = now()");
+
+		acao("entregar")
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value(6))
+			.andExpect(jsonPath("$.concluidoEm").isString())
+			.andExpect(jsonPath("$.entregueEm").isString())
+			.andExpect(jsonPath("$.mensagens.length()").value(0))
+			.andExpect(jsonPath("$.avisoDeProntoEnviado").doesNotExist());
+
+		assertThat(jdbc.queryForObject("select entregue_em from pedido where id = ?", Object.class, pedido)).isNotNull();
+		assertThat(log()).containsEntry("antes", "CONCLUIDO")
+			.containsEntry("depois", "ENTREGUE")
+			.containsEntry("entidade", "pedido")
+			.containsEntry("user_agent", NAVEGADOR);
+	}
+
+	@Test
+	void voltaParaConcluidoApagandoAEntrega() throws Exception {
+		etapa("status = 6, confirmado_em = now(), producao_em = now(), concluido_em = now(), entregue_em = now()");
+
+		acao("voltar-para-concluido")
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value(4))
+			.andExpect(jsonPath("$.concluidoEm").isString())
+			.andExpect(jsonPath("$.entregueEm").value(nullValue()))
+			.andExpect(jsonPath("$.mensagens.length()").value(0));
+
+		assertThat(jdbc.queryForMap("select concluido_em, entregue_em from pedido where id = ?", pedido))
+			.containsEntry("entregue_em", null)
+			.extractingByKey("concluido_em").isNotNull();
+		assertThat(log()).containsEntry("antes", "ENTREGUE").containsEntry("depois", "CONCLUIDO");
+	}
+
+	@Test
+	void entregueNaoVoltaParaProducaoNemAvancaDeNovo() throws Exception {
+		etapa("status = 6, confirmado_em = now(), producao_em = now(), concluido_em = now(), entregue_em = now()");
+
+		acao("voltar-para-producao").andExpect(status().isConflict());
+		acao("entregar").andExpect(status().isConflict())
+			.andExpect(jsonPath("$.codigo").value("TRANSICAO_NAO_PERMITIDA"))
+			.andExpect(jsonPath("$.mensagem").value("Só pedidos concluídos podem ser marcados como entregues."));
+
+		assertThat(jdbc.queryForObject("select status from pedido where id = ?", Integer.class, pedido)).isEqualTo(6);
+	}
+
+	@Test
 	void recusaTransicoesForaDaOrdem() throws Exception {
 		// O pedido #1 está Novo: nada volta para antes da confirmação (RN03)
 		acao("iniciar-producao").andExpect(status().isConflict())
@@ -144,10 +193,20 @@ class AndamentoPedidoTests {
 			.andExpect(jsonPath("$.mensagem").value("Só pedidos em produção podem voltar para confirmado."));
 		acao("voltar-para-producao").andExpect(status().isConflict())
 			.andExpect(jsonPath("$.mensagem").value("Só pedidos concluídos podem voltar para produção."));
+		acao("entregar").andExpect(status().isConflict())
+			.andExpect(jsonPath("$.mensagem").value("Só pedidos concluídos podem ser marcados como entregues."));
+		acao("voltar-para-concluido").andExpect(status().isConflict())
+			.andExpect(jsonPath("$.mensagem").value("Só pedidos entregues podem voltar para concluído."));
+
+		// Em produção ainda não pode ser entregue
+		etapa("status = 3, confirmado_em = now(), producao_em = now()");
+		acao("entregar").andExpect(status().isConflict());
 
 		etapa("status = 5, recusado_em = now(), motivo_recusa = 'Agenda cheia.'");
 		acao("iniciar-producao").andExpect(status().isConflict());
 		acao("voltar-para-producao").andExpect(status().isConflict());
+		acao("entregar").andExpect(status().isConflict());
+		acao("voltar-para-concluido").andExpect(status().isConflict());
 
 		assertThat(jdbc.queryForObject("select count(*) from log_auditoria where acao = 'PEDIDO_STATUS_ALTERADO' "
 				+ "and entidade_id = ?", Integer.class, pedido)).isZero();
@@ -178,6 +237,26 @@ class AndamentoPedidoTests {
 		mockMvc.perform(post("/api/pedidos/1/iniciar-producao")).andExpect(status().isUnauthorized());
 		mockMvc.perform(post("/api/pedidos/1/voltar-para-confirmado")).andExpect(status().isUnauthorized());
 		mockMvc.perform(post("/api/pedidos/1/voltar-para-producao")).andExpect(status().isUnauthorized());
+		mockMvc.perform(post("/api/pedidos/1/entregar")).andExpect(status().isUnauthorized());
+		mockMvc.perform(post("/api/pedidos/1/voltar-para-concluido")).andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void naoEntregaPedidoDeOutroEstabelecimento() throws Exception {
+		etapa("status = 4, confirmado_em = now(), producao_em = now(), concluido_em = now()");
+		long outraLoja = jdbc.queryForObject("""
+				insert into estabelecimento (nome, slug, telefone_whatsapp)
+				values ('Doces da Ana', 'doces-da-ana-entrega', '5511900000009') returning id
+				""", Long.class);
+		long ana = jdbc.queryForObject("""
+				insert into usuario (estabelecimento_id, nome, email, senha_hash)
+				values (?, 'Ana', 'ana@docesdaana.com', 'hash-de-teste') returning id
+				""", Long.class, outraLoja);
+
+		mockMvc.perform(post("/api/pedidos/1/entregar")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + servicoToken.gerar(new UsuarioAutenticado(ana, outraLoja))))
+			.andExpect(status().isNotFound());
+		assertThat(jdbc.queryForObject("select status from pedido where id = ?", Integer.class, pedido)).isEqualTo(4);
 	}
 
 	private ResultActions acao(String rota) throws Exception {

@@ -68,8 +68,8 @@ class AndamentoPedidoRollbackTests {
 
 	@AfterEach
 	void devolveOPedido() {
-		jdbc.update("update pedido set status = 1, confirmado_em = null, producao_em = null, concluido_em = null where id = ?",
-				pedido);
+		jdbc.update("update pedido set status = 1, confirmado_em = null, producao_em = null, concluido_em = null, "
+				+ "entregue_em = null where id = ?", pedido);
 	}
 
 	@Test
@@ -115,6 +115,34 @@ class AndamentoPedidoRollbackTests {
 
 		continuaEmProducao();
 		assertThat(jdbc.queryForObject("select producao_em from pedido where id = ?", Object.class, pedido)).isNotNull();
+	}
+
+	@Test
+	void desfazAEntregaSeOLogFalhar() {
+		concluido();
+		logFalha();
+
+		falhaCom("entregar", "log fora do ar");
+
+		assertThat(status()).isEqualTo(4);
+		assertThat(jdbc.queryForObject("select entregue_em from pedido where id = ?", Object.class, pedido)).isNull();
+	}
+
+	@Test
+	void desfazAVoltaParaConcluidoSeOLogFalhar() {
+		concluido();
+		jdbc.update("update pedido set status = 6, entregue_em = now() where id = ?", pedido);
+		logFalha();
+
+		falhaCom("voltar-para-concluido", "log fora do ar");
+
+		assertThat(status()).isEqualTo(6);
+		assertThat(jdbc.queryForObject("select entregue_em from pedido where id = ?", Object.class, pedido)).isNotNull();
+	}
+
+	private void concluido() {
+		jdbc.update("update pedido set status = 4, confirmado_em = now(), producao_em = now(), concluido_em = now() "
+				+ "where id = ?", pedido);
 	}
 
 	private void emProducao() {

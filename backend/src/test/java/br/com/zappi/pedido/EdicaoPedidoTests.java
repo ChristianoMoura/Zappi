@@ -226,13 +226,20 @@ class EdicaoPedidoTests {
 	}
 
 	@Test
-	void naoEditaPedidoConcluidoOuRecusado() throws Exception {
+	void naoEditaPedidoConcluidoEntregueOuRecusado() throws Exception {
 		etapa("status = 4, confirmado_em = now(), producao_em = now(), concluido_em = now()");
 		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 3, Map.of()))))
 			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.mensagem").value("Pedidos concluídos ou recusados não podem ser editados."));
+			.andExpect(jsonPath("$.mensagem")
+				.value("Pedidos concluídos, entregues ou recusados não podem ser editados."));
 
-		etapa("status = 5, concluido_em = null, recusado_em = now(), motivo_recusa = 'Agenda cheia.'");
+		// Entregue (RN21, ZAP-60)
+		etapa("status = 6, entregue_em = now()");
+		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 3, Map.of()))))
+			.andExpect(status().isConflict());
+
+		etapa("status = 5, concluido_em = null, entregue_em = null, recusado_em = now(), "
+				+ "motivo_recusa = 'Agenda cheia.'");
 		editar(1, pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 3, Map.of()))))
 			.andExpect(status().isConflict());
 

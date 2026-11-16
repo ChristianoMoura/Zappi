@@ -1,7 +1,8 @@
 package br.com.zappi.pedido;
 
 /**
- * Status do pedido, gravado como número em {@code pedido.status} (RN03).
+ * Status do pedido, gravado como número em {@code pedido.status} (RN03). O Entregue entrou
+ * depois e ficou com o 6, para nenhum pedido antigo mudar de número (ZAP-60).
  */
 public enum StatusPedido {
 
@@ -9,7 +10,8 @@ public enum StatusPedido {
 	CONFIRMADO(2),
 	EM_PRODUCAO(3),
 	CONCLUIDO(4),
-	RECUSADO(5);
+	RECUSADO(5),
+	ENTREGUE(6);
 
 	private final short codigo;
 
