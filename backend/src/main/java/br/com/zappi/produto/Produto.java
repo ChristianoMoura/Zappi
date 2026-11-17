@@ -2,6 +2,11 @@ package br.com.zappi.produto;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import br.com.zappi.categoria.Categoria;
 import br.com.zappi.estabelecimento.Estabelecimento;
@@ -62,9 +67,13 @@ public class Produto {
 	@Column(name = "foto_texto_alternativo", length = 150)
 	private String fotoTextoAlternativo;
 
-	/** Nulo é "não informado": nunca vira "não contém glúten" sem a Lídia ter dito (ZAP-128). */
-	@Column(name = "contem_gluten")
-	private Boolean contemGluten;
+	/**
+	 * Códigos da lista fixa ({@link Alergeno}), sem repetir e na ordem dela; vazia sem alérgeno da
+	 * lista (ZAP-197). O glúten é o código GLUTEN. O banco só aceita os códigos da lista (V12).
+	 */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "alergenos", nullable = false)
+	private List<String> alergenos = new ArrayList<>();
 
 	@Column(name = "outros_alergenos", length = 300)
 	private String outrosAlergenos;
@@ -92,21 +101,22 @@ public class Produto {
 
 	/** Produto novo, já ativo no cardápio (ZAP-39). */
 	public Produto(Estabelecimento estabelecimento, Categoria categoria, UnidadeMedida unidadeMedida, String nome,
-			String descricao, BigDecimal preco, String fotoTextoAlternativo, Boolean contemGluten,
+			String descricao, BigDecimal preco, String fotoTextoAlternativo, List<String> alergenos,
 			String outrosAlergenos, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.ativo = true;
 		this.noCardapio = true;
-		atualizar(categoria, unidadeMedida, nome, descricao, preco, fotoTextoAlternativo, contemGluten, outrosAlergenos,
+		atualizar(categoria, unidadeMedida, nome, descricao, preco, fotoTextoAlternativo, alergenos, outrosAlergenos,
 				agora);
 	}
 
 	/**
 	 * Troca os dados do produto. Os pedidos antigos não mudam: o item do pedido guarda o
-	 * preço congelado (RN10).
+	 * preço congelado (RN10). {@code alergenos} já vem conferido e na ordem da lista
+	 * ({@link Alergeno#dosCodigos}).
 	 */
 	public void atualizar(Categoria categoria, UnidadeMedida unidadeMedida, String nome, String descricao,
-			BigDecimal preco, String fotoTextoAlternativo, Boolean contemGluten, String outrosAlergenos,
+			BigDecimal preco, String fotoTextoAlternativo, List<String> alergenos, String outrosAlergenos,
 			OffsetDateTime agora) {
 		this.categoria = categoria;
 		this.unidadeMedida = unidadeMedida;
@@ -114,7 +124,7 @@ public class Produto {
 		this.descricao = descricao;
 		this.preco = preco;
 		this.fotoTextoAlternativo = fotoTextoAlternativo;
-		this.contemGluten = contemGluten;
+		this.alergenos = new ArrayList<>(alergenos);
 		this.outrosAlergenos = outrosAlergenos;
 		this.atualizadoEm = agora;
 	}
@@ -234,9 +244,9 @@ public class Produto {
 		return fotoTextoAlternativo;
 	}
 
-	/** Nulo quando a Lídia ainda não informou (produto anterior à ZAP-128). */
-	public Boolean getContemGluten() {
-		return contemGluten;
+	/** Códigos da lista fixa, na ordem dela; vazia sem alérgeno da lista (ZAP-197). */
+	public List<String> getAlergenos() {
+		return alergenos == null ? List.of() : List.copyOf(alergenos);
 	}
 
 	public String getOutrosAlergenos() {

@@ -298,7 +298,7 @@ class PromocaoProdutoTests {
 		dados.put("categoriaId", jdbc.queryForObject("select categoria_id from produto where id = ?", Long.class, ninho));
 		dados.put("unidade", "KG");
 		dados.put("preco", new BigDecimal(preco));
-		dados.put("contemGluten", true);
+		dados.put("alergenos", List.of("GLUTEN", "LEITE"));
 		return dados;
 	}
 

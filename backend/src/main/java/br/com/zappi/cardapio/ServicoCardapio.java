@@ -59,7 +59,8 @@ public class ServicoCardapio {
 							id -> RespostaCategoria.de(produto.getCategoria())),
 					produto.getUnidadeMedida().getSigla(), produto.getPreco(), produto.getPrecoPromocional(),
 					produto.getDescricao(),
-					fotosDosProdutos.enderecoPublico(produto.getFotoCaminho()), produto.getFotoTextoAlternativo()))
+					fotosDosProdutos.enderecoPublico(produto.getFotoCaminho()), produto.getFotoTextoAlternativo(),
+					produto.getAlergenos(), produto.getOutrosAlergenos()))
 			.toList();
 		return new RespostaCardapio(dadosDaLoja, List.copyOf(categorias.values()), doCardapio);
 	}

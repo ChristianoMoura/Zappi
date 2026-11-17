@@ -1,6 +1,7 @@
 package br.com.zappi.produto;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Locale;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -16,7 +17,11 @@ import jakarta.validation.constraints.Size;
  * Corpo do cadastro e da edição de produto (RF05, RN13). Os nomes dos campos são os da
  * tela ({@code frontend/src/produtos/servicoProdutos.js}). A foto em si chega na ZAP-40. O nome
  * é o nome completo, sem o campo sabor, e a categoria é obrigatória (ZAP-136). Campos a mais,
- * como o {@code sabor} de uma tela antiga, são ignorados.
+ * como o {@code sabor} de uma tela antiga ou o {@code contemGluten} da ZAP-131, são ignorados.
+ *
+ * <p>{@code alergenos} são os códigos da lista fixa ({@link Alergeno}), conferidos pelo serviço;
+ * sem a lista, o produto fica sem alérgeno da lista (ZAP-197). Os outros vão em
+ * {@code outrosAlergenos}, texto livre.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record RequisicaoProduto(
@@ -29,7 +34,7 @@ public record RequisicaoProduto(
 		@Digits(integer = 8, fraction = 2, message = "Use no máximo 2 casas decimais.") BigDecimal preco,
 		@Size(max = 500, message = "Use até 500 caracteres.") String descricao,
 		@Size(max = 150, message = "Use até 150 caracteres.") String textoAlternativo,
-		@NotNull(message = "Informe se o produto contém glúten.") Boolean contemGluten,
+		List<String> alergenos,
 		@Size(max = 300, message = "Use até 300 caracteres.") String outrosAlergenos) {
 
 	public RequisicaoProduto {

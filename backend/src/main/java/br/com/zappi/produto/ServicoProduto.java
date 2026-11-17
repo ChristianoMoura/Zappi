@@ -87,7 +87,7 @@ public class ServicoProduto {
 	public RespostaProduto criar(UsuarioAutenticado usuario, RequisicaoProduto dados) {
 		Produto produto = new Produto(entityManager.getReference(Estabelecimento.class, usuario.estabelecimentoId()),
 				categoria(usuario, dados), unidade(dados), dados.nome(), dados.descricao(), preco(dados),
-				dados.textoAlternativo(), dados.contemGluten(), dados.outrosAlergenos(), agora());
+				dados.textoAlternativo(), alergenos(dados), dados.outrosAlergenos(), agora());
 		produtos.saveAndFlush(produto);
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_CRIADO, produto, Map.of("depois", retrato(produto)));
@@ -101,6 +101,7 @@ public class ServicoProduto {
 			throw new FotoSemTextoAlternativoException();
 		}
 		Categoria categoria = categoria(usuario, dados);
+		List<String> alergenos = alergenos(dados);
 		// Com a promoção ativa, o preço normal continua acima do com desconto (ZAP-152, CDC)
 		if (produto.emPromocao() && preco(dados).compareTo(produto.getPrecoPromocional()) <= 0) {
 			throw new DadosInvalidosException(Map.of("preco", PRECO_ABAIXO_DO_DESCONTO));
@@ -108,7 +109,7 @@ public class ServicoProduto {
 		Map<String, Object> antes = retrato(produto);
 
 		produto.atualizar(categoria, unidade(dados), dados.nome(), dados.descricao(), preco(dados),
-				dados.textoAlternativo(), dados.contemGluten(), dados.outrosAlergenos(), agora());
+				dados.textoAlternativo(), alergenos, dados.outrosAlergenos(), agora());
 		produtos.flush();
 
 		registrar(usuario, AcaoAuditoria.PRODUTO_EDITADO, produto, Map.of("antes", antes, "depois", retrato(produto)));
@@ -270,6 +271,11 @@ public class ServicoProduto {
 			.orElseThrow(() -> new DadosInvalidosException(Map.of("categoriaId", CATEGORIA_INVALIDA)));
 	}
 
+	/** Códigos da lista fixa, sem repetir e na ordem dela; um fora da lista recebe 400 (ZAP-197). */
+	private static List<String> alergenos(RequisicaoProduto dados) {
+		return Alergeno.dosCodigos(dados.alergenos());
+	}
+
 	private UnidadeMedida unidade(RequisicaoProduto dados) {
 		// A validação da requisição já garante KG ou UN, que existem desde a V1.
 		return unidades.findBySigla(dados.unidade()).orElseThrow();
@@ -299,8 +305,8 @@ public class ServicoProduto {
 		campos.put("descricao", produto.getDescricao());
 		campos.put("foto", produto.getFotoCaminho());
 		campos.put("textoAlternativo", produto.getFotoTextoAlternativo());
-		// Nulo no log também quer dizer "não informado"
-		campos.put("contemGluten", produto.getContemGluten());
+		// Lista vazia no log é "nenhum alérgeno da lista" (ZAP-197)
+		campos.put("alergenos", produto.getAlergenos());
 		campos.put("outrosAlergenos", produto.getOutrosAlergenos());
 		campos.put("ativo", produto.isAtivo());
 		campos.put("noCardapio", produto.isNoCardapio());

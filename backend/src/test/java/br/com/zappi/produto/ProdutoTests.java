@@ -1,6 +1,7 @@
 package br.com.zappi.produto;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -386,23 +387,92 @@ class ProdutoTests {
 	}
 
 	@Test
-	void cadastraComGlutenEOutrosAlergenos() throws Exception {
-		Map<String, Object> dados = produto("Bolo de ninho sem farinha", "KG", "120");
-		dados.put("contemGluten", false);
-		dados.put("outrosAlergenos", "  leite, ovos  ");
+	void cadastraComOCorpoQueATelaEnvia() throws Exception {
+		// Exatamente os campos de salvarProduto (frontend/src/produtos/servicoProdutos.js), ZAP-197
+		Map<String, Object> dados = new LinkedHashMap<>();
+		dados.put("nome", "Bolo de ninho com nozes");
+		dados.put("categoriaId", bolos);
+		dados.put("unidade", "KG");
+		dados.put("preco", 120);
+		dados.put("descricao", "");
+		dados.put("textoAlternativo", "");
+		dados.put("alergenos", List.of("GLUTEN", "LEITE", "CASTANHAS"));
+		dados.put("outrosAlergenos", "  canela  ");
 
 		String corpo = comToken(post(ROTA), tokenDaLidia, dados)
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.contemGluten").value(false))
-			.andExpect(jsonPath("$.outrosAlergenos").value("leite, ovos"))
+			.andExpect(jsonPath("$.alergenos", contains("GLUTEN", "LEITE", "CASTANHAS")))
+			.andExpect(jsonPath("$.outrosAlergenos").value("canela"))
+			.andExpect(jsonPath("$.contemGluten").doesNotExist())
 			.andReturn().getResponse().getContentAsString();
 		long id = ((Number) json.readValue(corpo, Map.class).get("id")).longValue();
 
-		assertThat(jdbc.queryForMap("select contem_gluten, outros_alergenos from produto where id = ?", id))
-			.containsEntry("contem_gluten", false)
-			.containsEntry("outros_alergenos", "leite, ovos");
-		assertThat(jdbc.queryForObject("select (detalhes -> 'depois' -> 'contemGluten')::text from log_auditoria "
-				+ "where acao = 'PRODUTO_CRIADO' and entidade_id = ?", String.class, id)).isEqualTo("false");
+		assertThat(jdbc.queryForObject("select array_to_string(alergenos, ',') from produto where id = ?", String.class,
+				id)).isEqualTo("GLUTEN,LEITE,CASTANHAS");
+		assertThat(jdbc.queryForObject("select detalhes -> 'depois' ->> 'alergenos' from log_auditoria "
+				+ "where acao = 'PRODUTO_CRIADO' and entidade_id = ?", String.class, id))
+			.isEqualTo("[\"GLUTEN\", \"LEITE\", \"CASTANHAS\"]");
+		comToken(get(ROTA + "/" + id), tokenDaLidia)
+			.andExpect(jsonPath("$.alergenos", contains("GLUTEN", "LEITE", "CASTANHAS")));
+	}
+
+	@Test
+	void guardaOsAlergenosSemRepetirENaOrdemDaLista() throws Exception {
+		Map<String, Object> dados = produto("Bolo de amendoim", "KG", "90");
+		dados.put("alergenos", List.of("AMENDOIM", "OVOS", "GLUTEN", "OVOS"));
+
+		comToken(post(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.alergenos", contains("GLUTEN", "OVOS", "AMENDOIM")));
+	}
+
+	@Test
+	void semAListaOProdutoFicaSemAlergenos() throws Exception {
+		Map<String, Object> dados = produto("Bolo de sem lista", "KG", "90");
+		dados.remove("alergenos");
+		comToken(post(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.alergenos").isArray())
+			.andExpect(jsonPath("$.alergenos").isEmpty());
+
+		// Desmarcar tudo na edição apaga a lista
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+		Map<String, Object> comGluten = produto("Bolo de brigadeiro de chocolate", "KG", "100");
+		comToken(put(ROTA + "/" + id), tokenDaLidia, comGluten).andExpect(status().isOk());
+		comGluten.put("alergenos", List.of());
+		comToken(put(ROTA + "/" + id), tokenDaLidia, comGluten)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.alergenos").isEmpty());
+	}
+
+	@Test
+	void recusaAlergenoForaDaLista() throws Exception {
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+		for (List<String> alergenos : List.of(List.of("GLUTEN", "MOSTARDA"), List.of("gluten"), List.of(""))) {
+			Map<String, Object> dados = produto("Bolo de alérgeno estranho", "KG", "90");
+			dados.put("alergenos", alergenos);
+
+			comToken(post(ROTA), tokenDaLidia, dados)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DADOS_INVALIDOS"))
+				.andExpect(jsonPath("$.campos.alergenos").value("Escolha os alérgenos da lista."));
+			comToken(put(ROTA + "/" + id), tokenDaLidia, dados)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.campos.alergenos").value("Escolha os alérgenos da lista."));
+		}
+		assertThat(jdbc.queryForObject("select count(*) from produto where nome = 'Bolo de alérgeno estranho'",
+				Integer.class)).isZero();
+	}
+
+	@Test
+	void ignoraOContemGlutenAntigo() throws Exception {
+		Map<String, Object> dados = produto("Bolo de corpo antigo", "KG", "90");
+		dados.remove("alergenos");
+		dados.put("contemGluten", true);
+
+		comToken(post(ROTA), tokenDaLidia, dados)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.alergenos").isEmpty());
 	}
 
 	@Test
@@ -413,20 +483,6 @@ class ProdutoTests {
 		comToken(post(ROTA), tokenDaLidia, dados)
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.outrosAlergenos").value(org.hamcrest.Matchers.nullValue()));
-	}
-
-	@Test
-	void recusaProdutoSemInformarOGluten() throws Exception {
-		Map<String, Object> dados = produto("Bolo de sem resposta", "KG", "90");
-		dados.remove("contemGluten");
-
-		comToken(post(ROTA), tokenDaLidia, dados)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.codigo").value("DADOS_INVALIDOS"))
-			.andExpect(jsonPath("$.campos.contemGluten").value("Informe se o produto contém glúten."));
-		comToken(put(ROTA + "/" + idDoNome("Bolo de brigadeiro de chocolate")), tokenDaLidia, dados)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.campos.contemGluten").value("Informe se o produto contém glúten."));
 	}
 
 	@Test
@@ -442,31 +498,30 @@ class ProdutoTests {
 	}
 
 	@Test
-	void produtoAntigoContinuaComGlutenNaoInformadoEORegistraOAntesNaEdicao() throws Exception {
+	void produtoAntigoComecaSemAlergenosEORegistraOAntesNaEdicao() throws Exception {
 		long id = idDoNome("Bolo de brigadeiro de chocolate");
 
-		// Nulo, e nunca false: o sistema não diz "sem glúten" sem a Lídia ter informado
 		comToken(get(ROTA + "/" + id), tokenDaLidia)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.contemGluten").value(org.hamcrest.Matchers.nullValue()))
+			.andExpect(jsonPath("$.alergenos").isEmpty())
 			.andExpect(jsonPath("$.outrosAlergenos").value(org.hamcrest.Matchers.nullValue()));
 
 		Map<String, Object> dados = produto("Bolo de brigadeiro de chocolate", "KG", "100");
-		dados.put("contemGluten", true);
-		dados.put("outrosAlergenos", "leite");
+		dados.put("alergenos", List.of("LEITE", "GLUTEN"));
+		dados.put("outrosAlergenos", "canela");
 		comToken(put(ROTA + "/" + id), tokenDaLidia, dados)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.contemGluten").value(true));
+			.andExpect(jsonPath("$.alergenos", contains("GLUTEN", "LEITE")));
 
 		Map<String, Object> registro = jdbc.queryForMap("""
-				select (detalhes -> 'antes' -> 'contemGluten')::text as gluten_antes,
-				       (detalhes -> 'depois' -> 'contemGluten')::text as gluten_depois,
-				       detalhes -> 'depois' ->> 'outrosAlergenos' as alergenos_depois
+				select detalhes -> 'antes' ->> 'alergenos' as alergenos_antes,
+				       detalhes -> 'depois' ->> 'alergenos' as alergenos_depois,
+				       detalhes -> 'depois' ->> 'outrosAlergenos' as outros_depois
 				from log_auditoria where acao = 'PRODUTO_EDITADO' and entidade = 'produto' and entidade_id = ?
 				""", id);
-		assertThat(registro).containsEntry("gluten_antes", "null")
-			.containsEntry("gluten_depois", "true")
-			.containsEntry("alergenos_depois", "leite");
+		assertThat(registro).containsEntry("alergenos_antes", "[]")
+			.containsEntry("alergenos_depois", "[\"GLUTEN\", \"LEITE\"]")
+			.containsEntry("outros_depois", "canela");
 	}
 
 	@Test
@@ -490,7 +545,7 @@ class ProdutoTests {
 		dados.put("unidade", unidade);
 		dados.put("preco", new BigDecimal(preco));
 		dados.put("descricao", "Descrição de teste");
-		dados.put("contemGluten", true);
+		dados.put("alergenos", List.of("GLUTEN"));
 		return dados;
 	}
 

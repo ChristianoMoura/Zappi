@@ -89,6 +89,21 @@ class CardapioPublicoTests {
 	}
 
 	@Test
+	void mostraOsAlergenosParaOsSelos() throws Exception {
+		jdbc.update("""
+				update produto set alergenos = '{GLUTEN,LEITE,OVOS}', outros_alergenos = 'canela'
+				where estabelecimento_id = ? and nome = 'Bolo de brigadeiro de chocolate'
+				""", casaBelt);
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.produtos[0].alergenos", contains("GLUTEN", "LEITE", "OVOS")))
+			.andExpect(jsonPath("$.produtos[0].outrosAlergenos").value("canela"))
+			.andExpect(jsonPath("$.produtos[1].alergenos").isEmpty())
+			.andExpect(jsonPath("$.produtos[1].outrosAlergenos").value(nullValue()));
+	}
+
+	@Test
 	void semODestaqueOPrecoComDescontoContinuaNoProduto() throws Exception {
 		jdbc.update("update produto set preco_promocional = 99.90 where estabelecimento_id = ? "
 				+ "and nome = 'Bolo de ninho com morango'", casaBelt);
