@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
+import java.util.List;
 import java.util.Locale;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.zappi.TestcontainersConfiguration;
 import br.com.zappi.pagamento.FormaPagamento;
+import br.com.zappi.pedido.ItemPedidoRepositorio;
 import br.com.zappi.pedido.Pedido;
 import br.com.zappi.pedido.PedidoRepositorio;
 
@@ -35,6 +37,9 @@ class GeradorDeMensagensTests {
 
 	@Autowired
 	private PedidoRepositorio pedidos;
+
+	@Autowired
+	private ItemPedidoRepositorio itens;
 
 	@Autowired
 	private JdbcTemplate jdbc;
@@ -112,6 +117,24 @@ class GeradorDeMensagensTests {
 			.isEqualTo("O pagamento é feito na retirada, por cartão de débito.");
 		assertThat(GeradorDeMensagens.pagamento(FormaPagamento.VR))
 			.isEqualTo("O pagamento é feito na retirada, por vale-refeição.");
+	}
+
+	/**
+	 * Linha do item só com o nome completo do produto e a quantidade (ZAP-136, ZAP-141). O pedido
+	 * #1 da V2 tinha recheio e cobertura, que a V6 levou para a observação do item: eles não
+	 * entram na mensagem.
+	 */
+	@Test
+	void confirmacaoListaOsItensPeloNomeCompletoSemRecheioNemCobertura() {
+		Pedido ana = pedido(1);
+		assertThat(gerador.confirmacao(ana, itens.buscarDosPedidos(List.of(ana.getId()))))
+			.contains("\n- Bolo de brigadeiro de chocolate (2 kg)\n")
+			.doesNotContain("Recheio", "Cobertura", "Granulado");
+
+		// A V2 grava os itens do #2 por um JOIN, sem ordem garantida: cada linha é conferida sozinha
+		Pedido bruno = pedido(2);
+		assertThat(gerador.confirmacao(bruno, itens.buscarDosPedidos(List.of(bruno.getId()))))
+			.contains("\n- Cento de coxinha (1 un)\n", "\n- Bolo de ninho com morango (1,5 kg)\n");
 	}
 
 	private Pedido pedido(int numero) {

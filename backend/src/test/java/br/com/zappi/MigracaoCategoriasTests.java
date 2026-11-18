@@ -43,6 +43,8 @@ class MigracaoCategoriasTests {
 
 	private long lojaB;
 
+	private long lojaC;
+
 	@BeforeEach
 	void migraAteAV5EGravaOsDadosAntigos() {
 		apagarSchema();
@@ -61,6 +63,16 @@ class MigracaoCategoriasTests {
 		produto(lojaA, "Café", "Expresso", true);
 		produto(lojaA, NOME_LONGO, "Longo", true);
 		produto(lojaB, "Bolo", "Ninho", true);
+
+		// Casos da regra de plural() que a Loja A não cobre (ZAP-141)
+		lojaC = id("insert into %s.estabelecimento (nome, slug, telefone_whatsapp) values ('Loja C', 'loja-c', "
+				+ "'5511900000004') returning id");
+		produto(lojaC, "Pão", "Francês", true);
+		produto(lojaC, "Mamão", "Papaia", true);
+		produto(lojaC, "Pastel", "Carne", true);
+		produto(lojaC, " Torta ", "Holandesa", true);
+		produto(lojaC, "", "Brownie", true);
+		produto(lojaC, "   ", "Cookie", false);
 
 		long cliente = id("""
 				insert into %s.cliente (estabelecimento_id, nome, telefone_whatsapp, consentimento_lgpd, consentimento_em)
@@ -94,6 +106,20 @@ class MigracaoCategoriasTests {
 						"café:3:true", "pão de mel:4:true", "salgados:5:true", "tortas:6:true");
 		assertThat(jdbc.queryForList(sql("select nome || ':' || ordem from %s.categoria where estabelecimento_id = ?"),
 				String.class, lojaB)).containsExactly("Bolos:1");
+	}
+
+	@Test
+	void pluralSegueARegraDoCardapioENomeVazioViraOutros() {
+		// "ão" e consoante no fim ficam como estão; os espaços das pontas saem; nome vazio ou só com
+		// espaços vai para "Outros", inclusive o produto excluído
+		// A ordem entre "Pão" e "Pastel" depende da collation do banco, então só os nomes são conferidos
+		assertThat(jdbc.queryForList(sql("select nome from %s.categoria where estabelecimento_id = ?"), String.class,
+				lojaC)).containsExactlyInAnyOrder("Mamão", "Outros", "Pão", "Pastel", "Tortas");
+		assertThat(jdbc.queryForList(sql("""
+				select p.nome || ' > ' || c.nome from %1$s.produto p join %1$s.categoria c on c.id = p.categoria_id
+				where p.estabelecimento_id = ? order by p.id
+				"""), String.class, lojaC)).containsExactly("Francês > Pão", "Papaia > Mamão", "Carne > Pastel",
+						"Holandesa > Tortas", "Brownie > Outros", "Cookie > Outros");
 	}
 
 	@Test
