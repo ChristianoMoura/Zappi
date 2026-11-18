@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { dataMinima } from '../cardapio/regrasPedidoCliente'
@@ -382,5 +382,94 @@ describe('forma de pagamento no "Seu pedido" (ZAP-194)', () => {
     await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
 
     expect(enviarPedido.mock.calls[0][1]).not.toHaveProperty('formaPagamento')
+  })
+})
+
+// Data de retirada no "Seu pedido" (ZAP-108, RN22). O relógio fica parado em 10/11/2026, às 15h em
+// São Paulo: a primeira data permitida é 17/11/2026, e o dia 16 fica no mesmo mês do calendário
+describe('data de retirada e pedido guardado no "Seu pedido" (ZAP-108)', () => {
+  const guardar = (extra = {}) =>
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: '', hora: '', observacao: '', ...extra }))
+
+  beforeEach(() => {
+    // Só a data é simulada: os outros relógios continuam reais, para o userEvent funcionar
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-10T18:00:00Z'))
+    buscarCardapio.mockResolvedValue(structuredClone(CARDAPIO))
+    window.scrollTo = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test.each([
+    ['que já passou', '2026-11-09'],
+    ['com menos de 7 dias', '2026-11-16'],
+  ])('data %s não é aceita: o erro explica o motivo, junto do campo e com o foco nele', async (_caso, data) => {
+    guardar({ data, hora: '15:00' })
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.click(await screen.findByRole('button', { name: /Enviar pedido/ }))
+
+    const erro = screen.getByText('Escolha uma data a partir de 17/11/2026. A loja precisa de pelo menos 7 dias para preparar a encomenda.')
+    expect(erro).toBeVisible()
+    expect(screen.getByLabelText('Data')).toHaveFocus()
+    // O resumo da retirada só aparece com uma data válida
+    expect(screen.queryByText(/^Retirada:/)).not.toBeInTheDocument()
+    expect(enviarPedido).not.toHaveBeenCalled()
+  })
+
+  test('o calendário bloqueia os dias antes de 7 dias e aceita o sétimo dia', async () => {
+    guardar()
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.click(await screen.findByLabelText('Data'))
+
+    expect(await screen.findByRole('button', { name: '16 de novembro de 2026' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '10 de novembro de 2026' })).toBeDisabled()
+    const setimoDia = screen.getByRole('button', { name: '17 de novembro de 2026' })
+    expect(setimoDia).toBeEnabled()
+
+    await usuario.click(setimoDia)
+    await usuario.selectOptions(screen.getByLabelText('Hora'), '08:00')
+
+    expect(guardado()).toMatchObject({ data: '2026-11-17', hora: '08:00' })
+    expect(screen.getByText(/^Retirada:/)).toHaveTextContent('Retirada: terça-feira, 17/11, às 8h')
+  })
+
+  test('abaixo do calendário, a frase leva ao WhatsApp da loja para quem precisa antes de 7 dias', async () => {
+    guardar()
+    abrir('/cardapio/casa-belt/pedido')
+
+    const link = await screen.findByRole('link', { name: /Fale com a loja pelo WhatsApp/ })
+    expect(link.closest('p')).toHaveTextContent('Precisa para antes de 7 dias? Fale com a loja pelo WhatsApp (abre o WhatsApp)')
+    expect(link).toHaveAttribute('href', expect.stringMatching(/^https:\/\/wa\.me\/5511900000000\?text=/))
+    expect(decodeURIComponent(link.getAttribute('href'))).toContain('Preciso de uma encomenda da Casa Belt para antes de 7 dias. É possível?')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  test('ao recarregar a página, o pedido continua com os itens, a data, a hora e a observação', async () => {
+    guardar({ itens: [{ chave: 1, produtoId: 1, quantidade: 1.5 }] })
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.click(await screen.findByLabelText('Data'))
+    await usuario.click(await screen.findByRole('button', { name: '20 de novembro de 2026' }))
+    await usuario.selectOptions(screen.getByLabelText('Hora'), '15:30')
+    await usuario.type(screen.getByRole('textbox', { name: 'Observação do pedido' }), 'Festa da Ana')
+
+    // Recarregar: a tela sai e volta, e só o que ficou guardado no navegador é usado
+    cleanup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    expect(await screen.findByText(/^Retirada:/)).toHaveTextContent('Retirada: sexta-feira, 20/11, às 15h30')
+    expect(screen.getByLabelText('Hora')).toHaveValue('15:30')
+    expect(screen.getByRole('textbox', { name: 'Observação do pedido' })).toHaveValue('Festa da Ana')
+    expect(screen.getByRole('region', { name: 'Total' })).toHaveTextContent('R$ 150,00')
   })
 })

@@ -77,6 +77,19 @@ describe('regras da montagem do pedido pelo cliente (ZAP-107)', () => {
     expect(validarPedido(pedido({ hora: '03:00' }), produtos, agora)).toHaveProperty('hora')
   })
 
+  test('data que já passou é recusada com o motivo (RN22, ZAP-108)', () => {
+    for (const data of ['2026-11-09', '2026-11-10']) {
+      expect(validarPedido(pedido({ data }), produtos, agora).data).toBe('Escolha uma data a partir de 17/11/2026. A loja precisa de pelo menos 7 dias para preparar a encomenda.')
+    }
+  })
+
+  test('exatamente 7 dias depois é aceito em qualquer hora da lista: a hora não muda a conta (RN22, ZAP-108)', () => {
+    // Às 23h30 do dia 10, o dia 17 já vale, mesmo para retirar às 8h
+    for (const hora of HORARIOS) {
+      expect(validarPedido(pedido({ data: '2026-11-17', hora }), produtos, agora)).toEqual({})
+    }
+  })
+
   test('a mensagem do WhatsApp leva o nome do produto, a observação, a data e a hora e o total', () => {
     const texto = mensagemDoPedido({ nome: 'Casa Belt' }, pedido(), produtos)
 
