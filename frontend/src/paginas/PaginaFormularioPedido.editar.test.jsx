@@ -128,6 +128,24 @@ describe('Edição de pedido (ZAP-91, RF14, RN21)', () => {
     expect(await within(detalhes).findByText(/Pedido atualizado. Lembre de avisar Ana pelo WhatsApp/)).toBeVisible()
   })
 
+  test('item antigo com o recheio e a cobertura na observação, maior que 300 caracteres, salva sem cortar (ZAP-136, ZAP-141)', async () => {
+    // A migração da ZAP-137 pôs o recheio e a cobertura antes da observação, e o texto pode passar dos 300 do item novo
+    const longa = `Recheio: ${'r'.repeat(100)}. Cobertura: ${'c'.repeat(100)}. ${'o'.repeat(300)}`
+    buscarPedido.mockResolvedValue({ ...emProducao, itens: [{ ...emProducao.itens[0], observacao: longa }] })
+    const usuario = userEvent.setup()
+    await abrirEdicao(9)
+
+    expect(campo(/^Observação do item/)).toHaveValue(longa)
+    expect(screen.queryByRole('textbox', { name: /^Recheio|^Cobertura/ })).not.toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+
+    const [numero, dados] = editarPedido.mock.calls[0]
+    expect(numero).toBe(9)
+    expect(dados.itens[0].observacao).toBe(longa)
+    expect(dados.itens[0]).not.toHaveProperty('recheio')
+    expect(dados.itens[0]).not.toHaveProperty('cobertura')
+  })
+
   test('pedido Concluído não abre para edição', async () => {
     renderizarComRotas(rotas, '/pedidos/8/editar')
 
