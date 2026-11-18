@@ -21,7 +21,8 @@ import br.com.zappi.produto.ProdutoRepositorio;
  * Leitura do cardápio público pelo link da loja (ZAP-104), sem login (RN02). A loja é achada
  * pelo {@code slug}, e só os produtos dela não excluídos e no cardápio aparecem (RN01, RN14,
  * ZAP-151), na ordem das categorias da Lídia (ZAP-136). Categoria sem produto no cardápio não
- * aparece para o cliente.
+ * aparece para o cliente. A loja é lida a cada chamada, então o endereço de retirada (ZAP-185)
+ * e as formas de pagamento são sempre os que estão agora na tela Estabelecimento.
  */
 @Service
 public class ServicoCardapio {
@@ -50,7 +51,9 @@ public class ServicoCardapio {
 		LojaDoCardapio dadosDaLoja = new LojaDoCardapio(loja.getNome(), loja.getSlug(), loja.getDescricao(),
 				loja.getTelefoneWhatsapp(), fotosDaLoja.enderecoPublico(loja.getLogoCaminho()),
 				fotosDaLoja.enderecoPublico(loja.getCapaCaminho()), loja.isDestacarPromocoes(),
-				loja.getFormasPagamento());
+				loja.getFormasPagamento(), semVazio(loja.getCep()), semVazio(loja.getLogradouro()),
+				semVazio(loja.getNumero()), semVazio(loja.getComplemento()), semVazio(loja.getBairro()),
+				semVazio(loja.getCidade()), semVazio(loja.getUf()));
 		// As categorias saem dos próprios produtos, que já vêm na ordem delas
 		Map<Long, RespostaCategoria> categorias = new LinkedHashMap<>();
 		List<ProdutoDoCardapio> doCardapio = produtos.listarNoCardapioNaOrdem(loja.getId())
@@ -64,6 +67,11 @@ public class ServicoCardapio {
 					produto.getAlergenos(), produto.getOutrosAlergenos()))
 			.toList();
 		return new RespostaCardapio(dadosDaLoja, List.copyOf(categorias.values()), doCardapio);
+	}
+
+	/** Campo do endereço em branco vai como nulo, para a tela saber que ele falta (ZAP-185). */
+	private static String semVazio(String texto) {
+		return texto == null || texto.isBlank() ? null : texto.trim();
 	}
 
 }

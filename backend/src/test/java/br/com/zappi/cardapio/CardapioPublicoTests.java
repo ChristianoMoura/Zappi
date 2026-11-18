@@ -9,17 +9,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.zappi.TestcontainersConfiguration;
+import br.com.zappi.seguranca.ServicoToken;
+import br.com.zappi.seguranca.UsuarioAutenticado;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Cardápio público pelo link da loja, sem login (ZAP-104, RN02), com a Casa Belt e o cardápio
@@ -39,6 +47,12 @@ class CardapioPublicoTests {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+
+	@Autowired
+	private ServicoToken servicoToken;
+
+	@Autowired
+	private JsonMapper json;
 
 	private long casaBelt;
 
@@ -125,24 +139,85 @@ class CardapioPublicoTests {
 	}
 
 	@Test
-	void naoExpoeEnderecoEmailNemDadosInternos() throws Exception {
+	void mostraOEnderecoDeRetiradaMasNaoOEmailNemDadosInternos() throws Exception {
+		// O endereço passou a ser público na ZAP-183 (ZAP-185); o e-mail continua fora (LGPD)
 		jdbc.update("""
 				update estabelecimento set email_contato = 'lidia@exemplo.com', cep = '01001000',
-				       logradouro = 'Rua de Teste', numero = '10', bairro = 'Centro', cidade = 'São Paulo', uf = 'SP'
+				       logradouro = 'Rua de Teste', numero = '10', complemento = 'Casa 2', bairro = 'Centro',
+				       cidade = 'São Paulo', uf = 'SP'
 				where id = ?
 				""", casaBelt);
 
 		String corpo = mockMvc.perform(get(CASA_BELT))
 			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.estabelecimento.cep").value("01001000"))
+			.andExpect(jsonPath("$.estabelecimento.logradouro").value("Rua de Teste"))
+			.andExpect(jsonPath("$.estabelecimento.numero").value("10"))
+			.andExpect(jsonPath("$.estabelecimento.complemento").value("Casa 2"))
+			.andExpect(jsonPath("$.estabelecimento.bairro").value("Centro"))
+			.andExpect(jsonPath("$.estabelecimento.cidade").value("São Paulo"))
+			.andExpect(jsonPath("$.estabelecimento.uf").value("SP"))
 			.andExpect(jsonPath("$.estabelecimento.emailContato").doesNotExist())
-			.andExpect(jsonPath("$.estabelecimento.cep").doesNotExist())
-			.andExpect(jsonPath("$.estabelecimento.logradouro").doesNotExist())
 			.andExpect(jsonPath("$.estabelecimento.id").doesNotExist())
+			.andExpect(jsonPath("$.estabelecimento.ativo").doesNotExist())
 			.andExpect(jsonPath("$.produtos[0].ativo").doesNotExist())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		assertThat(corpo).doesNotContain("lidia@exemplo.com", "01001000", "Rua de Teste", "Exemplo");
+		assertThat(corpo).doesNotContain("lidia@exemplo.com", "Exemplo");
+	}
+
+	@Test
+	void lojaSemEnderecoDevolveOsCamposNulos() throws Exception {
+		jdbc.update("""
+				update estabelecimento set cep = null, logradouro = null, numero = null, complemento = null,
+				       bairro = null, cidade = null, uf = null
+				where id = ?
+				""", casaBelt);
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.estabelecimento.cep").value(nullValue()))
+			.andExpect(jsonPath("$.estabelecimento.logradouro").value(nullValue()))
+			.andExpect(jsonPath("$.estabelecimento.numero").value(nullValue()))
+			.andExpect(jsonPath("$.estabelecimento.complemento").value(nullValue()))
+			.andExpect(jsonPath("$.estabelecimento.bairro").value(nullValue()))
+			.andExpect(jsonPath("$.estabelecimento.cidade").value(nullValue()))
+			.andExpect(jsonPath("$.estabelecimento.uf").value(nullValue()));
+	}
+
+	@Test
+	void trocarOEnderecoNoPainelMudaOCardapioNaHora() throws Exception {
+		Map<String, Object> dados = new LinkedHashMap<>();
+		dados.put("nome", "Casa Belt");
+		dados.put("slug", "casa-belt");
+		dados.put("whatsapp", "5511900000000");
+		dados.put("cep", "04001-000");
+		dados.put("logradouro", "Rua Nova");
+		dados.put("numero", "45");
+		dados.put("complemento", "  ");
+		dados.put("bairro", "Paraíso");
+		dados.put("cidade", "São Paulo");
+		dados.put("uf", "sp");
+		mockMvc.perform(put("/api/estabelecimento").header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDaLidia())
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json.writeValueAsString(dados)))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.estabelecimento.cep").value("04001000"))
+			.andExpect(jsonPath("$.estabelecimento.logradouro").value("Rua Nova"))
+			.andExpect(jsonPath("$.estabelecimento.numero").value("45"))
+			.andExpect(jsonPath("$.estabelecimento.complemento").value(nullValue()))
+			.andExpect(jsonPath("$.estabelecimento.bairro").value("Paraíso"))
+			.andExpect(jsonPath("$.estabelecimento.uf").value("SP"));
+	}
+
+	private String tokenDaLidia() {
+		Map<String, Object> lidia = jdbc.queryForMap(
+				"select id, estabelecimento_id from usuario where email = 'lidia@casabelt.com'");
+		return servicoToken.gerar(new UsuarioAutenticado(((Number) lidia.get("id")).longValue(), casaBelt));
 	}
 
 	@Test
