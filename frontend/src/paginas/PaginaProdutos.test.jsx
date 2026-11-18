@@ -150,6 +150,50 @@ describe('Lista de produtos (ZAP-41, RF05, RF06)', () => {
     await waitFor(() => expect(within(cartao).getByRole('button', { name: 'Tirar Coxinha de frango do cardápio' })).toHaveFocus())
   })
 
+  test('produto fora do cardápio continua com "Editar" e "Excluir", e excluir tira da lista (ZAP-151, RN14)', async () => {
+    buscarProdutos.mockResolvedValue([brigadeiro, { ...coxinha, noCardapio: false }])
+    const usuario = userEvent.setup()
+    await abrirLista()
+
+    const cartao = screen.getByRole('article', { name: 'Coxinha de frango' })
+    expect(within(cartao).getByRole('link', { name: 'Editar Coxinha de frango' })).toHaveAttribute('href', '/produtos/4')
+    await usuario.click(within(cartao).getByRole('button', { name: 'Excluir Coxinha de frango' }))
+    const janela = await screen.findByRole('dialog', { name: 'Excluir Coxinha de frango?' })
+    await usuario.click(within(janela).getByRole('button', { name: 'Excluir produto' }))
+
+    expect(excluirProduto).toHaveBeenCalledWith(4)
+    expect(await screen.findByText('Coxinha de frango foi excluído.')).toBeVisible()
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Coxinha de frango' })).not.toBeInTheDocument())
+    expect(tirarDoCardapio).not.toHaveBeenCalled()
+    expect(voltarAoCardapio).not.toHaveBeenCalled()
+  })
+
+  test('avisa quando não consegue tirar do cardápio, e o produto continua no cardápio (ZAP-157)', async () => {
+    tirarDoCardapio.mockRejectedValue(new Error('falhou'))
+    const usuario = userEvent.setup()
+    await abrirLista()
+
+    await usuario.click(screen.getByRole('button', { name: 'Tirar Bolo de brigadeiro de chocolate do cardápio' }))
+    const janela = await screen.findByRole('dialog', { name: 'Tirar Bolo de brigadeiro de chocolate do cardápio?' })
+    await usuario.click(within(janela).getByRole('button', { name: 'Tirar do cardápio' }))
+
+    expect(await within(janela).findByRole('alert')).toHaveTextContent('Não foi possível tirar do cardápio agora. Tente novamente em alguns minutos.')
+    expect(within(screen.getByRole('article', { name: /Bolo de brigadeiro de chocolate/ })).queryByText('Fora do cardápio')).not.toBeInTheDocument()
+  })
+
+  test('avisa quando não consegue voltar ao cardápio, e o produto continua fora (ZAP-157)', async () => {
+    buscarProdutos.mockResolvedValue([brigadeiro, { ...coxinha, noCardapio: false }])
+    voltarAoCardapio.mockRejectedValue(new Error('falhou'))
+    const usuario = userEvent.setup()
+    await abrirLista()
+
+    const cartao = screen.getByRole('article', { name: 'Coxinha de frango' })
+    await usuario.click(within(cartao).getByRole('button', { name: 'Voltar Coxinha de frango ao cardápio' }))
+
+    expect(await screen.findByText('Não foi possível voltar ao cardápio agora. Tente novamente em alguns minutos.')).toBeVisible()
+    expect(within(cartao).getByText('Fora do cardápio')).toBeVisible()
+  })
+
   test('cardápio vazio mostra como começar', async () => {
     buscarProdutos.mockResolvedValue([])
     await abrirLista()

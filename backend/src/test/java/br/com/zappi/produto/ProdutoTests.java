@@ -274,6 +274,40 @@ class ProdutoTests {
 	}
 
 	@Test
+	void tirarEVoltarPelasRotasMudaOCardapioPublico() throws Exception {
+		long id = idDoNome("Bolo de ninho com morango");
+
+		// Critérios da ZAP-151: some do cardápio do cliente e volta com "Voltar ao cardápio"
+		comToken(post(ROTA + "/" + id + "/tirar-do-cardapio"), tokenDaLidia).andExpect(status().isOk());
+		mockMvc.perform(get("/api/cardapio/casa-belt"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.produtos[*].nome", contains("Bolo de brigadeiro de chocolate", "Cento de coxinha",
+					"Coxinha por unidade")));
+
+		comToken(post(ROTA + "/" + id + "/voltar-ao-cardapio"), tokenDaLidia).andExpect(status().isOk());
+		mockMvc.perform(get("/api/cardapio/casa-belt"))
+			.andExpect(jsonPath("$.produtos[*].nome", contains("Bolo de brigadeiro de chocolate",
+					"Bolo de ninho com morango", "Cento de coxinha", "Coxinha por unidade")));
+	}
+
+	@Test
+	void excluiProdutoForaDoCardapioETiraDaTelaDeProdutos() throws Exception {
+		long id = idDoNome("Bolo de brigadeiro de chocolate");
+		comToken(post(ROTA + "/" + id + "/tirar-do-cardapio"), tokenDaLidia).andExpect(status().isOk());
+
+		// Excluir continua tirando o produto de todos os lugares, também da tela de produtos (RN14)
+		comToken(delete(ROTA + "/" + id), tokenDaLidia).andExpect(status().isNoContent());
+
+		assertThat(jdbc.queryForObject("select ativo from produto where id = ?", Boolean.class, id)).isFalse();
+		comToken(get(ROTA), tokenDaLidia)
+			.andExpect(jsonPath("$.length()").value(3))
+			.andExpect(jsonPath("$[*].nome", contains("Bolo de ninho com morango", "Cento de coxinha",
+					"Coxinha por unidade")));
+		comToken(get(ROTA + "/" + id), tokenDaLidia).andExpect(status().isNotFound());
+		assertThat(log("PRODUTO_EXCLUIDO", id)).containsEntry("usuario_id", lidia);
+	}
+
+	@Test
 	void naoMostraNemAlteraProdutosDeOutroEstabelecimento() throws Exception {
 		long id = idDoNome("Bolo de brigadeiro de chocolate");
 
