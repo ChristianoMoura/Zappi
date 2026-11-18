@@ -1,6 +1,6 @@
 # Zappi — Textos das mensagens do WhatsApp
 
-Versão de 07/11/2026 · aprovada pela equipe na ZAP-63 (validação com a Lídia autorizada pelo Lucas) · hora da retirada incluída em 10/11/2026 (ZAP-127)
+Versão de 07/11/2026 · aprovada pela equipe na ZAP-63 (validação com a Lídia autorizada pelo Lucas) · hora da retirada incluída em 10/11/2026 (ZAP-127) · forma de pagamento na confirmação em 17/11/2026 (ZAP-190)
 
 Estes são os textos que o Zappi prepara para o cliente ao confirmar, recusar ou cancelar e concluir um pedido. O backend monta o texto com os campos variáveis e gera o link `wa.me` (ZAP-50); a Lídia clica em "Enviar no WhatsApp" e só aperta enviar.
 
@@ -8,7 +8,7 @@ Estes são os textos que o Zappi prepara para o cliente ao confirmar, recusar ou
 
 - **Linguagem simples (NBR 17225 5.12.12):** frases curtas, sem termos técnicos, sempre dizendo o que o cliente pode fazer.
 - **Transparência (CDC):** toda mensagem termina com "Mensagem gerada pelo Zappi".
-- **Sem delivery (RN19):** o pedido é sempre retirado, e o pagamento é feito na retirada.
+- **Sem delivery (RN19):** o pedido é sempre retirado, e o pagamento é feito na retirada, pela forma combinada no pedido (RN25).
 - **Sem emojis:** leitores de tela leem cada emoji em voz alta, e a mensagem fica mais limpa.
 - **Sem endereço:** a retirada é na casa da Lídia e os clientes já a conhecem; a mensagem não expõe esse dado pessoal.
 - O texto entre `{chaves}` é trocado pelos dados do pedido; o resto é fixo. As quebras de linha fazem parte do texto.
@@ -24,10 +24,11 @@ Estes são os textos que o Zappi prepara para o cliente ao confirmar, recusar ou
 | `{valor_total}` | `pedido.valor_total` | Moeda brasileira | R$ 200,00 |
 | `{data_retirada}` | `pedido.data_retirada` | Dia da semana por extenso, dia/mês e hora ("15h" ou "15h30"); no próprio dia, começa com "hoje," | sábado, 14/11, às 15h · hoje, sábado, 07/11, às 9h30 |
 | `{motivo}` | `pedido.motivo_recusa` | Texto digitado pela Lídia, sem alteração | Agenda cheia nesse dia. |
+| `{forma_pagamento}` | `pedido.forma_pagamento` | A forma com a preposição: "em dinheiro", "por Pix", "por cartão de crédito", "por cartão de débito" ou "por vale-refeição" (ZAP-190) | por Pix |
 
 ## 1. Confirmação (tipo 1)
 
-Gerada ao confirmar um pedido Novo (ZAP-29).
+Gerada ao confirmar um pedido Novo (ZAP-29). Se a Lídia edita um pedido Confirmado, o texto é refeito, inclusive com a forma de pagamento nova (ZAP-90, ZAP-190).
 
 ```text
 Olá, {nome}!
@@ -38,10 +39,12 @@ Seu pedido #{numero} na {estabelecimento} está confirmado.
 Total: {valor_total}
 Retirada: {data_retirada}
 
-O pagamento é feito na retirada. Qualquer dúvida, é só responder esta mensagem.
+O pagamento é feito na retirada, {forma_pagamento}. Qualquer dúvida, é só responder esta mensagem.
 
 Mensagem gerada pelo Zappi
 ```
+
+**Pedido sem forma de pagamento** (os de antes da ZAP-190): a linha fica como antes, "O pagamento é feito na retirada. Qualquer dúvida, é só responder esta mensagem."
 
 **Exemplo:**
 
@@ -54,10 +57,12 @@ Seu pedido #12 na Casa Belt está confirmado.
 Total: R$ 200,00
 Retirada: sábado, 14/11, às 15h
 
-O pagamento é feito na retirada. Qualquer dúvida, é só responder esta mensagem.
+O pagamento é feito na retirada, por Pix. Qualquer dúvida, é só responder esta mensagem.
 
 Mensagem gerada pelo Zappi
 ```
+
+**Exemplo em dinheiro:** "O pagamento é feito na retirada, em dinheiro. Qualquer dúvida, é só responder esta mensagem."
 
 ## 2. Recusa e cancelamento (tipo 2)
 
@@ -130,3 +135,5 @@ Mensagem gerada pelo Zappi
 | Data | Decisão |
 |---|---|
 | 07/11/2026 | Textos aprovados pela equipe na ZAP-63, com autorização do Lucas para definir em nome da Lídia |
+| 10/11/2026 | Hora da retirada em `{data_retirada}` (ZAP-127) |
+| 15/11/2026 | A confirmação passa a dizer a forma de pagamento combinada: "O pagamento é feito na retirada, por Pix." (decisão da equipe na ZAP-190). Dinheiro fica "em dinheiro", que soa natural. Pedido sem forma mantém a frase antiga. Implementado em 17/11/2026 (ZAP-192) |

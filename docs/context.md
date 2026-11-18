@@ -141,26 +141,26 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 **Portal do Administrador**
 
 1. Login da Lídia (e-mail e senha).
-2. Cadastro e edição das informações do estabelecimento (Casa Belt).
+2. Cadastro e edição das informações do estabelecimento (Casa Belt), incluindo as **formas de pagamento aceitas** (RN25).
 3. Cadastro, edição e exclusão lógica de produtos (nome, sabor, unidade, preço, descrição, foto com texto alternativo e **alérgenos**: lista fixa, com o glúten, e texto livre para os demais, RN24).
 4. Upload da foto do produto para o Supabase Storage.
 5. Quadro **Kanban** de pedidos com as colunas Novo, Confirmado, Em produção, Concluído, Entregue e Recusado, e um **filtro de status**: em "Todos", Entregue e Recusado ficam ocultos; escolhendo um status, só os pedidos dele aparecem (RN04).
-6. Detalhes do pedido ao abrir um card.
+6. Detalhes do pedido ao abrir um card, com a forma de pagamento combinada ("Não informada" nos pedidos antigos, RN25).
 7. **Confirmar** um pedido.
 8. **Recusar** um pedido com **motivo obrigatório**, e **cancelar** um pedido Confirmado ou Em produção pelo mesmo fluxo.
 9. Mover o pedido para **Em produção**, **Concluído** e **Entregue** (quando o cliente retira), e voltar uma etapa para corrigir um clique errado.
 10. Geração da mensagem ao cliente (confirmação, recusa e pronto para retirada) e botão **"Enviar no WhatsApp"** com link `wa.me`, que continua disponível para reenviar.
 11. Registro de auditoria (logins e ações administrativas).
 12. Infraestrutura: Docker Compose no ambiente local; em produção, Render e Supabase com HTTPS gerenciado, CI no GitHub Actions e deploy automático do Render a cada merge na `main`.
-13. **Cadastrar e editar pedidos** (US7): a Lídia registra as encomendas que recebe pelo WhatsApp e corrige um pedido, com a edição limitada pelo status (RN21).
+13. **Cadastrar e editar pedidos** (US7): a Lídia registra as encomendas que recebe pelo WhatsApp e corrige um pedido, com a edição limitada pelo status (RN21) e a forma de pagamento entre as aceitas (RN25).
 14. **Anonimizar os dados de um cliente** a pedido do titular (RN17, LGPD), sem apagar o histórico de pedidos (decisão da ZAP-64).
 
 15. **Resposta automática com o link do cardápio** pela mensagem de saudação do WhatsApp Business, configurada pela Lídia no aplicativo, sem código no Zappi (seção 14, item 12). O envio automático pela WhatsApp Cloud API não será feito (decisão de 15/11/2026, seção 5.4).
 
 **Portal do Cliente** (épico `ZAP-2`; requisitos e regras definidos na `ZAP-18`, seção 14, item 11)
 
-16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo, os **selos de alérgenos** com o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar." (RN24) e o contato da Lídia. No topo, **busca** pelos produtos, **modo escuro** e o botão **Compartilhar** (ZAP-100, ZAP-105).
-17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio e cobertura (opcionais, só em produtos vendidos por KG), observações e data e hora de retirada, com pelo menos 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23).
+16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo, os **selos de alérgenos** com o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar." (RN24), as **formas de pagamento** que a loja aceita, sempre com "Pagamento na retirada" (RN25), e o contato da Lídia. No topo, **busca** pelos produtos, **modo escuro** e o botão **Compartilhar** (ZAP-100, ZAP-105).
+17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio e cobertura (opcionais, só em produtos vendidos por KG), observações, data e hora de retirada, com pelo menos 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23), e a **forma de pagamento**, obrigatória, entre as aceitas (RN25).
 18. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
 
 ### 5.3 Dados iniciais (seed)
@@ -195,15 +195,15 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | User story | Requisitos funcionais |
 |---|---|
 | **US1** — Como Lídia, quero fazer login, para acessar de forma segura minhas informações e pedidos. | **RF01** Login com e-mail e senha. **RF02** Validar credenciais e bloquear acesso com dados incorretos. |
-| **US2** — Como Lídia, quero cadastrar as informações do estabelecimento, para manter meus dados registrados. | **RF03** Cadastro de nome, descrição e contato do Casa Belt. **RF04** Edição posterior dessas informações. |
+| **US2** — Como Lídia, quero cadastrar as informações do estabelecimento, para manter meus dados registrados. | **RF03** Cadastro de nome, descrição, contato e formas de pagamento aceitas do Casa Belt (RN25). **RF04** Edição posterior dessas informações. |
 | **US3** — Como Lídia, quero cadastrar meus produtos, para manter o cardápio atualizado. | **RF05** Cadastro de produtos com nome, sabor, preço por kg, foto e alérgenos (RN24). **RF06** Edição e exclusão de produtos (exclusão lógica). |
-| **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído, Entregue e Recusado), com filtro de status; em "Todos", Entregue e Recusado ficam ocultos (RN04). **RF08** Detalhes do pedido ao selecionar um card. |
+| **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído, Entregue e Recusado), com filtro de status; em "Todos", Entregue e Recusado ficam ocultos (RN04). **RF08** Detalhes do pedido ao selecionar um card, com a forma de pagamento (RN25). |
 | **US5** — Como Lídia, quero confirmar um pedido, para informar ao cliente que ele será atendido. | **RF09** Mover o pedido para "Confirmado". **RF10** Preparar a mensagem de confirmação ao cliente via WhatsApp. |
 | **US6** — Como Lídia, quero recusar um pedido informando o motivo, para que o cliente entenda. | **RF11** Motivo obrigatório ao recusar. **RF12** Preparar a mensagem de recusa com o motivo via WhatsApp. |
-| **US7** — Como Lídia, quero cadastrar e editar pedidos, para registrar as encomendas que recebo pelo WhatsApp e corrigir um pedido quando o cliente pede uma mudança. | **RF13** Cadastro de pedido com cliente (nome e WhatsApp), itens do cardápio com quantidade, data e hora de retirada e observações. **RF14** Edição do pedido conforme o status (RN21). |
+| **US7** — Como Lídia, quero cadastrar e editar pedidos, para registrar as encomendas que recebo pelo WhatsApp e corrigir um pedido quando o cliente pede uma mudança. | **RF13** Cadastro de pedido com cliente (nome e WhatsApp), itens do cardápio com quantidade, data e hora de retirada, observações e forma de pagamento (RN25). **RF14** Edição do pedido conforme o status (RN21). |
 | **US8** — Como Lídia, quero mover o pedido para Em produção e Concluído, para acompanhar o andamento e avisar o cliente que o pedido está pronto. | **RF15** Mover o pedido para "Em produção", "Concluído" e "Entregue", com a volta de uma etapa para corrigir um clique errado (RN03). **RF16** Preparar a mensagem de pronto para retirada via WhatsApp. |
-| **US9** — Como cliente, quero ver o cardápio pelo link, para conhecer sabores e preços sem precisar de login. | **RF17** Cardápio público pelo `slug`, só com produtos ativos, com busca pelos produtos, modo escuro e botão de compartilhar o link (ZAP-100). **RF18** Exibir o contato da Lídia. |
-| **US10** — Como cliente, quero montar meu pedido, para encomendar sem depender de troca de mensagens. | **RF19** Escolher produtos, quantidade, recheio, cobertura e observações. **RF20** Escolher a data e a hora de retirada, com 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23). |
+| **US9** — Como cliente, quero ver o cardápio pelo link, para conhecer sabores e preços sem precisar de login. | **RF17** Cardápio público pelo `slug`, só com produtos ativos, com busca pelos produtos, modo escuro e botão de compartilhar o link (ZAP-100), e as formas de pagamento aceitas (RN25). **RF18** Exibir o contato da Lídia. |
+| **US10** — Como cliente, quero montar meu pedido, para encomendar sem depender de troca de mensagens. | **RF19** Escolher produtos, quantidade, recheio, cobertura, observações e a forma de pagamento, entre as aceitas (RN25). **RF20** Escolher a data e a hora de retirada, com 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23). |
 | **US11** — Como cliente, quero enviar meu pedido, para que a Lídia avalie se pode atender. | **RF21** Identificar com nome e WhatsApp, com consentimento (RN16). **RF22** Registrar o pedido como Novo e avisar que ainda não está confirmado. **RF23** Limitar os envios e descartar os automáticos. |
 | **US12** — Como Lídia, quero anonimizar os dados de um cliente, para atender ao pedido de exclusão. | **RF24** Anonimizar o cliente sem apagar o histórico (RN17). |
 
@@ -214,6 +214,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 - **US8, RF15 e RF16** numeram o escopo ampliado que já tinha sido aprovado sem RF (história `ZAP-60`).
 - **RF07 e RF15** passam a ter o status **Entregue** (`ZAP-60`, 14/11/2026), e o **RF07** ganha o filtro de status no lugar do filtro "Recusados" (`ZAP-28`, `ZAP-179`, 14/11/2026).
 - **RF05 e RF17** passam a ter os **alérgenos** do produto: a Lídia marca a lista fixa no cadastro, e o cardápio público mostra os selos (história `ZAP-128`, correção do formato na `ZAP-197`, 17/11/2026). A equipe não criou um RF próprio.
+- **RF03, RF04, RF08, RF13, RF17 e RF19** passam a ter as **formas de pagamento**: a Lídia escolhe as que aceita, o cardápio mostra só essas, e o pedido grava a forma combinada (história `ZAP-190`, 17/11/2026). Também sem RF próprio.
 - **RF11 e RF12** passam a valer também para o **cancelamento** de pedidos Confirmados e Em produção (`ZAP-64`).
 - **RF10, RF12 e RF16:** o botão "Enviar no WhatsApp" continua disponível para **reenviar** a mensagem, e o painel mostra só a mensagem da etapa atual, com as anteriores guardadas para consulta (`ZAP-64`, `ZAP-51`).
 
@@ -241,12 +242,13 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. | LGPD |
 | RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. O cliente pede pelo WhatsApp da Lídia, e ela anonimiza no painel, o que fica bloqueado se houver pedido em aberto (Novo, Confirmado ou Em produção); Concluído, Entregue e Recusado contam como encerrados. O nome vira "Cliente anonimizado", o telefone vira `0` + id do cliente completado com zeros, em 13 dígitos, e nome e telefone também saem de `mensagem_whatsapp`, de `log_auditoria.detalhes` e de `pedido.motivo_recusa`, que vai para a mensagem de recusa. As observações do pedido e do item não mudam. Depois de anonimizado, o cliente nunca volta a ter pedido em aberto: o pedido Concluído dele não pode voltar para Em produção. | LGPD / ZAP-64 / ZAP-18 / ZAP-115 / ZAP-60 |
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
-| RN19 | Não há delivery: o pedido tem `data_retirada`, com a data e a hora da retirada (RN23), e o pagamento é presencial, na retirada. O sistema não registra pagamento. | Comunidade |
+| RN19 | Não há delivery: o pedido tem `data_retirada`, com a data e a hora da retirada (RN23), e o pagamento é presencial, na retirada. O sistema não processa nem confirma pagamento; guarda só a **forma combinada** (RN25). | Comunidade / ZAP-190 |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
 | RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data e hora de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e hora de retirada e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído, 5-Recusado e 6-Entregue: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 / ZAP-60 |
 | RN22 | **Antecedência mínima.** Pelo Portal do Cliente, a data de retirada deve ser de pelo menos 7 dias corridos após o envio do pedido, contados no horário de São Paulo e validados também no backend. No Portal do Administrador, a Lídia pode escolher hoje ou uma data futura, inclusive ao editar pedidos que vieram do portal. O horário segue a RN23. | RF20 / ZAP-18 |
 | RN23 | **Horário de retirada.** A retirada tem data e hora: das 8h às 20h, de 30 em 30 minutos, no horário de São Paulo, nos dois portais. A data e hora não pode ser antes de agora; na edição, a que já estava no pedido pode ficar, se não foi mudada. Validado na tela, no backend e no banco. | ZAP-127 |
 | RN24 | **Alérgenos do produto.** A Lídia marca, no cadastro e na edição, os alérgenos de uma lista fixa: glúten, leite e derivados, ovos, soja, amendoim, castanhas e nozes, e gergelim (`GLUTEN`, `LEITE`, `OVOS`, `SOJA`, `AMENDOIM`, `CASTANHAS`, `GERGELIM`). Os que não estão na lista vão num texto livre de até 300 caracteres. Nenhum é obrigatório: sem o glúten marcado, o produto não contém glúten. O detalhe do produto no cardápio público mostra um selo, com ícone e nome, para cada alérgeno marcado e para o texto livre, e sempre o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar.". Não há selo "Não contém glúten" nem "Pode conter traços de…": a cozinha usa farinha de trigo, e o aviso cobre a contaminação cruzada. Código fora da lista é recusado na API e no banco. A informação vale para pedidos novos; o pedido antigo não guarda cópia dela. | CDC / ZAP-128 / ZAP-129 / ZAP-197 |
+| RN25 | **Formas de pagamento.** Lista fixa: Dinheiro, Pix, Cartão de crédito, Cartão de débito e Vale-refeição (VR) (`DINHEIRO`, `PIX`, `CREDITO`, `DEBITO`, `VR`). A loja aceita pelo menos uma; todas vêm marcadas no começo, e a Lídia muda na tela Estabelecimento. O cardápio público mostra só as aceitas. Todo pedido novo, do portal ou do painel, tem uma forma, entre as que a loja aceita no momento do pedido. Como o preço (RN10), a forma fica gravada no pedido: se a loja deixar de aceitá-la, os pedidos que já existem não mudam, e na edição a forma que já estava pode ficar. Pedidos de antes da regra ficam sem forma ("Não informada"). A mensagem de confirmação diz a forma: "O pagamento é feito na retirada, por Pix." ("em dinheiro" para Dinheiro); sem forma, a frase antiga. Validado na tela, no backend e no banco. | RF03 / RF13 / RF19 / ZAP-190 |
 
 ---
 
@@ -398,6 +400,7 @@ Confeitaria cadastrada (tenant). Exemplo: Casa Belt.
 | uf | CHAR(2) | Não | | Ex.: SP |
 | logo_caminho | VARCHAR(255) | Não | | Caminho do logo no bucket `estabelecimentos`. Ex.: 1/logo-a1b2c3d4.webp. O texto alternativo vem do nome ("Logo de Casa Belt"). **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-119, ZAP-83) |
 | capa_caminho | VARCHAR(255) | Não | | Caminho da foto de capa no bucket `estabelecimentos`. Decorativa (texto alternativo vazio). **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-119, ZAP-83) |
+| formas_pagamento | VARCHAR(10)[] | Sim | | Formas aceitas (RN25), sem repetir e na ordem da lista. Padrão {DINHEIRO,PIX,CREDITO,DEBITO,VR}. Pelo menos uma, só da lista (`ck_estabelecimento_formas_pagamento`). **Coluna nova** (V13, ZAP-191) |
 | ativo | BOOLEAN | Sim | | Padrão TRUE |
 | criado_em | TIMESTAMPTZ | Sim | | Padrão now() |
 | atualizado_em | TIMESTAMPTZ | Sim | | |
@@ -476,6 +479,7 @@ Encomenda. Cada pedido é um card do Kanban (RF07–RF16).
 | observacao | VARCHAR(500) | Não | | Ocasião, tema da festa |
 | motivo_recusa | VARCHAR(500) | Não | | Obrigatório quando status = 5 (RF11) |
 | valor_total | NUMERIC(10,2) | Sim | | Soma dos subtotais. Pago na retirada |
+| forma_pagamento | VARCHAR(10) | Não | | Forma combinada (RN25): DINHEIRO, PIX, CREDITO, DEBITO ou VR (`ck_pedido_forma_pagamento`). Nula nos pedidos de antes da regra; a API exige nos novos. **Coluna nova** (V13, ZAP-191) |
 | criado_em | TIMESTAMPTZ | Sim | | Pedido recebido. Padrão now() |
 | confirmado_em | TIMESTAMPTZ | Não | | RF09 |
 | producao_em | TIMESTAMPTZ | Não | | RF15. Entrada em Em produção. **Coluna nova**, fora do dicionário da Atividade #14 (ZAP-83) |
@@ -542,6 +546,7 @@ Trilha de auditoria (ISO 8.16).
 - `CHECK` do horário de retirada em `pedido`: das 8h às 20h, em hora cheia ou meia hora (RN23, ZAP-127).
 - `CHECK (foto_caminho IS NULL OR foto_texto_alternativo IS NOT NULL)` em `produto`.
 - `CHECK` dos alérgenos em `produto` (`ck_produto_alergenos`): a lista `alergenos` só aceita GLUTEN, LEITE, OVOS, SOJA, AMENDOIM, CASTANHAS e GERGELIM (ZAP-197).
+- `CHECK` das formas de pagamento (ZAP-191): em `estabelecimento`, pelo menos uma e só DINHEIRO, PIX, CREDITO, DEBITO e VR (`ck_estabelecimento_formas_pagamento`); em `pedido`, nula ou uma delas (`ck_pedido_forma_pagamento`).
 - `ON DELETE CASCADE` em `item_pedido.pedido_id` e `mensagem_whatsapp.pedido_id`.
 - Consistência de tenant (decisão da ZAP-64): `UNIQUE (id, estabelecimento_id)` em `cliente` e FK composta `(cliente_id, estabelecimento_id)` em `pedido`, referenciando `cliente (id, estabelecimento_id)`. O banco recusa um pedido com cliente de outro estabelecimento.
 - RLS habilitado em todas as tabelas (somente o backend acessa).
@@ -692,6 +697,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Pedidos ocultos no quadro | Recusados ocultos por padrão, com o interruptor "Mostrar recusados" (RN04, ZAP-46); as outras colunas sempre à vista | **Filtro de status** ("Mostrar"), com "Todos" e uma opção por status, com a quantidade de pedidos (14/11/2026, ZAP-28, ZAP-179, ZAP-83). Em "Todos", Entregue e Recusado ficam ocultos; escolhendo um status, só os pedidos dele aparecem, em grade no computador e em lista no celular. O filtro fica no endereço (`?status=3`), e o backend não muda. Motivo: pedido da equipe, para a Lídia ver só os pedidos de uma etapa quando precisar |
 | Fim do pedido | Concluído era o último status (RN03, cinco status), e o sistema não registrava a retirada | **Status 6-Entregue** e coluna "Entregue" no quadro (14/11/2026, ZAP-60, ZAP-83). "Marcar como entregue" no pedido Concluído grava `entregue_em`, e "Voltar para concluído" corrige um engano. Entregue não pode ser editado nem cancelado e conta como encerrado na anonimização (RN17). No banco, `ck_pedido_status` aceita de 1 a 6 e entra a coluna `pedido.entregue_em` (ZAP-167); o Recusado continua 5. Motivo: a Lídia precisa controlar quais pedidos foram de fato retirados e quando |
 | Alérgenos do produto | Sem campos no dicionário da Atividade #14; a ZAP-131 criou `contem_gluten` (sim, não ou nulo = "não informado", obrigatório na API) e o texto livre `outros_alergenos`, enquanto a tela (ZAP-132) marcava uma lista fixa. Com os dois formatos diferentes, nenhum produto podia ser salvo | **Lista fixa `alergenos`** em `produto` (`VARCHAR(20)[]`, vazia por padrão), com GLUTEN, LEITE, OVOS, SOJA, AMENDOIM, CASTANHAS e GERGELIM, mais o texto livre `outros_alergenos` para os demais (RN24; 17/11/2026, ZAP-197, ZAP-83). A API recebe e devolve `alergenos` na ordem da lista, recusa código fora dela e o cardápio público passa a mostrar os selos. A coluna `contem_gluten` saiu: quem tinha glúten passou a ter GLUTEN. Lista vazia é "nenhum alérgeno da lista", e a tela só mostra selos do que está marcado, sem dizer "não contém glúten". Motivo: o formato da tela cobre os alérgenos mais comuns da confeitaria, e o glúten fica como um deles |
+| Formas de pagamento | Fixas na tela do cardápio (Pix, crédito e débito), sem a Lídia poder mudar; o pedido não guardava como o cliente ia pagar, e a confirmação dizia só "O pagamento é feito na retirada." (RN19) | **A Lídia escolhe as formas aceitas** (Dinheiro, Pix, Cartão de crédito, Cartão de débito e VR; todas no começo, pelo menos uma), o cardápio mostra só essas, e **todo pedido novo grava a forma combinada**, entre as aceitas, que aparece nos detalhes e na confirmação ("O pagamento é feito na retirada, por Pix.") (RN25; 15/11/2026, ZAP-190, ZAP-83; implementado em 17/11/2026). Colunas novas `estabelecimento.formas_pagamento` e `pedido.forma_pagamento` (V13). O pagamento continua na retirada, sem processamento pelo sistema. Motivo: o cliente sabe antes como pode pagar, e a Lídia sabe o que esperar na retirada |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
