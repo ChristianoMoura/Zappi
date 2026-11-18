@@ -105,8 +105,23 @@ export function linkWhatsapp(whatsapp, texto) {
 
 export const mensagemContato = (loja) => `Olá! Vi o cardápio da ${loja.nome} no Zappi e queria tirar uma dúvida.`
 
-// Mensagem do botão "Pedir pelo WhatsApp", com a observação que o cliente escreveu
-export function mensagemPedido(loja, produto, observacao = '') {
-  const obs = observacao.trim()
-  return `Olá! Vi o cardápio da ${loja.nome} no Zappi e quero encomendar: ${produto.nome} (${precoTexto(produto)} ${unidadeTexto(produto)}).${obs ? ` Observação: ${obs}` : ''}`
+// Artigo do produto ("o", "a", "os", "as") pela primeira palavra do nome, porque o produto não tem
+// gênero cadastrado: terminada em "a" é feminina (Torta, Coxinha), o resto masculino (Bolo, Cento,
+// Pudim), com as exceções abaixo. Plural pelo "s" final (Brigadeiros, Empadas). "Mini" é pulado:
+// "Mini pizza" usa o gênero de "pizza"
+const FEMININAS = new Set(['mousse', 'quiche', 'omelete'])
+const MASCULINAS = new Set(['dia'])
+const PULAR = new Set(['mini', 'super'])
+
+export function artigoDoProduto(nome) {
+  const palavras = String(nome ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const palavra = palavras.find((p, i) => !PULAR.has(p) || i === palavras.length - 1) ?? ''
+  const plural = palavra.length > 3 && palavra.endsWith('s') && !palavra.endsWith('ss')
+  const singular = plural ? palavra.slice(0, -1) : palavra
+  const feminina = FEMININAS.has(singular) || (singular.endsWith('a') && !MASCULINAS.has(singular))
+  return (feminina ? 'a' : 'o') + (plural ? 's' : '')
 }
+
+// Mensagem do "Tem alergia? Fale com a loja", no detalhe do produto (revisão das mensagens, ZAP-65)
+export const mensagemAlergia = (produto) =>
+  `Olá! Tenho alergia e queria saber se dá para fazer ${artigoDoProduto(produto.nome)} ${produto.nome} sem algum ingrediente.`
