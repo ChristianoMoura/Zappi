@@ -91,7 +91,7 @@ function paraTela(pedido) {
 
 const pedidoDaApi = async (caminho, opcoes) => paraTela(await chamar(caminho, opcoes))
 
-// Todos, com os recusados: o filtro "Mostrar recusados" é da tela (RN04)
+// Todos, com os recusados: o filtro de status é da tela (RN04, ZAP-179)
 export async function buscarPedidos() {
   return (await chamar('?recusados=true')).map(paraTela)
 }

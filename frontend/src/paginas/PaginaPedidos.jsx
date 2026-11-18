@@ -190,7 +190,7 @@ export function PaginaPedidos() {
     // Depois de confirmar ou recusar, o card mudou de coluna: o foco volta para ele no lugar novo
     const numero = aberto?.numero
     // Se o pedido saiu do que está na tela (mudou para um status fora do filtro), o foco volta
-    // para a lista "Mostrar" (ZAP-179)
+    // para o filtro de status (ZAP-179)
     const cartao = numero && document.querySelector(`[data-numero-pedido="${numero}"]`)
     if (cartao) focarCartao(cartao)
     else document.getElementById('filtro-status')?.focus()
