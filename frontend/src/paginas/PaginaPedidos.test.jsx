@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { STATUS } from '../pedidos/regrasPedidos'
+import { dataLocal, STATUS } from '../pedidos/regrasPedidos'
 import { buscarPedidos } from '../pedidos/servicoPedidos'
 import { abrirPedido, abrirQuadro, pedidoDeTeste, renderizarQuadro, usarTela } from '../testes/pedidosDeTeste'
 
@@ -196,6 +196,24 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       expect(within(novo).getAllByRole('button')[0]).toHaveFocus()
     })
 
+    test('o selo "Retira hoje" aparece no card do Concluído e não no do Entregue (ZAP-169, ZAP-170)', async () => {
+      const usuario = userEvent.setup()
+      const hoje = `${dataLocal(new Date())}T15:00`
+      buscarPedidos.mockResolvedValue([
+        pedido(8, STATUS.CONCLUIDO, 'Pedro Alves', { dataRetirada: hoje, concluidoEm: '2030-01-14T17:45' }),
+        pedido(6, STATUS.ENTREGUE, 'Lia Moraes', { dataRetirada: hoje, entregueEm: '2030-01-15T10:30' }),
+      ])
+      await abrirQuadro()
+
+      const concluido = within(screen.getByRole('region', { name: /Concluído/ })).getByRole('button', { name: /Pedido 8, Pedro Alves/ })
+      expect(concluido).toHaveTextContent('Retira hoje')
+
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' }), '6')
+      const entregue = screen.getByRole('button', { name: /Pedido 6, Lia Moraes/ })
+      expect(entregue).toHaveTextContent('Entregue em 15/01 às 10:30')
+      expect(entregue).not.toHaveTextContent('Retira hoje')
+    })
+
     test('coluna sem pedidos não tem área rolável', async () => {
       buscarPedidos.mockResolvedValue([pedido(12, STATUS.NOVO, 'Ana Souza')])
       await abrirQuadro()
@@ -234,6 +252,20 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
       expect(screen.getByRole('heading', { level: 2, name: /Recusado/ })).toBeVisible()
       expect(screen.getByRole('button', { name: /Pedido 7, Rita Gomes/ })).toBeVisible()
+    })
+
+    test('o Entregue não tem aba; pelo filtro, aparece na lista com a data da entrega (ZAP-179, ZAP-170)', async () => {
+      const usuario = userEvent.setup()
+      buscarPedidos.mockResolvedValue([...pedidos, pedido(6, STATUS.ENTREGUE, 'Lia Moraes', { entregueEm: '2030-01-15T10:30' })])
+      await abrirQuadro()
+      expect(screen.queryByRole('tab', { name: /Entregue/ })).not.toBeInTheDocument()
+
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' }), '6')
+
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: /Entregue/ })).toBeVisible()
+      expect(screen.getByRole('button', { name: 'Pedido 6, Lia Moraes, entregue em 15/01 às 10:30, R$ 200,00' })).toBeVisible()
+      expect(screen.queryByRole('button', { name: /Pedido 8, Pedro Alves/ })).not.toBeInTheDocument()
     })
   })
 
