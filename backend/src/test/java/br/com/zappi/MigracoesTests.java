@@ -143,6 +143,44 @@ class MigracoesTests {
 			.hasMessageContaining("ck_produto_alergenos");
 	}
 
+	@Test
+	void lojasComecamAceitandoTodasAsFormasEPedidosAntigosFicamSemForma() {
+		assertThat(jdbc.queryForObject(
+				"select array_to_string(formas_pagamento, ',') from estabelecimento where slug = 'casa-belt'", String.class))
+			.isEqualTo("DINHEIRO,PIX,CREDITO,DEBITO,VR");
+		assertThat(jdbc.queryForObject(
+				"select array_to_string(formas_pagamento, ',') from estabelecimento where id = ?", String.class,
+				criarEstabelecimento("confeitaria-a")))
+			.isEqualTo("DINHEIRO,PIX,CREDITO,DEBITO,VR");
+		assertThat(jdbc.queryForObject("""
+				select count(*) from pedido p join estabelecimento e on e.id = p.estabelecimento_id
+				where e.slug = 'casa-belt' and p.forma_pagamento is null
+				""", Integer.class)).isEqualTo(2);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "{}", "{PIX,CHEQUE}", "{pix}", "{PIX,NULL}" })
+	void recusaLojaSemFormaOuComFormaForaDaLista(String formas) {
+		long loja = criarEstabelecimento("confeitaria-a");
+
+		assertThatThrownBy(
+				() -> jdbc.update("update estabelecimento set formas_pagamento = ?::varchar[] where id = ?", formas, loja))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("ck_estabelecimento_formas_pagamento");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "CHEQUE", "pix", "" })
+	void recusaPedidoComFormaForaDaLista(String forma) {
+		long loja = criarEstabelecimento("confeitaria-a");
+		criarPedido(loja, criarCliente(loja, "5511900000001"));
+
+		assertThatThrownBy(
+				() -> jdbc.update("update pedido set forma_pagamento = ? where estabelecimento_id = ?", forma, loja))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("ck_pedido_forma_pagamento");
+	}
+
 	private long criarProduto(long estabelecimento) {
 		return jdbc.queryForObject("""
 				with categoria as (
