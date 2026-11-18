@@ -4,6 +4,7 @@ import static br.com.zappi.pedido.CadastroPedidoTests.hoje;
 import static br.com.zappi.pedido.CadastroPedidoTests.item;
 import static br.com.zappi.pedido.CadastroPedidoTests.pedido;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -123,6 +124,17 @@ class PedidoPeloPortalTests {
 				select i.preco_unitario from item_pedido i join pedido p on p.id = i.pedido_id
 				where p.estabelecimento_id = ? and p.numero = 3 and i.produto_id = ?
 				""", BigDecimal.class, casaBelt, brigadeiro)).isEqualByComparingTo("80.00");
+
+		// Encerrada a promoção no painel, o pedido novo do portal volta ao preço normal e o que já
+		// existe não muda (RN10, ZAP-163)
+		mockMvc.perform(delete("/api/produtos/" + brigadeiro + "/promocao")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDaLidia())).andExpect(status().isOk());
+		enviar(pedido("Carla Nova", CARLA, daquiA(7), List.of(item(brigadeiro, 1.5, Map.of("precoUnitario", 80.00)))))
+			.andExpect(status().isCreated());
+		assertThat(jdbc.queryForList("""
+				select p.valor_total from pedido p where p.estabelecimento_id = ? and p.numero in (3, 4) order by p.numero
+				""", BigDecimal.class, casaBelt)).usingElementComparator(BigDecimal::compareTo)
+			.containsExactly(new BigDecimal("132.50"), new BigDecimal("150.00"));
 	}
 
 	@Test
