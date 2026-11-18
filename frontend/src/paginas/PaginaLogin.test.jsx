@@ -188,6 +188,27 @@ describe('aceite dos termos no login (ZAP-143, ZAP-147)', () => {
     expect(await screen.findByRole('checkbox', { name: /Li e concordo/ })).toHaveAccessibleDescription(/Versão 2/)
   })
 
+  test('sem o armazenamento do navegador, a caixa aparece e o login funciona (ZAP-149)', async () => {
+    // Navegador que bloqueia o localStorage: ler e gravar o lembrete dá erro
+    const falha = () => {
+      throw new Error('armazenamento bloqueado')
+    }
+    vi.stubGlobal('localStorage', { getItem: falha, setItem: falha, removeItem: falha, clear: falha })
+    try {
+      const usuario = userEvent.setup()
+      const roteador = abrirLogin()
+      await usuario.click(await screen.findByRole('checkbox', { name: /Li e concordo/ }))
+
+      await preencherEEntrar(usuario)
+
+      await waitFor(() => expect(roteador.state.location.pathname).toBe('/pedidos'))
+      expect(entrarNoServidor).toHaveBeenCalledWith('lidia@casabelt.com', 'senha-de-teste', { versao: 1 })
+      expect(JSON.parse(sessionStorage.getItem('zappi.sessao'))).toEqual({ token: 'token-de-teste', nome: 'Lídia' })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   test('se o backend pedir o aceite (TERMOS_PENDENTES), a caixa aparece com o foco e a senha continua', async () => {
     const usuario = userEvent.setup()
     localStorage.setItem('zappi.termos-aceitos', '1')
