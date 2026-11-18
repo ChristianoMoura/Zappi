@@ -91,6 +91,27 @@ class ListagemPedidosTests {
 	}
 
 	@Test
+	void incluiOsEntreguesComADataDaEntrega() throws Exception {
+		// #8 Entregue: o quadro esconde o Entregue em "Todos" na tela, mas a lista traz (RN04, ZAP-168, ZAP-170)
+		long ana = jdbc.queryForObject("select id from cliente where telefone_whatsapp = '5511900000001'", Long.class);
+		pedido(8, 4, ana, "current_date + time '10:00'",
+				"confirmado_em = now(), producao_em = now(), concluido_em = now()", null);
+		jdbc.update("update pedido set status = 6, entregue_em = now() where estabelecimento_id = ? and numero = 8",
+				casaBelt);
+
+		listar("")
+			.andExpect(jsonPath("$[*].numero", contains(1, 2, 3, 4, 5, 8)))
+			.andExpect(jsonPath("$[5].status").value(6))
+			.andExpect(jsonPath("$[5].concluidoEm").isString())
+			.andExpect(jsonPath("$[5].entregueEm").isString())
+			.andExpect(jsonPath("$[4].numero").value(5))
+			.andExpect(jsonPath("$[4].entregueEm").value(nullValue()));
+		listar("?recusados=true")
+			.andExpect(jsonPath("$[*].numero", contains(1, 2, 3, 4, 5, 6, 7, 8)))
+			.andExpect(jsonPath("$[*].status", contains(1, 1, 2, 3, 4, 5, 5, 6)));
+	}
+
+	@Test
 	void trazClienteItensETotalDoPedido() throws Exception {
 		// Pedido #2 da V2: cento de coxinha + 1,5 kg de Ninho com morango
 		listar("")

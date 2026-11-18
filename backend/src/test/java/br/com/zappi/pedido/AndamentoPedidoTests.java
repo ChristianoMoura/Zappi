@@ -6,6 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -153,6 +156,19 @@ class AndamentoPedidoTests {
 			.containsEntry("depois", "ENTREGUE")
 			.containsEntry("entidade", "pedido")
 			.containsEntry("user_agent", NAVEGADOR);
+	}
+
+	@Test
+	void gravaAEntregaComAHoraDoClique() throws Exception {
+		// entregue_em é a hora do servidor no clique, não uma data informada (RN06, ZAP-170)
+		etapa("status = 4, confirmado_em = now(), producao_em = now(), concluido_em = now()");
+		OffsetDateTime antes = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+
+		acao("entregar").andExpect(status().isOk());
+
+		OffsetDateTime depois = OffsetDateTime.now(ZoneOffset.UTC);
+		assertThat(jdbc.queryForObject("select entregue_em from pedido where id = ?", OffsetDateTime.class, pedido))
+			.isBetween(antes, depois);
 	}
 
 	@Test
