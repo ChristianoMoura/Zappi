@@ -163,6 +163,26 @@ class CadastroPedidoTests {
 	}
 
 	@Test
+	void pedidoQueJaExistiaNaoMudaAoAplicarAPromocao() throws Exception {
+		// Os pedidos da V2 foram feitos antes da promoção: itens e totais ficam como estavam (RN10, ZAP-163)
+		String precosGravados = """
+				select p.numero, i.produto_id, i.preco_unitario, p.valor_total
+				from item_pedido i join pedido p on p.id = i.pedido_id
+				where p.estabelecimento_id = ? order by p.numero, i.id
+				""";
+		List<Map<String, Object>> antes = jdbc.queryForList(precosGravados, casaBelt);
+		assertThat(antes).isNotEmpty();
+
+		mockMvc.perform(post("/api/produtos/" + brigadeiro + "/promocao")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json.writeValueAsString(Map.of("preco", 100, "precoPromocional", 80))))
+			.andExpect(status().isOk());
+
+		assertThat(jdbc.queryForList(precosGravados, casaBelt)).isEqualTo(antes);
+	}
+
+	@Test
 	void cadastrosSeguidosRecebemNumerosSeguidos() throws Exception {
 		cadastrar(pedido("Carla", CARLA, amanha(), List.of(item(brigadeiro, 1, Map.of()))))
 			.andExpect(jsonPath("$.numero").value(3));

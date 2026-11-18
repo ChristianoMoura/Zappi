@@ -530,3 +530,69 @@ describe('erro da data ligado ao campo (ZAP-107, NBR 17225 5.3.3)', () => {
     expect(data).toHaveAccessibleDescription('Escolha a data de retirada.')
   })
 })
+
+describe('promoção no detalhe do produto e no "Seu pedido" (ZAP-152, ZAP-163)', () => {
+  // Bolo de ninho de R$ 115,00 por R$ 100,00 o kg: 13% de desconto
+  const comPromocao = (precoPromocional = 100) => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.produtos.push({ id: 5, nome: 'Bolo de ninho com morango', categoriaId: 1, categoria: 'Bolos', unidade: 'KG', preco: 115, precoPromocional, descricao: 'Ninho.', foto: '', textoAlternativo: '' })
+    return cardapio
+  }
+  const pedidoComNinho = () =>
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 5, quantidade: 1.5, observacao: '' }, { chave: 2, produtoId: 4, quantidade: 10, observacao: '' }], data: '', hora: '', observacao: '' }))
+
+  beforeEach(() => {
+    window.scrollTo = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test('o detalhe mostra o preço antigo riscado, o "-13%", o "De ... por ..." e o valor com desconto', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao())
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/produto/5')
+
+    const info = (await screen.findByRole('heading', { level: 2, name: 'Bolo de ninho com morango' })).closest('section')
+    expect(within(info).getByText('R$ 115,00').tagName).toBe('S')
+    expect(within(info).getByText('R$ 100,00')).toBeVisible()
+    expect(within(info).getByText('-13%')).toBeVisible()
+    expect(within(info).getByText('De R$ 115,00 por R$ 100,00 por kg, 13% de desconto')).toBeInTheDocument()
+
+    // O valor do item e o botão usam o preço com desconto: 1,5 kg × R$ 100,00
+    await usuario.click(screen.getByRole('button', { name: 'Aumentar quantidade' }))
+    expect(screen.getByText(/^Valor:/)).toHaveTextContent('R$ 150,00')
+    expect(screen.getByRole('button', { name: /Adicionar ao pedido/ })).toHaveTextContent('R$ 150,00')
+  })
+
+  test('no "Seu pedido", o item mostra os dois preços e o subtotal com desconto; o total soma com o desconto (RN11)', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao())
+    pedidoComNinho()
+    abrir('/cardapio/casa-belt/pedido')
+
+    const itens = await screen.findByRole('region', { name: 'Itens' })
+    const ninho = within(itens).getByRole('heading', { level: 3, name: 'Bolo de ninho com morango' }).closest('li')
+    expect(within(ninho).getByText('R$ 115,00').tagName).toBe('S')
+    expect(within(ninho).getByText('De R$ 115,00 por R$ 100,00 por kg, 13% de desconto')).toBeInTheDocument()
+    expect(within(ninho).getByText('R$ 150,00')).toBeVisible()
+    // 1,5 × R$ 100,00 + 10 × R$ 1,25
+    expect(screen.getByRole('region', { name: 'Total' })).toHaveTextContent('R$ 162,50')
+  })
+
+  test('encerrada a promoção, o pedido guardado volta ao preço normal, sem o riscado', async () => {
+    const cardapio = comPromocao(null)
+    buscarCardapio.mockResolvedValue(cardapio)
+    pedidoComNinho()
+    abrir('/cardapio/casa-belt/pedido')
+
+    const itens = await screen.findByRole('region', { name: 'Itens' })
+    const ninho = within(itens).getByRole('heading', { level: 3, name: 'Bolo de ninho com morango' }).closest('li')
+    expect(within(ninho).queryByText(/de desconto/)).not.toBeInTheDocument()
+    expect(within(ninho).queryByText('-13%')).not.toBeInTheDocument()
+    expect(within(ninho).getByText('R$ 172,50')).toBeVisible()
+    // 1,5 × R$ 115,00 + 10 × R$ 1,25
+    expect(screen.getByRole('region', { name: 'Total' })).toHaveTextContent('R$ 185,00')
+  })
+})

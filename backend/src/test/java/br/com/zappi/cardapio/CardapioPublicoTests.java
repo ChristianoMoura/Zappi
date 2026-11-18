@@ -3,6 +3,7 @@ package br.com.zappi.cardapio;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -126,6 +127,49 @@ class CardapioPublicoTests {
 				+ "and nome = 'Bolo de ninho com morango'", casaBelt);
 		jdbc.update("update estabelecimento set destacar_promocoes = false where id = ?", casaBelt);
 
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(jsonPath("$.estabelecimento.destacarPromocoes").value(false))
+			.andExpect(jsonPath("$.produtos[1].precoPromocional").value(99.90));
+	}
+
+	@Test
+	void aplicarEEncerrarAPromocaoNoPainelMudaOCardapioNaHora() throws Exception {
+		// Ponta a ponta pelas rotas do painel (ZAP-160, ZAP-163): o cardápio público acompanha
+		long ninho = produto("Bolo de ninho com morango");
+		mockMvc.perform(post("/api/produtos/" + ninho + "/promocao")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDaLidia())
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json.writeValueAsString(Map.of("preco", 115, "precoPromocional", 99.9))))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(jsonPath("$.produtos[1].preco").value(115.00))
+			.andExpect(jsonPath("$.produtos[1].precoPromocional").value(99.90));
+
+		// Sem data de fim: a promoção só sai quando a Lídia encerra (decisão de 15/11/2026)
+		mockMvc.perform(delete("/api/produtos/" + ninho + "/promocao")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDaLidia()))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(get(CASA_BELT))
+			.andExpect(jsonPath("$.produtos[1].preco").value(115.00))
+			.andExpect(jsonPath("$.produtos[1].precoPromocional").value(nullValue()));
+	}
+
+	@Test
+	void desligarODestaqueNoPainelMudaOCardapioNaHora() throws Exception {
+		jdbc.update("update produto set preco_promocional = 99.90 where id = ?", produto("Bolo de ninho com morango"));
+		Map<String, Object> dados = new LinkedHashMap<>();
+		dados.put("nome", "Casa Belt");
+		dados.put("slug", "casa-belt");
+		dados.put("whatsapp", "5511900000000");
+		dados.put("destacarPromocoes", false);
+		mockMvc.perform(put("/api/estabelecimento").header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDaLidia())
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(json.writeValueAsString(dados)))
+			.andExpect(status().isOk());
+
+		// A seção some no front, mas o preço com desconto continua no produto (ZAP-152)
 		mockMvc.perform(get(CASA_BELT))
 			.andExpect(jsonPath("$.estabelecimento.destacarPromocoes").value(false))
 			.andExpect(jsonPath("$.produtos[1].precoPromocional").value(99.90));

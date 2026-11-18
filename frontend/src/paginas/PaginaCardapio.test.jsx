@@ -242,6 +242,46 @@ describe('Promoção no cardápio público (ZAP-162)', () => {
 
     expect(await screen.findByRole('region', { name: 'Total' })).toHaveTextContent('R$ 150,00')
   })
+
+  test('a janela "Categorias" começa pelas Promoções, com a contagem, e mantém a seção durante a busca (ZAP-163)', async () => {
+    buscarCardapio.mockResolvedValue(comPromocao())
+    const usuario = userEvent.setup()
+    abrir()
+
+    // Na busca, a seção sai da página, mas a janela continua levando até ela
+    await usuario.click(await screen.findByRole('button', { name: 'Buscar no cardápio' }))
+    await usuario.type(screen.getByRole('searchbox', { name: 'Buscar no cardápio' }), 'ninho')
+    await usuario.click(screen.getByRole('button', { name: 'Ver todas as categorias' }))
+
+    const janela = await screen.findByRole('dialog', { name: 'Categorias' })
+    const opcoes = within(janela).getAllByRole('button').filter((b) => b.getAttribute('aria-label') !== 'Fechar categorias')
+    expect(opcoes.map((b) => b.textContent)).toEqual(['Promoções2 produtos', 'Salgados1 produto', 'Bolos2 produtos'])
+  })
+
+  test('sem nenhum produto em promoção, a seção não aparece nem nas abas, mesmo com o destaque ligado (ZAP-163)', async () => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.estabelecimento.destacarPromocoes = true
+    cardapio.produtos.forEach((p) => { p.precoPromocional = null })
+    buscarCardapio.mockResolvedValue(cardapio)
+    abrir()
+
+    await screen.findByRole('heading', { level: 1, name: 'Casa Belt' })
+    expect(screen.queryByRole('list', { name: 'Produtos em promoção' })).not.toBeInTheDocument()
+    const abas = screen.getByRole('navigation', { name: 'Categorias do cardápio' })
+    expect(within(abas).getAllByRole('button').slice(1).map((aba) => aba.textContent)).toEqual(['Salgados', 'Bolos'])
+    expect(screen.queryByText(/de desconto/)).not.toBeInTheDocument()
+  })
+
+  test('desconto menor que 1% não mostra o percentual, nem na tela nem para o leitor de tela (ZAP-163)', async () => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.produtos[0].precoPromocional = 99.5
+    buscarCardapio.mockResolvedValue(cardapio)
+    abrir()
+
+    const bolos = await screen.findByRole('region', { name: 'Bolos' })
+    expect(within(bolos).getByText('De R$ 100,00 por R$ 99,50 por kg')).toBeInTheDocument()
+    expect(within(bolos).queryByText(/%/)).not.toBeInTheDocument()
+  })
 })
 
 describe('formas de pagamento em "Mais informações" (ZAP-194)', () => {
