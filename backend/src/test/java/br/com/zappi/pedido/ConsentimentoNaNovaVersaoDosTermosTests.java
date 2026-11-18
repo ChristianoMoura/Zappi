@@ -28,7 +28,7 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Versão dos termos no consentimento do cliente quando os textos mudam (ZAP-149, RN16, RN26):
+ * Versão dos termos no consentimento do cliente quando os textos mudam (ZAP-149, RN16, RN27):
  * com a versão 2 vigente, o cliente novo fica gravado com a 2, tanto pelo Portal do Cliente quanto
  * pelo cadastro da Lídia no painel. Com a versão 1, isso já é testado no {@code PedidoPeloPortalTests}
  * e no {@code CadastroPedidoTests}. Tudo é desfeito no fim de cada teste.
