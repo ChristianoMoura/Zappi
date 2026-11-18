@@ -384,3 +384,37 @@ describe('forma de pagamento no "Seu pedido" (ZAP-194)', () => {
     expect(enviarPedido.mock.calls[0][1]).not.toHaveProperty('formaPagamento')
   })
 })
+
+describe('erro da data ligado ao campo (ZAP-107, NBR 17225 5.3.3)', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test('sem data, o erro aparece, o foco vai para o campo e o leitor de tela ouve o motivo', async () => {
+    buscarCardapio.mockResolvedValue(CARDAPIO)
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: '', hora: '15:30', observacao: '' }))
+    window.scrollTo = vi.fn()
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.click(await screen.findByRole('button', { name: /Enviar pedido/ }))
+
+    const data = screen.getByRole('button', { name: 'Data' })
+    expect(data).toHaveFocus()
+    expect(data).toHaveAttribute('aria-invalid', 'true')
+    expect(data).toHaveAccessibleDescription('Escolha a data de retirada.')
+  })
+
+  test('data que já passou: a descrição do campo explica a antecedência', async () => {
+    buscarCardapio.mockResolvedValue(CARDAPIO)
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: '2020-01-10', hora: '15:30', observacao: '' }))
+    window.scrollTo = vi.fn()
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.click(await screen.findByRole('button', { name: /Enviar pedido/ }))
+
+    expect(screen.getByRole('button', { name: 'Data' })).toHaveAccessibleDescription(/Escolha uma data a partir de .* pelo menos 7 dias/)
+  })
+})
