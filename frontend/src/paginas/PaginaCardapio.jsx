@@ -528,14 +528,15 @@ function Cardapio({ loja, categorias: categoriasDaLoja, produtos, montagem, escu
 function Retirada({ loja }) {
   const endereco = enderecoDaLoja(loja)
   if (!endereco) {
+    // Sem endereço, o aviso e o botão ficam centralizados; com endereço, tudo à esquerda
     return (
-      <>
+      <div className={classes.semEndereco}>
         <p className={classes.endereco}>
           <IconMapPin size={22} aria-hidden />
           <span>Combine o local de retirada pelo WhatsApp.</span>
         </p>
         <BotaoWhatsapp loja={loja} texto={mensagemContato(loja)} rotulo="Combinar pelo WhatsApp" />
-      </>
+      </div>
     )
   }
   // Chave da Maps Embed API (ZAP-184), só no ambiente (Render ou .env.local), nunca no repositório
@@ -630,9 +631,17 @@ function PerfilLoja({ loja, escuro }) {
         </section>
         <section aria-labelledby="perfil-contato">
           <h2 id="perfil-contato" className={classes.tituloBloco}>Contato</h2>
-          {loja.whatsapp && (
+          {(loja.whatsapp || loja.emailContato) && (
             <div className={classes.bloco}>
-              <p>WhatsApp: {telefoneTexto(loja.whatsapp)}</p>
+              {loja.whatsapp && <p>WhatsApp: {telefoneTexto(loja.whatsapp)}</p>}
+              {loja.emailContato && (
+                <p>
+                  E-mail:{' '}
+                  <a className={classes.email} href={`mailto:${loja.emailContato}`}>
+                    {loja.emailContato}
+                  </a>
+                </p>
+              )}
             </div>
           )}
           <div className={classes.botaoContato}>

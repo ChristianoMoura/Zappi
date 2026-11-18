@@ -936,6 +936,36 @@
   color: var(--texto);
 }
 
+/* Retirada sem endereço: aviso e botão centralizados, com o ícone junto do texto */
+.semEndereco {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+}
+
+.semEndereco .endereco {
+  display: block;
+  text-wrap: balance;
+}
+
+.semEndereco .endereco > span {
+  display: inline;
+}
+
+.semEndereco .endereco svg {
+  display: inline-block;
+  vertical-align: -5px;
+  margin: 0 4px 0 0;
+}
+
+/* E-mail de contato da loja, em "Informações da loja" */
+.email {
+  color: var(--destaque);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .mapa {
   border-radius: 14px;
   overflow: hidden;
