@@ -17,6 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.zappi.TestcontainersConfiguration;
+import br.com.zappi.pagamento.FormaPagamento;
 import br.com.zappi.pedido.Pedido;
 import br.com.zappi.pedido.PedidoRepositorio;
 
@@ -97,6 +98,20 @@ class GeradorDeMensagensTests {
 	void montaOLinkDoWhatsappComOTextoCodificado() {
 		assertThat(GeradorDeMensagens.link("5511900000002", "Olá, Bruno!\n\nPedido #2 & mais"))
 			.isEqualTo("https://wa.me/5511900000002?text=Ol%C3%A1%2C%20Bruno%21%0A%0APedido%20%232%20%26%20mais");
+	}
+
+	@Test
+	void linhaDoPagamentoComCadaFormaESemForma() {
+		assertThat(GeradorDeMensagens.pagamento(null)).isEqualTo("O pagamento é feito na retirada.");
+		assertThat(GeradorDeMensagens.pagamento(FormaPagamento.DINHEIRO))
+			.isEqualTo("O pagamento é feito na retirada, em dinheiro.");
+		assertThat(GeradorDeMensagens.pagamento(FormaPagamento.PIX)).isEqualTo("O pagamento é feito na retirada, por Pix.");
+		assertThat(GeradorDeMensagens.pagamento(FormaPagamento.CREDITO))
+			.isEqualTo("O pagamento é feito na retirada, por cartão de crédito.");
+		assertThat(GeradorDeMensagens.pagamento(FormaPagamento.DEBITO))
+			.isEqualTo("O pagamento é feito na retirada, por cartão de débito.");
+		assertThat(GeradorDeMensagens.pagamento(FormaPagamento.VR))
+			.isEqualTo("O pagamento é feito na retirada, por vale-refeição.");
 	}
 
 	private Pedido pedido(int numero) {

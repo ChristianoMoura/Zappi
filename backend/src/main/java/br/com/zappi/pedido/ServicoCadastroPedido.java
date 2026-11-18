@@ -32,6 +32,7 @@ import br.com.zappi.estabelecimento.EstabelecimentoNaoEncontradoException;
 import br.com.zappi.estabelecimento.EstabelecimentoRepositorio;
 import br.com.zappi.mensagem.MensagemWhatsapp;
 import br.com.zappi.notificacao.ServicoNotificacao;
+import br.com.zappi.pagamento.FormaPagamento;
 import br.com.zappi.pedido.RequisicaoPedido.ItemDaRequisicao;
 import br.com.zappi.produto.Produto;
 import br.com.zappi.produto.ProdutoRepositorio;
@@ -78,7 +79,13 @@ public class ServicoCadastroPedido {
 	/** Produto da loja que a Lídia tirou do cardápio por um tempo (ZAP-151). */
 	private static final String PRODUTO_FORA_DO_CARDAPIO = "Este produto não está mais no cardápio.";
 
-	private static final String QUANTIDADE_INTEIRA = "Este produto é vendido por unidade: use um número inteiro.";
+	private static final String CAMPO_FORMA_PAGAMENTO = "formaPagamento";
+
+	static final String SEM_FORMA_PAGAMENTO = "Escolha a forma de pagamento.";
+
+	static final String FORMA_NAO_ACEITA = "Escolha uma forma de pagamento que a loja aceita.";
+
+	private static final String QUANTIDADE_INTEIRA ="Este produto é vendido por unidade: use um número inteiro.";
 
 	private static final String OBSERVACAO_LONGA = "Use no máximo %d caracteres."
 		.formatted(ItemDaRequisicao.MAXIMO_OBSERVACAO);
@@ -129,7 +136,9 @@ public class ServicoCadastroPedido {
 	 */
 	@Transactional
 	public RespostaPedido cadastrar(UsuarioAutenticado usuario, RequisicaoPedido requisicao) {
-		Pedido pedido = criar(usuario.estabelecimentoId(), usuario.usuarioId(), requisicao, false);
+		Estabelecimento loja = estabelecimentos.findById(usuario.estabelecimentoId())
+			.orElseThrow(EstabelecimentoNaoEncontradoException::new);
+		Pedido pedido = criar(loja, usuario.usuarioId(), requisicao, false);
 		return consulta.detalhar(usuario, pedido.getNumero());
 	}
 
@@ -143,7 +152,7 @@ public class ServicoCadastroPedido {
 	public Integer cadastrarPeloPortal(String slug, RequisicaoPedido requisicao) {
 		Estabelecimento loja = estabelecimentos.findBySlugAndAtivoTrue(slug)
 			.orElseThrow(EstabelecimentoNaoEncontradoException::new);
-		Pedido pedido = criar(loja.getId(), null, requisicao, true);
+		Pedido pedido = criar(loja, null, requisicao, true);
 		// Aviso no sino da Lídia, na mesma transação do pedido (ZAP-172). O cadastro pelo painel
 		// não avisa: foi ela mesma quem cadastrou.
 		notificacoes.novoPedido(pedido);
@@ -152,15 +161,18 @@ public class ServicoCadastroPedido {
 
 	/**
 	 * Cadastro comum ao painel e ao portal. Pelo portal, não há usuário: o log fica sem ele e
-	 * com a origem nos detalhes (ISO 27002 8.16).
+	 * com a origem nos detalhes (ISO 27002 8.16). A forma de pagamento precisa estar entre as que
+	 * a loja aceita no momento do pedido (ZAP-190).
 	 */
-	private Pedido criar(Long estabelecimentoId, Long usuarioId, RequisicaoPedido requisicao, boolean peloPortal) {
+	private Pedido criar(Estabelecimento loja, Long usuarioId, RequisicaoPedido requisicao, boolean peloPortal) {
+		Long estabelecimentoId = loja.getId();
 		OffsetDateTime agora = OffsetDateTime.now(ZoneOffset.UTC);
 		Map<String, String> erros = new LinkedHashMap<>();
 		conferirRetirada(erros, requisicao.dataRetirada(), null);
 		if (peloPortal) {
 			conferirAntecedencia(erros, requisicao.dataRetirada());
 		}
+		FormaPagamento formaPagamento = conferirFormaPagamento(erros, requisicao.formaPagamento(), loja, null);
 		Map<Long, Produto> doCardapio = produtosDoCardapio(estabelecimentoId, requisicao.itens());
 		List<ItemDaRequisicao> itensDaRequisicao = requisicao.itens();
 		for (int i = 0; i < itensDaRequisicao.size(); i++) {
@@ -176,7 +188,7 @@ public class ServicoCadastroPedido {
 		Cliente cliente = clienteDoWhatsapp(estabelecimento, requisicao, agora);
 		Integer numero = pedidos.proximoNumero(estabelecimento.getId());
 		Pedido pedido = pedidos.save(new Pedido(estabelecimento, cliente, numero, requisicao.dataRetirada(),
-				requisicao.observacao(), agora));
+				requisicao.observacao(), formaPagamento, agora));
 
 		List<ItemPedido> itensDoPedido = new ArrayList<>();
 		for (ItemDaRequisicao item : itensDaRequisicao) {
@@ -194,6 +206,7 @@ public class ServicoCadastroPedido {
 		detalhes.put("dataRetirada", pedido.getDataRetirada().toString());
 		detalhes.put("valorTotal", dinheiro(pedido.getValorTotal()));
 		detalhes.put("itens", itensDoPedido.size());
+		detalhes.put("formaPagamento", formaPagamento.name());
 		if (peloPortal) {
 			detalhes.put("origem", ORIGEM_PORTAL);
 		}
@@ -230,6 +243,8 @@ public class ServicoCadastroPedido {
 
 		Map<String, String> erros = new LinkedHashMap<>();
 		conferirRetirada(erros, requisicao.dataRetirada(), pedido.getDataRetirada());
+		FormaPagamento formaPagamento = conferirFormaPagamento(erros, requisicao.formaPagamento(),
+				pedido.getEstabelecimento(), pedido.getFormaPagamento());
 		List<ItemDaRequisicao> itensDaRequisicao = requisicao.itens();
 		List<ItemPedido> correspondentes = correspondentes(atuais, itensDaRequisicao);
 		List<ItemDaRequisicao> novos = new ArrayList<>();
@@ -265,7 +280,7 @@ public class ServicoCadastroPedido {
 		}
 		List<ItemPedido> retirados = atuais.stream().filter(item -> !itensDoPedido.contains(item)).toList();
 		itens.deleteAll(retirados);
-		pedido.alterar(requisicao.dataRetirada(), requisicao.observacao(), agora);
+		pedido.alterar(requisicao.dataRetirada(), requisicao.observacao(), formaPagamento, agora);
 		pedido.atualizarTotal(total(itensDoPedido));
 		pedidos.flush();
 
@@ -405,6 +420,25 @@ public class ServicoCadastroPedido {
 		}
 	}
 
+	/**
+	 * Forma de pagamento obrigatória e entre as que a loja aceita agora (ZAP-190). Na edição, a
+	 * forma que já estava no pedido pode ficar, mesmo que a loja tenha deixado de aceitá-la, como
+	 * o preço congelado (RN10). Devolve nulo quando a forma é recusada, com o erro em {@code erros}.
+	 */
+	private static FormaPagamento conferirFormaPagamento(Map<String, String> erros, String codigo,
+			Estabelecimento loja, FormaPagamento atual) {
+		if (codigo == null) {
+			erros.put(CAMPO_FORMA_PAGAMENTO, SEM_FORMA_PAGAMENTO);
+			return null;
+		}
+		Optional<FormaPagamento> forma = FormaPagamento.doCodigo(codigo);
+		if (forma.isPresent() && (forma.get() == atual || loja.aceita(forma.get()))) {
+			return forma.get();
+		}
+		erros.put(CAMPO_FORMA_PAGAMENTO, FORMA_NAO_ACEITA);
+		return null;
+	}
+
 	/** Das 8h às 20h, em hora cheia ou meia hora, sem segundos (RN23). */
 	static boolean horarioPermitido(LocalDateTime retirada) {
 		LocalTime hora = retirada.toLocalTime();
@@ -420,6 +454,8 @@ public class ServicoCadastroPedido {
 		retrato.put("clienteId", pedido.getCliente().getId());
 		retrato.put("dataRetirada", pedido.getDataRetirada().toString());
 		retrato.put("valorTotal", dinheiro(pedido.getValorTotal()));
+		// Nulo no pedido de antes da ZAP-190
+		retrato.put("formaPagamento", pedido.getFormaPagamento() == null ? null : pedido.getFormaPagamento().name());
 		retrato.put("itens", itensDoPedido.stream()
 			.map(item -> Map.of("produtoId", item.getProduto().getId(), "quantidade",
 					item.getQuantidade().stripTrailingZeros().toPlainString(), "precoUnitario",

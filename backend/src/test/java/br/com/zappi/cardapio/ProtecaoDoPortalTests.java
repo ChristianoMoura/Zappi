@@ -224,6 +224,7 @@ class ProtecaoDoPortalTests {
 		pedido.put("consentimentoLgpd", true);
 		pedido.put("dataRetirada", LocalDate.now(ZoneId.of("America/Sao_Paulo")).plusDays(8).atTime(12, 0).toString());
 		pedido.put("itens", List.of(Map.of("produtoId", brigadeiro, "quantidade", 1)));
+		pedido.put("formaPagamento", "PIX");
 		return pedido;
 	}
 

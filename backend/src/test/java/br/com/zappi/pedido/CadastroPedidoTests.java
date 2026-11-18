@@ -404,6 +404,7 @@ class CadastroPedidoTests {
 		pedido.put("dataRetirada", dataRetirada.toString());
 		pedido.put("observacao", "");
 		pedido.put("itens", itens);
+		pedido.put("formaPagamento", "PIX");
 		return pedido;
 	}
 

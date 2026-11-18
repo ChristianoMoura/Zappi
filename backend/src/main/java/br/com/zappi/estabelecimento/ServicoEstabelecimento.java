@@ -3,6 +3,7 @@ package br.com.zappi.estabelecimento;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -18,6 +19,8 @@ import br.com.zappi.armazenamento.ArmazenamentoIndisponivelException;
 import br.com.zappi.auditoria.AcaoAuditoria;
 import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
+import br.com.zappi.erro.DadosInvalidosException;
+import br.com.zappi.pagamento.FormaPagamento;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 
 /**
@@ -31,6 +34,12 @@ public class ServicoEstabelecimento {
 	private static final String ENTIDADE = "estabelecimento";
 
 	private static final String RESTRICAO_SLUG = "uk_estabelecimento_slug";
+
+	private static final String CAMPO_FORMAS = "formasPagamento";
+
+	static final String NENHUMA_FORMA = "Escolha pelo menos uma forma de pagamento.";
+
+	static final String FORMA_FORA_DA_LISTA = "Escolha as formas de pagamento da lista.";
 
 	private final EstabelecimentoRepositorio estabelecimentos;
 
@@ -56,13 +65,29 @@ public class ServicoEstabelecimento {
 		if (estabelecimentos.existsBySlugAndIdNot(dados.slug(), estabelecimento.getId())) {
 			throw new LinkEmUsoException();
 		}
+		List<String> formasPagamento = formasPagamento(dados);
 		Map<String, Object> antes = retrato(estabelecimento);
 
-		estabelecimento.atualizar(dados, agora());
+		estabelecimento.atualizar(dados, formasPagamento, agora());
 		gravar();
 
 		registrar(usuario, estabelecimento, antes);
 		return resposta(estabelecimento);
+	}
+
+	/**
+	 * Formas aceitas, sem repetir e na ordem da lista (ZAP-190), ou nulo quando a tela não mandou
+	 * o campo, para elas continuarem como estavam. Lista vazia ou código fora da lista: 400.
+	 */
+	private static List<String> formasPagamento(RequisicaoEstabelecimento dados) {
+		if (dados.formasPagamento() == null) {
+			return null;
+		}
+		if (dados.formasPagamento().isEmpty()) {
+			throw new DadosInvalidosException(Map.of(CAMPO_FORMAS, NENHUMA_FORMA));
+		}
+		return FormaPagamento.ordenar(dados.formasPagamento())
+			.orElseThrow(() -> new DadosInvalidosException(Map.of(CAMPO_FORMAS, FORMA_FORA_DA_LISTA)));
 	}
 
 	/**
@@ -189,6 +214,7 @@ public class ServicoEstabelecimento {
 		campos.put("logo", estabelecimento.getLogoCaminho());
 		campos.put("capa", estabelecimento.getCapaCaminho());
 		campos.put("destacarPromocoes", estabelecimento.isDestacarPromocoes());
+		campos.put("formasPagamento", estabelecimento.getFormasPagamento());
 		return campos;
 	}
 

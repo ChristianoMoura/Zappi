@@ -28,6 +28,9 @@ import jakarta.validation.constraints.Size;
  * @param site campo invisível do formulário do Portal do Cliente (ZAP-112): pessoas não veem
  *        nem preenchem; se vier preenchido, o envio foi feito por um robô e é descartado. No
  *        painel, é ignorado
+ * @param formaPagamento código da forma de pagamento combinada (ZAP-190), ex.: {@code "PIX"}.
+ *        Obrigatória e entre as que a loja aceita, conferida no serviço; na edição, a forma que já
+ *        estava no pedido pode ficar, mesmo que a loja tenha deixado de aceitá-la
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record RequisicaoPedido(
@@ -38,7 +41,8 @@ public record RequisicaoPedido(
 		@Size(max = 500, message = "Use no máximo 500 caracteres.") String observacao,
 		@NotEmpty(message = "Adicione pelo menos um item.") @Size(max = 100, message = "Use no máximo 100 itens.")
 		List<@NotNull(message = "Escolha o produto.") @Valid ItemDaRequisicao> itens,
-		@Size(max = 200, message = "Use no máximo 200 caracteres.") String site) {
+		@Size(max = 200, message = "Use no máximo 200 caracteres.") String site,
+		String formaPagamento) {
 
 	static final String CONSENTIMENTO = "Confirme que o cliente autorizou o uso do nome e do WhatsApp.";
 
@@ -47,6 +51,7 @@ public record RequisicaoPedido(
 	public RequisicaoPedido {
 		observacao = opcional(observacao);
 		site = opcional(site);
+		formaPagamento = opcional(formaPagamento);
 	}
 
 	/** Cliente pelo WhatsApp com 55 e DDD, ex.: {@code 5511900000000} (RN01). */

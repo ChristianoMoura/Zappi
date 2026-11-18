@@ -19,9 +19,10 @@ public record RespostaCardapio(LojaDoCardapio estabelecimento, List<RespostaCate
 	 * Dados da loja que aparecem no cardápio. {@code whatsapp} é o contato direto da Lídia
 	 * (CDC); {@code logo} e {@code capa} são os endereços públicos das fotos, ou nulos sem foto.
 	 * {@code destacarPromocoes} diz se a seção "Promoções" aparece no topo do cardápio (ZAP-152).
+	 * {@code formasPagamento} são só as formas que a loja aceita, na ordem da lista (ZAP-190).
 	 */
 	public record LojaDoCardapio(String nome, String slug, String descricao, String whatsapp, String logo,
-			String capa, boolean destacarPromocoes) {
+			String capa, boolean destacarPromocoes, List<String> formasPagamento) {
 	}
 
 	/**

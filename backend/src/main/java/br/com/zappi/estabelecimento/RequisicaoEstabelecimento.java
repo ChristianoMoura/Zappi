@@ -1,5 +1,6 @@
 package br.com.zappi.estabelecimento;
 
+import java.util.List;
 import java.util.Locale;
 
 import jakarta.validation.constraints.NotBlank;
@@ -12,7 +13,8 @@ import jakarta.validation.constraints.Size;
  * coluna {@code telefone_whatsapp} e {@code emailContato} é {@code email_contato}. A edição
  * troca todos os campos: um campo opcional que não vier fica vazio. A exceção é
  * {@code destacarPromocoes} (ZAP-152): a tela só manda quando o recebeu, então, se não vier, a
- * opção continua como estava.
+ * opção continua como estava. O mesmo vale para {@code formasPagamento} (ZAP-190): se vier, é
+ * a lista de códigos aceitos, com pelo menos um, conferida pelo serviço.
  * <p>
  * Os formatos aceitam o vazio de propósito: o vazio é recusado só pelo {@code @NotBlank}, para
  * a tela receber sempre "Digite..." e não uma mensagem de formato, que dependeria da ordem
@@ -40,7 +42,8 @@ public record RequisicaoEstabelecimento(
 		@Size(max = 80, message = "Use no máximo 80 caracteres.") String cidade,
 		@Pattern(regexp = "AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO",
 				message = "Escolha o estado na lista.") String uf,
-		Boolean destacarPromocoes) {
+		Boolean destacarPromocoes,
+		List<String> formasPagamento) {
 
 	/** Separadores que a Lídia pode digitar no telefone e no CEP, ex.: "(11) 90000-0000". */
 	private static final String SEPARADORES = "[\\s().+-]";
