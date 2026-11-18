@@ -532,10 +532,17 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
                 minDate={minima}
                 value={pedido.data}
                 onChange={(data) => mudarCampo('data', data)}
-                error={Boolean(erros.data)}
-                aria-invalid={Boolean(erros.data)}
-                aria-describedby={erroDe('data')}
-                classNames={{ root: classes.campo, label: classes.rotuloData, input: classes.entradaData }}
+                // O erro vai pelo próprio campo: o Mantine liga a mensagem ao botão da data
+                // (aria-describedby) e marca aria-invalid; um aria-describedby passado aqui seria descartado (ZAP-107)
+                error={
+                  erros.data && (
+                    <>
+                      <IconAlertCircle size={20} aria-hidden />
+                      {erros.data}
+                    </>
+                  )
+                }
+                classNames={{ root: classes.campo, label: classes.rotuloData, input: classes.entradaData, error: classes.erro }}
               />
               <label className={classes.campo}>
                 <b>Hora</b>
@@ -555,14 +562,11 @@ export function SeuPedido({ loja, produtos, montagem, escuro }) {
                 </select>
               </label>
             </div>
-            {['data', 'hora'].map(
-              (campo) =>
-                erros[campo] && (
-                  <p key={campo} className={classes.erro} id={`erro-${campo}`}>
-                    <IconAlertCircle size={20} aria-hidden />
-                    {erros[campo]}
-                  </p>
-                ),
+            {erros.hora && (
+              <p className={classes.erro} id="erro-hora">
+                <IconAlertCircle size={20} aria-hidden />
+                {erros.hora}
+              </p>
             )}
             {pedido.data && pedido.hora && pedido.data >= minima && (
               <p className={classes.resumoData}>
