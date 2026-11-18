@@ -76,7 +76,10 @@ public class Cliente {
 		this.atualizadoEm = agora;
 	}
 
-	/** Mesmo WhatsApp com outro nome: é a mesma pessoa, então só o nome muda (ZAP-90). */
+	/**
+	 * Mesmo WhatsApp com outro nome num pedido novo: guarda o último nome usado (ZAP-199). Os
+	 * pedidos não mudam, porque cada um guarda o nome informado nele.
+	 */
 	public void renomear(String nome, OffsetDateTime agora) {
 		this.nome = nome;
 		this.atualizadoEm = agora;

@@ -1,10 +1,14 @@
 package br.com.zappi.cliente;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Tira o nome e o telefone de um cliente de textos já gravados, ao anonimizar (RN17, LGPD).
@@ -32,16 +36,45 @@ public final class RemocaoDeDadosPessoais {
 	 * @param telefoneAnonimizado o que entra no lugar do telefone
 	 */
 	public RemocaoDeDadosPessoais(String nome, String telefone, String telefoneAnonimizado) {
+		this(List.of(nome), telefone, telefoneAnonimizado);
+	}
+
+	/**
+	 * Para um cliente que usou nomes diferentes nos pedidos (ZAP-199): todos eles saem.
+	 *
+	 * @param nomes nomes originais do cliente, ao menos um
+	 * @param telefone telefone original do cliente
+	 * @param telefoneAnonimizado o que entra no lugar do telefone
+	 */
+	public RemocaoDeDadosPessoais(Collection<String> nomes, String telefone, String telefoneAnonimizado) {
 		this.telefone = telefone;
 		this.telefoneAnonimizado = telefoneAnonimizado;
-		String[] palavras = nome.trim().split("\\s+");
-		// Nome completo com qualquer espaço entre as palavras: "Ana  Exemplo" casa com "ana exemplo"
-		String nomeCompleto = Arrays.stream(palavras).map(Pattern::quote).collect(Collectors.joining("\\s+"));
-		String primeiroNome = FORA_DE_PALAVRA_ANTES + Pattern.quote(palavras[0]) + FORA_DE_PALAVRA_DEPOIS;
+		List<String[]> palavrasDosNomes = nomes.stream()
+			.map(String::trim)
+			.filter(nome -> !nome.isEmpty())
+			.distinct()
+			.map(nome -> nome.split("\\s+"))
+			.toList();
+		if (palavrasDosNomes.isEmpty()) {
+			throw new IllegalArgumentException("Informe ao menos um nome.");
+		}
+		// Nome completo com qualquer espaço entre as palavras: "Ana  Exemplo" casa com "ana exemplo".
+		// Os mais longos primeiro, para "Ana Souza" ser trocado inteiro, e não só o "Ana"
+		String nomesCompletos = alternativas(palavrasDosNomes.stream()
+			.map(palavras -> Arrays.stream(palavras).map(Pattern::quote).collect(Collectors.joining("\\s+"))));
+		String primeirosNomes = alternativas(palavrasDosNomes.stream()
+			.map(palavras -> FORA_DE_PALAVRA_ANTES + Pattern.quote(palavras[0]) + FORA_DE_PALAVRA_DEPOIS));
 		int opcoes = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
-		this.nomeCompletoOuTelefone = Pattern.compile(nomeCompleto + "|" + Pattern.quote(telefone), opcoes);
-		this.comPrimeiroNome = Pattern.compile(nomeCompleto + "|" + Pattern.quote(telefone) + "|" + primeiroNome,
+		this.nomeCompletoOuTelefone = Pattern.compile(nomesCompletos + "|" + Pattern.quote(telefone), opcoes);
+		this.comPrimeiroNome = Pattern.compile(nomesCompletos + "|" + Pattern.quote(telefone) + "|" + primeirosNomes,
 				opcoes);
+	}
+
+	/** "a|b|c", da expressão mais longa para a mais curta, sem repetir. */
+	private static String alternativas(Stream<String> expressoes) {
+		return expressoes.distinct()
+			.sorted(Comparator.comparingInt(String::length).reversed())
+			.collect(Collectors.joining("|"));
 	}
 
 	/**

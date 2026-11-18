@@ -247,6 +247,40 @@ class AnonimizacaoClienteTests {
 	}
 
 	@Test
+	void tiraTodosOsNomesUsadosNosPedidosDoMesmoWhatsapp() throws Exception {
+		// O mesmo WhatsApp faz outro pedido com outro nome, que é recusado com o nome no motivo
+		// (ZAP-199)
+		cadastrar("Beatriz Souza", TELEFONE_DA_ANA).andExpect(status().isCreated());
+		int outro = jdbc.queryForObject("select max(numero) from pedido where estabelecimento_id = ?", Integer.class,
+				casaBelt);
+		acao(outro, "recusar", Map.of("motivo", "A Beatriz Souza não tem agenda nesse dia."))
+			.andExpect(status().isOk());
+		jdbc.update("""
+				insert into log_auditoria (estabelecimento_id, usuario_id, acao, entidade, entidade_id, detalhes)
+				values (?, ?, 'PEDIDO_EDITADO', 'pedido', ?, '{"cliente": {"nome": "beatriz souza"}}')
+				""", casaBelt, lidia, pedido);
+		concluirPedido1();
+
+		anonimizar(1).andExpect(status().isOk());
+
+		assertThat(jdbc.queryForList("select nome_cliente from pedido where cliente_id = ?", String.class, ana))
+			.hasSize(2)
+			.containsOnly("Cliente anonimizado");
+		assertThat(jdbc.queryForObject("""
+				select count(*) from mensagem_whatsapp m join pedido p on p.id = m.pedido_id
+				where p.cliente_id = ? and (m.conteudo ~* '\\m(ana|beatriz)\\M' or m.conteudo ~* 'souza')
+				""", Integer.class, ana)).isZero();
+		assertThat(jdbc.queryForObject("select motivo_recusa from pedido where estabelecimento_id = ? and numero = ?",
+				String.class, casaBelt, outro))
+			.isEqualTo("A Cliente anonimizado não tem agenda nesse dia.");
+		assertThat(jdbc.queryForObject("""
+				select count(*) from log_auditoria where estabelecimento_id = ?
+				and (strpos(lower(detalhes::text), 'beatriz souza') > 0 or strpos(lower(detalhes::text), 'ana exemplo') > 0)
+				""", Integer.class, casaBelt)).isZero();
+		acao(outro, "anonimizar-cliente").andExpect(status().isConflict());
+	}
+
+	@Test
 	void novoPedidoComOMesmoTelefoneCriaUmClienteNovo() throws Exception {
 		concluirPedido1();
 		anonimizar(1).andExpect(status().isOk());

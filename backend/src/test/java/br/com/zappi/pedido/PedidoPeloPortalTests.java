@@ -139,7 +139,7 @@ class PedidoPeloPortalTests {
 	}
 
 	@Test
-	void clienteQueJaExisteNaoTemONomeMudadoNemERevelado() throws Exception {
+	void clienteQueJaExisteGuardaONomeNoPedidoSemSerRevelado() throws Exception {
 		long ana = jdbc.queryForObject("select id from cliente where telefone_whatsapp = '5511900000001'", Long.class);
 
 		String paraCliente = enviar(pedido("Outro Nome", "5511900000001", daquiA(7), List.of(item(brigadeiro, 1, Map.of()))))
@@ -149,9 +149,11 @@ class PedidoPeloPortalTests {
 			.andExpect(status().isCreated())
 			.andReturn().getResponse().getContentAsString();
 
-		assertThat(jdbc.queryForObject("select nome from cliente where id = ?", String.class, ana)).isEqualTo("Ana Exemplo");
+		// O mesmo cliente, com o nome informado guardado só no pedido novo (ZAP-199)
 		assertThat(jdbc.queryForObject("select cliente_id from pedido where estabelecimento_id = ? and numero = 3",
 				Long.class, casaBelt)).isEqualTo(ana);
+		assertThat(jdbc.queryForList("select nome_cliente from pedido where cliente_id = ? order by numero",
+				String.class, ana)).containsExactly("Ana Exemplo", "Outro Nome");
 		// A resposta tem o mesmo formato nos dois casos: só o número
 		assertThat(paraCliente).isEqualTo("{\"numero\":3}");
 		assertThat(paraNovo).isEqualTo("{\"numero\":4}");

@@ -181,11 +181,30 @@ class CadastroPedidoTests {
 
 		cadastrar(pedido("Ana Souza", "5511900000001", amanha(), List.of(item(coxinha, 10, Map.of()))))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.cliente.nome").value("Ana Exemplo"));
+			.andExpect(jsonPath("$.cliente.nome").value("Ana Souza"));
 
 		assertThat(jdbc.queryForObject("select count(*) from cliente", Integer.class)).isEqualTo(clientes);
 		assertThat(jdbc.queryForObject("select cliente_id from pedido where estabelecimento_id = ? and numero = 3",
 				Long.class, casaBelt)).isEqualTo(ana);
+		// Cada pedido guarda o seu nome: o pedido anterior não muda, e o cliente fica com o último
+		// nome usado (ZAP-199)
+		assertThat(jdbc.queryForList("select nome_cliente from pedido where cliente_id = ? order by numero",
+				String.class, ana)).containsExactly("Ana Exemplo", "Ana Souza");
+		assertThat(jdbc.queryForObject("select nome from cliente where id = ?", String.class, ana))
+			.isEqualTo("Ana Souza");
+	}
+
+	@Test
+	void asMensagensUsamONomeDeCadaPedido() throws Exception {
+		cadastrar(pedido("Beatriz Souza", "5511900000001", amanha(), List.of(item(coxinha, 10, Map.of()))))
+			.andExpect(status().isCreated());
+
+		confirmar(1).andExpect(status().isOk())
+			.andExpect(jsonPath("$.cliente.nome").value("Ana Exemplo"))
+			.andExpect(jsonPath("$.mensagens[0].texto").value(startsWith("Olá, Ana!")));
+		confirmar(3).andExpect(status().isOk())
+			.andExpect(jsonPath("$.cliente.nome").value("Beatriz Souza"))
+			.andExpect(jsonPath("$.mensagens[0].texto").value(startsWith("Olá, Beatriz!")));
 	}
 
 	@Test
@@ -375,6 +394,11 @@ class CadastroPedidoTests {
 			.isZero();
 		assertThat(jdbc.queryForObject("select count(*) from log_auditoria where acao = 'PEDIDO_CRIADO'", Integer.class))
 			.isZero();
+	}
+
+	private ResultActions confirmar(int numero) throws Exception {
+		return mockMvc.perform(post("/api/pedidos/" + numero + "/confirmar")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
 	}
 
 	private ResultActions cadastrar(Map<String, Object> pedido) throws Exception {

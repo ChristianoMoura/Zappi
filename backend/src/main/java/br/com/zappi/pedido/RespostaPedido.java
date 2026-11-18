@@ -47,7 +47,7 @@ public record RespostaPedido(Integer numero, int status, LocalDateTime dataRetir
 		boolean cancelado = pedido.getStatus() == StatusPedido.RECUSADO && pedido.getConfirmadoEm() != null;
 		boolean anonimizado = pedido.getCliente().getAnonimizadoEm() != null;
 		return new RespostaPedido(pedido.getNumero(), pedido.getStatus().getCodigo(), pedido.getDataRetirada(),
-				pedido.getObservacao(), pedido.getValorTotal(), ClienteDoPedido.de(pedido.getCliente()),
+				pedido.getObservacao(), pedido.getValorTotal(), ClienteDoPedido.de(pedido),
 				itens.stream().map(ItemDoPedido::de).toList(), pedido.getCriadoEm(), pedido.getConfirmadoEm(),
 				pedido.getProducaoEm(), pedido.getConcluidoEm(), pedido.getEntregueEm(), pedido.getRecusadoEm(),
 				pedido.getMotivoRecusa(),
@@ -80,15 +80,17 @@ public record RespostaPedido(Integer numero, int status, LocalDateTime dataRetir
 
 	/**
 	 * Cliente do pedido. Anonimizado (RN17, LGPD), não expõe dados pessoais: o nome vem como
-	 * "Cliente anonimizado" e o telefone, nulo.
+	 * "Cliente anonimizado" e o telefone, nulo. O nome é o informado no pedido (ZAP-199), e o
+	 * telefone, o do cliente.
 	 */
 	public record ClienteDoPedido(String nome, String telefone, boolean anonimizado) {
 
-		static ClienteDoPedido de(Cliente cliente) {
+		static ClienteDoPedido de(Pedido pedido) {
+			Cliente cliente = pedido.getCliente();
 			if (cliente.getAnonimizadoEm() != null) {
 				return new ClienteDoPedido(Cliente.NOME_ANONIMIZADO, null, true);
 			}
-			return new ClienteDoPedido(cliente.getNome(), cliente.getTelefoneWhatsapp(), false);
+			return new ClienteDoPedido(pedido.getNomeCliente(), cliente.getTelefoneWhatsapp(), false);
 		}
 
 	}

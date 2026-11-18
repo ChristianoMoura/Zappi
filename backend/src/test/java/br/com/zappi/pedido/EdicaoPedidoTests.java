@@ -185,19 +185,31 @@ class EdicaoPedidoTests {
 
 	@Test
 	void corrigeONomeNoPedidoNovo() throws Exception {
+		// Outro pedido do mesmo WhatsApp, com o nome de antes
+		jdbc.update("""
+				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, valor_total,
+				                    nome_cliente)
+				select estabelecimento_id, cliente_id, 99, 1, data_retirada, valor_total, nome_cliente
+				from pedido where estabelecimento_id = ? and numero = 1
+				""", casaBelt);
+
 		editar(1, pedido("Ana Souza", ANA, retirada, List.of(item(brigadeiro, 2, Map.of()))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.cliente.nome").value("Ana Souza"));
 
+		// O nome muda só neste pedido: os outros do mesmo número continuam com o seu (ZAP-199)
+		assertThat(jdbc.queryForObject("select nome_cliente from pedido where estabelecimento_id = ? and numero = 99",
+				String.class, casaBelt)).isEqualTo("Ana Exemplo");
 		assertThat(jdbc.queryForObject("select nome from cliente where telefone_whatsapp = ?", String.class, ANA))
-			.isEqualTo("Ana Souza");
+			.isEqualTo("Ana Exemplo");
 	}
 
 	@Test
 	void trocaOClienteNoPedidoNovo() throws Exception {
+		// O pedido fica com o nome informado nele, mesmo com o WhatsApp já cadastrado (ZAP-199)
 		editar(1, pedido("Bruno", BRUNO, retirada, List.of(item(brigadeiro, 2, Map.of()))))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.cliente.nome").value("Bruno Exemplo"))
+			.andExpect(jsonPath("$.cliente.nome").value("Bruno"))
 			.andExpect(jsonPath("$.cliente.telefone").value(BRUNO));
 
 		editar(1, pedido("Carla Nova", "5511988887777", retirada, List.of(item(brigadeiro, 2, Map.of()))))

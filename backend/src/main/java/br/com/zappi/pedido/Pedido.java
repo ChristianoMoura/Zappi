@@ -117,11 +117,11 @@ public class Pedido {
 	 * Pedido novo, no status Novo (RN03), com o número sequencial do estabelecimento (RN09). O
 	 * total começa em zero e é calculado quando os itens entram (RN11).
 	 */
-	public Pedido(Estabelecimento estabelecimento, Cliente cliente, Integer numero, LocalDateTime dataRetirada,
-			String observacao, FormaPagamento formaPagamento, OffsetDateTime agora) {
+	public Pedido(Estabelecimento estabelecimento, Cliente cliente, String nomeCliente, Integer numero,
+			LocalDateTime dataRetirada, String observacao, FormaPagamento formaPagamento, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.cliente = cliente;
-		this.nomeCliente = cliente.getNome();
+		this.nomeCliente = nomeCliente;
 		this.numero = numero;
 		this.status = StatusPedido.NOVO;
 		this.dataRetirada = dataRetirada;
@@ -149,15 +149,21 @@ public class Pedido {
 		exigir(StatusPedido.NOVO, "O cliente não pode ser trocado depois da confirmação.");
 	}
 
-	/** Troca o cliente do pedido; só enquanto o pedido está Novo (ZAP-90). */
-	public void trocarCliente(Cliente cliente, OffsetDateTime agora) {
+	/**
+	 * Troca o cliente do pedido, com o nome informado nele; só enquanto o pedido está Novo
+	 * (ZAP-90, ZAP-199).
+	 */
+	public void trocarCliente(Cliente cliente, String nomeCliente, OffsetDateTime agora) {
 		exigirClienteTrocavel();
 		this.cliente = cliente;
-		this.nomeCliente = cliente.getNome();
+		this.nomeCliente = nomeCliente;
 		this.atualizadoEm = agora;
 	}
 
-	/** Mesmo WhatsApp com outro nome; só enquanto o pedido está Novo (ZAP-90, ZAP-199). */
+	/**
+	 * Mesmo WhatsApp com outro nome: muda só este pedido, e não os outros do mesmo número; só
+	 * enquanto o pedido está Novo (ZAP-90, ZAP-199).
+	 */
 	public void renomearCliente(String nome, OffsetDateTime agora) {
 		exigirClienteTrocavel();
 		this.nomeCliente = nome;
