@@ -304,6 +304,86 @@ describe('endereço e mapa da retirada (ZAP-186)', () => {
     expect(within(retirada).queryByTitle(/Mapa do local de retirada/)).not.toBeInTheDocument()
     expect(within(retirada).getByRole('link', { name: /Abrir no Google Maps/ })).toBeVisible()
   })
+
+  // ---------- ZAP-187 ----------
+
+  // Lê a busca (q ou query) da URL do Google, para conferir que vai o endereço da loja
+  const buscaDaUrl = (url, parametro) => new URL(url).searchParams.get(parametro)
+  const BUSCA = 'Rua das Flores, 123, casa 2, Centro, São Paulo/SP, 01000000'
+
+  test('o mapa e o botão levam o endereço da loja na URL do Google Maps (ZAP-187)', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_CHAVE', 'chave-teste')
+    buscarCardapio.mockResolvedValue(comEndereco())
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const retirada = await screen.findByRole('region', { name: 'Retirada' })
+    const mapa = within(retirada).getByTitle(`Mapa do local de retirada: ${ENDERECO}`)
+    expect(buscaDaUrl(mapa.src, 'q')).toBe(BUSCA)
+    expect(buscaDaUrl(mapa.src, 'key')).toBe('chave-teste')
+    expect(buscaDaUrl(within(retirada).getByRole('link', { name: /Abrir no Google Maps/ }).href, 'query')).toBe(BUSCA)
+    // O endereço de exemplo antigo saiu (ZAP-183)
+    expect(screen.queryByText(/Endereço ilustrativo/)).not.toBeInTheDocument()
+  })
+
+  test('o mapa não prende o foco do teclado: o Tab vai direto ao botão (NBR 17225 5.1.1, ZAP-187)', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_CHAVE', 'chave-teste')
+    buscarCardapio.mockResolvedValue(comEndereco())
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const retirada = await screen.findByRole('region', { name: 'Retirada' })
+    expect(within(retirada).getByTitle(/Mapa do local de retirada/)).toHaveAttribute('tabindex', '-1')
+    const focaveis = within(retirada).queryAllByRole('link')
+    expect(focaveis.map((link) => link.textContent)).toEqual([expect.stringContaining('Abrir no Google Maps')])
+  })
+
+  test('outro endereço salvo no painel aparece no texto, no mapa e no botão (ZAP-187)', async () => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_CHAVE', 'chave-teste')
+    const cardapio = comEndereco()
+    cardapio.estabelecimento.endereco = { cep: '04001000', logradouro: 'Rua Nova', numero: '45', complemento: '', bairro: 'Paraíso', cidade: 'São Paulo', uf: 'SP' }
+    buscarCardapio.mockResolvedValue(cardapio)
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const retirada = await screen.findByRole('region', { name: 'Retirada' })
+    expect(within(retirada).getByText('Rua Nova, 45')).toBeVisible()
+    expect(within(retirada).queryByText(/Rua das Flores/)).not.toBeInTheDocument()
+    const mapa = within(retirada).getByTitle('Mapa do local de retirada: Rua Nova, 45 · Paraíso, São Paulo/SP · CEP 04001-000')
+    expect(buscaDaUrl(mapa.src, 'q')).toBe('Rua Nova, 45, Paraíso, São Paulo/SP, 04001000')
+    expect(buscaDaUrl(within(retirada).getByRole('link', { name: /Abrir no Google Maps/ }).href, 'query')).toBe('Rua Nova, 45, Paraíso, São Paulo/SP, 04001000')
+  })
+
+  test.each([
+    ['sem endereço', null],
+    ['com o endereço incompleto (sem número)', { cep: '01000000', logradouro: 'Rua das Flores', numero: null, complemento: null, bairro: 'Centro', cidade: 'São Paulo', uf: 'SP' }],
+  ])('%s, pede para combinar pelo WhatsApp e não mostra mapa, mesmo com a chave (ZAP-187)', async (_caso, endereco) => {
+    vi.stubEnv('VITE_GOOGLE_MAPS_CHAVE', 'chave-teste')
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.estabelecimento.endereco = endereco
+    buscarCardapio.mockResolvedValue(cardapio)
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const retirada = await screen.findByRole('region', { name: 'Retirada' })
+    expect(within(retirada).getByText('Combine o local de retirada pelo WhatsApp.')).toBeVisible()
+    expect(within(retirada).getByRole('link', { name: /Combinar pelo WhatsApp/ })).toBeVisible()
+    expect(within(retirada).queryByTitle(/Mapa do local de retirada/)).not.toBeInTheDocument()
+    expect(within(retirada).queryByRole('link', { name: /Abrir no Google Maps/ })).not.toBeInTheDocument()
+    expect(within(retirada).queryByText(/Rua das Flores/)).not.toBeInTheDocument()
+  })
+
+  test('a mensagem do WhatsApp continua sem o endereço (ZAP-183, ZAP-187)', async () => {
+    buscarCardapio.mockResolvedValue(comEndereco())
+    abrir('/cardapio/casa-belt/informacoes')
+
+    await screen.findByRole('region', { name: 'Retirada' })
+    for (const link of screen.getAllByRole('link', { name: /WhatsApp/ })) {
+      const texto = buscaDaUrl(link.href, 'text') ?? ''
+      expect(texto).not.toMatch(/Rua das Flores|01000/)
+    }
+  })
+
+  test('nenhum teste usa a chave real: sem stub, a chave do Google fica vazia (ZAP-187)', () => {
+    // vite.config.js zera a chave nos testes, mesmo com um .env.local com a chave da equipe
+    expect(import.meta.env.VITE_GOOGLE_MAPS_CHAVE).toBe('')
+  })
 })
 
 describe('e-mail no contato de "Informações da loja"', () => {
