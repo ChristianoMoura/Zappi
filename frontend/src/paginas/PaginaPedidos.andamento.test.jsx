@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { STATUS } from '../pedidos/regrasPedidos'
@@ -152,5 +152,37 @@ describe('Andamento do pedido e voltar coluna (ZAP-77, RN03)', () => {
 
     expect(await within(detalhes).findByRole('alert')).toHaveTextContent('Não foi possível marcar o pedido como pronto agora')
     expect(within(detalhes).getByRole('button', { name: 'Marcar como pronto' })).toBeVisible()
+  })
+
+  test('avisa quando não consegue marcar como entregue e mantém o pedido em Concluído (ZAP-170)', async () => {
+    const usuario = userEvent.setup()
+    avancarPedido.mockRejectedValue(new Error('falhou'))
+    const detalhes = await abrirPedido(usuario, 8)
+
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Marcar como entregue' }))
+
+    expect(await within(detalhes).findByRole('alert')).toHaveTextContent('Não foi possível marcar o pedido como entregue agora. Tente novamente em alguns minutos.')
+    expect(within(detalhes).getByRole('button', { name: 'Marcar como entregue' })).toBeVisible()
+    expect(within(detalhes).queryByRole('button', { name: 'Voltar para concluído' })).not.toBeInTheDocument()
+    expect(detalhes).not.toHaveTextContent(/Entregue\d/)
+    const coluna = screen.getByRole('region', { name: /Concluído/ })
+    expect(within(coluna).getByRole('button', { name: /Pedido 8, Pedro Alves/ })).toBeInTheDocument()
+  })
+
+  test('avisa na janela quando não consegue voltar para concluído e o pedido continua Entregue (ZAP-170)', async () => {
+    const usuario = userEvent.setup()
+    voltarPedido.mockRejectedValue(new Error('falhou'))
+    const detalhes = await abrirPedido(usuario, 7, '/pedidos?status=6')
+
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Voltar para concluído' }))
+    const janela = await screen.findByRole('dialog', { name: 'Voltar o pedido #7 para Concluído?' })
+    await usuario.click(within(janela).getByRole('button', { name: 'Voltar para concluído' }))
+
+    expect(await within(janela).findByRole('alert')).toHaveTextContent('Não foi possível voltar o pedido agora. Tente novamente em alguns minutos.')
+    await usuario.click(within(janela).getByRole('button', { name: 'Manter como está' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Voltar o pedido #7/ })).not.toBeInTheDocument())
+    expect(detalhes).toHaveTextContent('Entregue14/01 às 18:10')
+    expect(within(detalhes).getByRole('button', { name: 'Voltar para concluído' })).toBeVisible()
+    expect(within(detalhes).queryByRole('button', { name: 'Marcar como entregue' })).not.toBeInTheDocument()
   })
 })
