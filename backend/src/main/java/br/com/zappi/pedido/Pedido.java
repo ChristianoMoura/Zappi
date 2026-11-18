@@ -9,9 +9,12 @@ import org.hibernate.type.SqlTypes;
 
 import br.com.zappi.cliente.Cliente;
 import br.com.zappi.estabelecimento.Estabelecimento;
+import br.com.zappi.pagamento.FormaPagamento;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -62,6 +65,15 @@ public class Pedido {
 	@Column(name = "observacao", length = 500)
 	private String observacao;
 
+	/**
+	 * Forma de pagamento combinada, na retirada (ZAP-190, RN19). Nula nos pedidos de antes dela
+	 * ("Não informada"). Fica gravada no pedido: se a loja deixar de aceitar a forma, o pedido não
+	 * muda (como o preço, RN10).
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "forma_pagamento", length = 10)
+	private FormaPagamento formaPagamento;
+
 	@Column(name = "motivo_recusa", length = TAMANHO_MOTIVO)
 	private String motivoRecusa;
 
@@ -99,13 +111,14 @@ public class Pedido {
 	 * total começa em zero e é calculado quando os itens entram (RN11).
 	 */
 	public Pedido(Estabelecimento estabelecimento, Cliente cliente, Integer numero, LocalDateTime dataRetirada,
-			String observacao, OffsetDateTime agora) {
+			String observacao, FormaPagamento formaPagamento, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.cliente = cliente;
 		this.numero = numero;
 		this.status = StatusPedido.NOVO;
 		this.dataRetirada = dataRetirada;
 		this.observacao = observacao;
+		this.formaPagamento = formaPagamento;
 		this.valorTotal = BigDecimal.ZERO;
 		this.atualizadoEm = agora;
 	}
@@ -135,10 +148,12 @@ public class Pedido {
 		this.atualizadoEm = agora;
 	}
 
-	/** Nova data de retirada e observação (ZAP-90). */
-	public void alterar(LocalDateTime dataRetirada, String observacao, OffsetDateTime agora) {
+	/** Nova data de retirada, observação (ZAP-90) e forma de pagamento (ZAP-190). */
+	public void alterar(LocalDateTime dataRetirada, String observacao, FormaPagamento formaPagamento,
+			OffsetDateTime agora) {
 		this.dataRetirada = dataRetirada;
 		this.observacao = observacao;
+		this.formaPagamento = formaPagamento;
 		this.atualizadoEm = agora;
 	}
 
@@ -278,6 +293,11 @@ public class Pedido {
 
 	public String getObservacao() {
 		return observacao;
+	}
+
+	/** Nula no pedido de antes da ZAP-190. */
+	public FormaPagamento getFormaPagamento() {
+		return formaPagamento;
 	}
 
 	public String getMotivoRecusa() {

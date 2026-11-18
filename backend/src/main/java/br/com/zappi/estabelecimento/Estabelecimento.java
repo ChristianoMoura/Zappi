@@ -1,9 +1,13 @@
 package br.com.zappi.estabelecimento;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import br.com.zappi.pagamento.FormaPagamento;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -77,6 +81,14 @@ public class Estabelecimento {
 	@Column(name = "destacar_promocoes", nullable = false)
 	private boolean destacarPromocoes;
 
+	/**
+	 * Formas de pagamento aceitas ({@link FormaPagamento}), sem repetir e na ordem da lista, com
+	 * pelo menos uma (ZAP-190). Todas por padrão (V13).
+	 */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "formas_pagamento", nullable = false)
+	private List<String> formasPagamento = new ArrayList<>(FormaPagamento.todas());
+
 	@Column(name = "ativo", nullable = false)
 	private boolean ativo;
 
@@ -92,9 +104,10 @@ public class Estabelecimento {
 
 	/**
 	 * Troca os dados que a Lídia edita na tela "Estabelecimento" (RF04). {@code ativo} e
-	 * {@code criado_em} não mudam por aqui.
+	 * {@code criado_em} não mudam por aqui. {@code formasPagamento} já vem conferida e na ordem
+	 * da lista; nula, as formas continuam como estavam (ZAP-190).
 	 */
-	void atualizar(RequisicaoEstabelecimento dados, OffsetDateTime agora) {
+	void atualizar(RequisicaoEstabelecimento dados, List<String> formasPagamento, OffsetDateTime agora) {
 		this.nome = dados.nome();
 		this.slug = dados.slug();
 		this.descricao = dados.descricao();
@@ -109,6 +122,9 @@ public class Estabelecimento {
 		this.uf = dados.uf();
 		if (dados.destacarPromocoes() != null) {
 			this.destacarPromocoes = dados.destacarPromocoes();
+		}
+		if (formasPagamento != null) {
+			this.formasPagamento = new ArrayList<>(formasPagamento);
 		}
 		this.atualizadoEm = agora;
 	}
@@ -187,6 +203,16 @@ public class Estabelecimento {
 
 	public boolean isDestacarPromocoes() {
 		return destacarPromocoes;
+	}
+
+	/** Códigos das formas aceitas, na ordem da lista (ZAP-190). */
+	public List<String> getFormasPagamento() {
+		return formasPagamento == null ? List.of() : List.copyOf(formasPagamento);
+	}
+
+	/** Se a loja aceita a forma agora (ZAP-190): vale para o pedido novo. */
+	public boolean aceita(FormaPagamento forma) {
+		return getFormasPagamento().contains(forma.name());
 	}
 
 	public boolean isAtivo() {

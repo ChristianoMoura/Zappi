@@ -266,6 +266,7 @@ class NotificacoesTests {
 		pedido.put("dataRetirada", retirada.toString());
 		pedido.put("observacao", "");
 		pedido.put("itens", List.of(Map.of("produtoId", produto, "quantidade", 1)));
+		pedido.put("formaPagamento", "PIX");
 		return pedido;
 	}
 

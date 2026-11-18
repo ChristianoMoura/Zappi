@@ -323,6 +323,8 @@ class EdicaoPedidoTests {
 
 	@Test
 	void semMudancaNoTextoNaoGeraOutraConfirmacao() throws Exception {
+		// A mesma forma de pagamento da edição, que aparece na mensagem (ZAP-190)
+		jdbc.update("update pedido set forma_pagamento = 'PIX' where id = ?", pedido);
 		long mensagem = confirmar();
 		enviada(mensagem);
 		Map<String, Object> corpo = pedido("Ana Exemplo", ANA, retirada, List.of(item(brigadeiro, 2, Map.of())));

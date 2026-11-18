@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import br.com.zappi.pagamento.FormaPagamento;
 import br.com.zappi.pedido.ItemPedido;
 import br.com.zappi.pedido.Pedido;
 import br.com.zappi.produto.UnidadeMedida;
@@ -47,7 +48,11 @@ public class GeradorDeMensagens {
 		this.relogio = relogio;
 	}
 
-	/** Texto da confirmação (tipo 1), gerado ao confirmar um pedido Novo (ZAP-49). */
+	/**
+	 * Texto da confirmação (tipo 1), gerado ao confirmar um pedido Novo (ZAP-49). Com a forma de
+	 * pagamento, a linha do pagamento diz qual é, ex.: "O pagamento é feito na retirada, por
+	 * Pix." (ZAP-190); no pedido sem forma, continua "O pagamento é feito na retirada."
+	 */
 	public String confirmacao(Pedido pedido, List<ItemPedido> itens) {
 		String linhasDosItens = itens.stream().map(GeradorDeMensagens::linhaDoItem).collect(Collectors.joining("\n"));
 		return """
@@ -59,11 +64,17 @@ public class GeradorDeMensagens {
 				Total: %s
 				Retirada: %s
 
-				O pagamento é feito na retirada. Qualquer dúvida, é só responder esta mensagem.
+				%s Qualquer dúvida, é só responder esta mensagem.
 
 				%s""".formatted(primeiroNome(pedido.getCliente().getNome()), pedido.getNumero(),
 				pedido.getEstabelecimento().getNome(), linhasDosItens, moeda(pedido.getValorTotal()),
-				dataDeRetirada(pedido.getDataRetirada()), ASSINATURA);
+				dataDeRetirada(pedido.getDataRetirada()), pagamento(pedido.getFormaPagamento()), ASSINATURA);
+	}
+
+	/** "O pagamento é feito na retirada, por Pix." ou, sem forma, "O pagamento é feito na retirada." */
+	static String pagamento(FormaPagamento forma) {
+		return forma == null ? "O pagamento é feito na retirada."
+				: "O pagamento é feito na retirada, " + forma.naMensagem() + ".";
 	}
 
 	/**
