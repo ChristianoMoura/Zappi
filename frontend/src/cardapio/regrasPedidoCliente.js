@@ -1,7 +1,6 @@
 // Regras da montagem do pedido pelo cliente no cardápio público (ZAP-101 / ZAP-107).
 // O valor na tela é só informativo: quem calcula o valor gravado é o backend (RN11).
 import { mascaraTelefone, soDigitos } from '../estabelecimento/regrasEstabelecimento'
-import { moeda } from '../pedidos/regrasPedidos'
 import { LIMITES } from '../pedidos/regrasCadastroPedido'
 import { precoVigente } from '../produtos/regrasProdutos'
 
@@ -144,18 +143,3 @@ export function validarPedido(pedido, produtos, agora = new Date()) {
   return erros
 }
 
-// ---------- Mensagem do WhatsApp ----------
-
-// Enquanto o envio pelo Zappi não existe (ZAP-109 e ZAP-110), o pedido segue pelo WhatsApp da loja
-export function mensagemDoPedido(loja, pedido, produtos) {
-  const linhas = [`Olá! Montei um pedido no cardápio da ${loja.nome} no Zappi:`, '']
-  // Só o nome do produto e a observação: recheio e cobertura saíram (ZAP-140)
-  for (const { produto, quantidade, observacao } of itensComProduto(pedido.itens, produtos)) {
-    linhas.push(`• ${produto.nome} — ${quantidadeTexto(produto, quantidade)} (${moeda(subtotal(produto, quantidade))})`)
-    if (observacao) linhas.push(`  Observação: ${observacao}`)
-  }
-  linhas.push('', `Retirada: ${dataPorExtenso(pedido.data)}, às ${horaTexto(pedido.hora)}`)
-  if (pedido.observacao.trim()) linhas.push(`Observação do pedido: ${pedido.observacao.trim()}`)
-  linhas.push(`Total estimado: ${moeda(totalDoPedido(pedido.itens, produtos))}`)
-  return linhas.join('\n')
-}

@@ -18,7 +18,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useTermosVigentes } from '../autenticacao/useTermosVigentes'
 import { juntar } from '../cardapio/juntarClasses'
-import { formaEscolhida, linkWhatsapp, pedeFormaPagamento } from '../cardapio/regrasCardapio'
+import { formaEscolhida, linkWhatsapp, mensagemAlergia, pedeFormaPagamento } from '../cardapio/regrasCardapio'
 import { nomeFormaPagamento } from '../comum/formasPagamento'
 import { IconeFormaPagamento } from './IconeFormaPagamento'
 import { CampoData } from '../comum/CampoData'
@@ -175,7 +175,7 @@ export function DetalheDoProduto({ loja, produtos, idProduto, montagem, escuro }
               <IconInfoCircle size={18} aria-hidden />
               <span>
                 Tem alergia?{' '}
-                <a href={linkWhatsapp(loja.whatsapp, `Olá! Tenho alergia e queria saber mais sobre o ${produto.nome}.`)} target="_blank" rel="noopener noreferrer">
+                <a href={linkWhatsapp(loja.whatsapp, mensagemAlergia(produto))} target="_blank" rel="noopener noreferrer">
                   Fale com a loja pelo WhatsApp<span className={somenteLeitor}> (abre o WhatsApp)</span>
                 </a>{' '}
                 antes de encomendar.
