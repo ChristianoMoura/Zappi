@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import {
   agruparPorCategoria,
+  artigoDoProduto,
   enderecoDaLoja,
   filtrarProdutos,
   linkGoogleMaps,
+  mensagemAlergia,
   linkWhatsapp,
   mapaGoogle,
-  mensagemPedido,
   precoTexto,
   secaoPromocoes,
   telefoneTexto,
@@ -63,15 +64,6 @@ describe('regras do cardápio público (ZAP-105)', () => {
     expect(telefoneTexto('5511900000000')).toBe('(11) 90000-0000')
   })
 
-  test('a mensagem do pedido leva o produto, o preço e a observação', () => {
-    const loja = { nome: 'Casa Belt' }
-
-    expect(mensagemPedido(loja, produtos[0])).toBe(
-      'Olá! Vi o cardápio da Casa Belt no Zappi e quero encomendar: Bolo de brigadeiro de chocolate (R$ 100,00 por kg).',
-    )
-    expect(mensagemPedido(loja, produtos[0], '  Escrever Feliz aniversário ')).toMatch(/\. Observação: Escrever Feliz aniversário$/)
-  })
-
   test('promoção: o preço vigente é o com desconto, e o leitor de tela ouve o "De ... por ..." (ZAP-162)', () => {
     const ninho = { id: 2, nome: 'Bolo de ninho', unidade: 'KG', preco: 115, precoPromocional: 100 }
     expect(precoTexto(ninho)).toBe('R$ 100,00')
@@ -123,5 +115,28 @@ describe('endereço de retirada (ZAP-186)', () => {
     expect(mapaGoogle(endereco, 'chave-teste')).toBe(`https://www.google.com/maps/embed/v1/place?key=chave-teste&q=${encodeURIComponent(endereco.busca)}`)
     expect(mapaGoogle(endereco, '')).toBeNull()
     expect(mapaGoogle(endereco, undefined)).toBeNull()
+  })
+})
+
+describe('mensagem de alergia (revisão das mensagens, ZAP-65)', () => {
+  test('usa o artigo do produto pela primeira palavra do nome', () => {
+    expect(artigoDoProduto('Bolo de brigadeiro de chocolate')).toBe('o')
+    expect(artigoDoProduto('Torta de limão')).toBe('a')
+    expect(artigoDoProduto('Coxinha de frango')).toBe('a')
+    expect(artigoDoProduto('Cento de coxinha')).toBe('o')
+    expect(artigoDoProduto('Pudim')).toBe('o')
+    expect(artigoDoProduto('Brigadeiros gourmet')).toBe('os')
+    expect(artigoDoProduto('Empadas de palmito')).toBe('as')
+    expect(artigoDoProduto('Mousse de maracujá')).toBe('a')
+    expect(artigoDoProduto('Quiche de alho-poró')).toBe('a')
+    expect(artigoDoProduto('Mini pizza')).toBe('a')
+    expect(artigoDoProduto('Kit festa')).toBe('o')
+  })
+
+  test('pergunta se dá para fazer o produto sem algum ingrediente', () => {
+    expect(mensagemAlergia({ nome: 'Torta de limão' })).toBe('Olá! Tenho alergia e queria saber se dá para fazer a Torta de limão sem algum ingrediente.')
+    expect(mensagemAlergia({ nome: 'Bolo de brigadeiro de chocolate' })).toBe(
+      'Olá! Tenho alergia e queria saber se dá para fazer o Bolo de brigadeiro de chocolate sem algum ingrediente.',
+    )
   })
 })

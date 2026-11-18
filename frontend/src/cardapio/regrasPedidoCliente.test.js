@@ -13,7 +13,6 @@ import {
   HORARIOS,
   horaTexto,
   itensDoPedido,
-  mensagemDoPedido,
   mudarQuantidade,
   quantidadeTexto,
   totalDoPedido,
@@ -88,18 +87,6 @@ describe('regras da montagem do pedido pelo cliente (ZAP-107)', () => {
     for (const hora of HORARIOS) {
       expect(validarPedido(pedido({ data: '2026-11-17', hora }), produtos, agora)).toEqual({})
     }
-  })
-
-  test('a mensagem do WhatsApp leva o nome do produto, a observação, a data e a hora e o total', () => {
-    const texto = mensagemDoPedido({ nome: 'Casa Belt' }, pedido(), produtos)
-
-    expect(texto).toContain('• Bolo de brigadeiro de chocolate — 1,5 kg (R$ 150,00)')
-    expect(texto).not.toMatch(/Recheio|Cobertura/)
-    expect(texto).toContain('  Observação: massa branca')
-    expect(texto).toContain('• Coxinha por unidade — 20 unidades (R$ 25,00)')
-    expect(texto).toContain('Retirada: terça-feira, 17/11, às 15h30')
-    expect(texto).toContain('Observação do pedido: Aniversário de 5 anos')
-    expect(texto).toContain('Total estimado: R$ 175,00')
   })
 
   test('marca os itens de produto que saiu do cardápio e conta os indisponíveis (ZAP-156)', () => {
