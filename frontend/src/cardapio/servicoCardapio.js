@@ -52,6 +52,8 @@ function paraTela(resposta) {
       slug: estabelecimento?.slug ?? '',
       descricao: estabelecimento?.descricao ?? '',
       whatsapp: estabelecimento?.whatsapp ?? '',
+      // E-mail de contato da tela Estabelecimento, em "Informações da loja"
+      emailContato: estabelecimento?.emailContato ?? '',
       logo: estabelecimento?.logo ?? '',
       capa: estabelecimento?.capa ?? '',
       // Seção "Promoções" no topo do cardápio, ligada por padrão (ZAP-160, ZAP-162)

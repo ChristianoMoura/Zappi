@@ -19,6 +19,7 @@ const CASA_BELT = {
     slug: 'casa-belt',
     descricao: 'Bolos e salgados artesanais sob encomenda.',
     whatsapp: '5511900000000',
+    emailContato: 'contato@casabelt.com',
     logo,
     capa,
     cep: '01310100',

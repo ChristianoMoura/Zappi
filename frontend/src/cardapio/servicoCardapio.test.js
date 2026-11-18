@@ -28,7 +28,7 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
       const cardapio = await buscarCardapio('casa-belt')
 
       expect(buscar).toHaveBeenCalledWith('/api/cardapio/casa-belt')
-      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp', destacarPromocoes: true, formasPagamento: null, endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' } })
+      expect(cardapio.estabelecimento).toEqual({ nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: 'https://storage/capa.webp', destacarPromocoes: true, formasPagamento: null, emailContato: '', endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' } })
       expect(cardapio.produtos[0]).toMatchObject({ preco: 115, descricao: '', foto: '', textoAlternativo: '' })
     })
 
@@ -138,5 +138,14 @@ describe('servicoCardapio (rota pública da ZAP-104)', () => {
     const cardapio = await buscarCardapio('casa-belt')
 
     expect(cardapio.estabelecimento.endereco).toEqual({ ...endereco, complemento: '' })
+  })
+
+  test('traz o e-mail de contato da loja', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, { ...doBackend, estabelecimento: { ...doBackend.estabelecimento, emailContato: 'contato@casabelt.com' } })))
+    vi.stubEnv('DEV', false)
+
+    const cardapio = await buscarCardapio('casa-belt')
+
+    expect(cardapio.estabelecimento.emailContato).toBe('contato@casabelt.com')
   })
 })
