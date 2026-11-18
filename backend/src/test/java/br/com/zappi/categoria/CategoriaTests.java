@@ -262,6 +262,19 @@ class CategoriaTests {
 	}
 
 	@Test
+	void naoExcluiCategoriaSoComProdutoForaDoCardapio() throws Exception {
+		// Fora do cardápio não é excluído (ZAP-151): o produto continua na tela de produtos e
+		// precisa da categoria, então ela não pode sair (RN26)
+		jdbc.update("update produto set no_cardapio = false where categoria_id = ?", bolos);
+
+		comToken(delete(ROTA + "/" + bolos), tokenDaLidia)
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.codigo").value("CATEGORIA_COM_PRODUTO"));
+		assertThat(jdbc.queryForObject("select ativo from categoria where id = ?", Boolean.class, bolos)).isTrue();
+		comToken(get(ROTA), tokenDaLidia).andExpect(jsonPath("$[*].nome", contains("Bolos", "Salgados")));
+	}
+
+	@Test
 	void naoMostraNemAlteraCategoriasDeOutroEstabelecimento() throws Exception {
 		comToken(put(ROTA + "/" + bolos), tokenDeOutraLoja, Map.of("nome", "Invadido"))
 			.andExpect(status().isNotFound())

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { buscarCategorias } from '../categorias/servicoCategorias'
@@ -223,6 +223,34 @@ describe('Cadastro e edição de produto (ZAP-42, RF05, RF06)', () => {
     expect(voltarAoCardapio).toHaveBeenCalledWith(1)
     expect(await screen.findByText('No cardápio')).toBeVisible()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('na tela do produto, a confirmação começa em "Manter no cardápio" e a falha avisa sem tirar (ZAP-155, ZAP-157)', async () => {
+    tirarDoCardapio.mockReset().mockRejectedValue(new Error('falhou'))
+    const usuario = userEvent.setup()
+    await abrir('/produtos/1')
+
+    await usuario.click(screen.getByRole('button', { name: 'Tirar do cardápio' }))
+    const janela = await screen.findByRole('dialog', { name: 'Tirar Bolo de brigadeiro de chocolate do cardápio?' })
+    expect(within(janela).getByText('O produto some do cardápio, mas continua aqui. Você pode voltar com ele quando quiser.')).toBeVisible()
+    await waitFor(() => expect(within(janela).getByRole('button', { name: 'Manter no cardápio' })).toHaveFocus())
+    await usuario.click(within(janela).getByRole('button', { name: 'Tirar do cardápio' }))
+
+    expect(await within(janela).findByRole('alert')).toHaveTextContent('Não foi possível tirar do cardápio agora. Tente novamente em alguns minutos.')
+    expect(screen.getByText('No cardápio')).toBeInTheDocument()
+    expect(screen.queryByText('Fora do cardápio')).not.toBeInTheDocument()
+  })
+
+  test('"Manter no cardápio" na tela do produto fecha sem mudar nada', async () => {
+    const usuario = userEvent.setup()
+    await abrir('/produtos/1')
+
+    await usuario.click(screen.getByRole('button', { name: 'Tirar do cardápio' }))
+    await usuario.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Manter no cardápio' }))
+
+    expect(tirarDoCardapio).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByText('No cardápio')).toBeVisible()
   })
 
   test('ao cadastrar, não mostra se o produto está no cardápio: ele entra no cardápio', async () => {

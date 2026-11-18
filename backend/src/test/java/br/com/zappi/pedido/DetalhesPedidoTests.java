@@ -3,6 +3,7 @@ package br.com.zappi.pedido;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -154,6 +155,31 @@ class DetalhesPedidoTests {
 		mockMvc.perform(get("/api/pedidos/1")
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + servicoToken.gerar(new UsuarioAutenticado(ana, outraLoja))))
 			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void pedidoQueJaExistiaNaoMudaQuandoOProdutoSaiDoCardapio() throws Exception {
+		long brigadeiro = jdbc.queryForObject(
+				"select id from produto where estabelecimento_id = ? and nome = 'Bolo de brigadeiro de chocolate'",
+				Long.class, casaBelt);
+		jdbc.update("update produto set preco = 130 where id = ?", brigadeiro);
+
+		mockMvc.perform(post("/api/produtos/" + brigadeiro + "/tirar-do-cardapio")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isOk());
+
+		// O pedido #1 continua com o produto e o preço da época (ZAP-151, RN10), no detalhe e no quadro
+		detalhar(1)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.valorTotal").value(200.00))
+			.andExpect(jsonPath("$.itens.length()").value(1))
+			.andExpect(jsonPath("$.itens[0].produto").value("Bolo de brigadeiro de chocolate"))
+			.andExpect(jsonPath("$.itens[0].precoUnitario").value(100.00))
+			.andExpect(jsonPath("$.itens[0].subtotal").value(200.00));
+		mockMvc.perform(get("/api/pedidos").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$[0].numero").value(1))
+			.andExpect(jsonPath("$[0].itens[*].produto", contains("Bolo de brigadeiro de chocolate")))
+			.andExpect(jsonPath("$[0].valorTotal").value(200.00));
 	}
 
 	@Test
