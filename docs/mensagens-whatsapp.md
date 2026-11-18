@@ -10,7 +10,7 @@ Estes são os textos que o Zappi prepara para o cliente ao confirmar, recusar ou
 - **Transparência (CDC):** toda mensagem termina com "Mensagem gerada pelo Zappi".
 - **Sem delivery (RN19):** o pedido é sempre retirado, e o pagamento é feito na retirada, pela forma combinada no pedido (RN25).
 - **Sem emojis:** leitores de tela leem cada emoji em voz alta, e a mensagem fica mais limpa.
-- **Sem endereço:** a retirada é na casa da Lídia e os clientes já a conhecem; a mensagem não expõe esse dado pessoal.
+- **Sem endereço:** a mensagem não traz o endereço de retirada. Desde a ZAP-183, ele aparece no cardápio público, na tela "Informações da loja", com o botão "Abrir no Google Maps", sempre atualizado com o cadastro da loja (RN31). Assim, o texto fica curto e não guarda uma cópia do endereço que pode ficar velha.
 - O texto entre `{chaves}` é trocado pelos dados do pedido; o resto é fixo. As quebras de linha fazem parte do texto.
 
 ## Campos variáveis
@@ -137,3 +137,4 @@ Mensagem gerada pelo Zappi
 | 07/11/2026 | Textos aprovados pela equipe na ZAP-63, com autorização do Lucas para definir em nome da Lídia |
 | 10/11/2026 | Hora da retirada em `{data_retirada}` (ZAP-127) |
 | 15/11/2026 | A confirmação passa a dizer a forma de pagamento combinada: "O pagamento é feito na retirada, por Pix." (decisão da equipe na ZAP-190). Dinheiro fica "em dinheiro", que soa natural. Pedido sem forma mantém a frase antiga. Implementado em 17/11/2026 (ZAP-192) |
+| 15/11/2026 | O endereço da loja passa a aparecer no cardápio público (decisão do grupo na ZAP-183, RN31). As mensagens continuam sem o endereço, e a regra "Sem endereço" passa a explicar que ele está no cardápio. Registrado em 18/11/2026 (ZAP-188) |
