@@ -47,6 +47,13 @@ public class Pedido {
 	@JoinColumn(name = "cliente_id", nullable = false)
 	private Cliente cliente;
 
+	/**
+	 * Nome do cliente informado neste pedido (ZAP-199). O cliente é único pelo WhatsApp, mas o
+	 * mesmo número pode fazer pedidos com nomes diferentes.
+	 */
+	@Column(name = "nome_cliente", nullable = false, length = 100)
+	private String nomeCliente;
+
 	@Column(name = "numero", nullable = false)
 	private Integer numero;
 
@@ -114,6 +121,7 @@ public class Pedido {
 			String observacao, FormaPagamento formaPagamento, OffsetDateTime agora) {
 		this.estabelecimento = estabelecimento;
 		this.cliente = cliente;
+		this.nomeCliente = cliente.getNome();
 		this.numero = numero;
 		this.status = StatusPedido.NOVO;
 		this.dataRetirada = dataRetirada;
@@ -145,6 +153,23 @@ public class Pedido {
 	public void trocarCliente(Cliente cliente, OffsetDateTime agora) {
 		exigirClienteTrocavel();
 		this.cliente = cliente;
+		this.nomeCliente = cliente.getNome();
+		this.atualizadoEm = agora;
+	}
+
+	/** Mesmo WhatsApp com outro nome; só enquanto o pedido está Novo (ZAP-90, ZAP-199). */
+	public void renomearCliente(String nome, OffsetDateTime agora) {
+		exigirClienteTrocavel();
+		this.nomeCliente = nome;
+		this.atualizadoEm = agora;
+	}
+
+	/** O cliente foi anonimizado (RN17): o nome do pedido vira "Cliente anonimizado" (ZAP-199). */
+	public void anonimizarNomeCliente(OffsetDateTime agora) {
+		if (Cliente.NOME_ANONIMIZADO.equals(nomeCliente)) {
+			return;
+		}
+		this.nomeCliente = Cliente.NOME_ANONIMIZADO;
 		this.atualizadoEm = agora;
 	}
 
@@ -277,6 +302,10 @@ public class Pedido {
 
 	public Cliente getCliente() {
 		return cliente;
+	}
+
+	public String getNomeCliente() {
+		return nomeCliente;
 	}
 
 	public Integer getNumero() {

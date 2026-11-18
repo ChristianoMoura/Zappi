@@ -277,8 +277,8 @@ class MigracoesTests {
 
 	private void criarPedido(long estabelecimento, long cliente) {
 		jdbc.update("""
-				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, valor_total)
-				values (?, ?, 1, 1, current_date + 7 + time '12:00', 100.00)
+				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, valor_total, nome_cliente)
+				values (?, ?, 1, 1, current_date + 7 + time '12:00', 100.00, 'Cliente de teste')
 				""", estabelecimento, cliente);
 	}
 

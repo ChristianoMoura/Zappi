@@ -100,6 +100,7 @@ public class ServicoAnonimizacaoCliente {
 		// O motivo da recusa vai para a mensagem, então perde o nome do mesmo jeito; as
 		// observações descrevem a encomenda e ficam como estão (RN17)
 		for (Pedido pedido : doCliente) {
+			pedido.anonimizarNomeCliente(agora);
 			if (pedido.getMotivoRecusa() != null) {
 				pedido.substituirMotivoRecusa(remocao.daMensagem(pedido.getMotivoRecusa()), agora);
 			}
