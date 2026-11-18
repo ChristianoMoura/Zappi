@@ -140,7 +140,7 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 
 **Portal do Administrador**
 
-1. Login da Lídia (e-mail e senha).
+1. Login da Lídia (e-mail e senha), com o **aceite dos Termos de uso e da Política de privacidade** na própria tela de login, e os links para os dois textos no rodapé da caixinha da conta (RN27).
 2. Cadastro e edição das informações do estabelecimento (Casa Belt), incluindo as **formas de pagamento aceitas** (RN25).
 3. Cadastro, edição e exclusão lógica de produtos (nome completo, categoria, unidade, preço, descrição, foto com texto alternativo e **alérgenos**: lista fixa, com o glúten, e texto livre para os demais, RN24), e cadastro das **categorias** do cardápio, com a ordem definida pela Lídia, arrastando ou pelo teclado (RN26).
 4. Upload da foto do produto para o Supabase Storage.
@@ -159,9 +159,9 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 
 **Portal do Cliente** (épico `ZAP-2`; requisitos e regras definidos na `ZAP-18`, seção 14, item 11)
 
-16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, em seções pelas categorias, na ordem definida pela Lídia (RN26), com nome, descrição, preço, foto com texto alternativo, os **selos de alérgenos** com o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar." (RN24), as **formas de pagamento** que a loja aceita, sempre com "Pagamento na retirada" (RN25), e o contato da Lídia. No topo, **busca** pelos produtos, **modo escuro** e o botão **Compartilhar** (ZAP-100, ZAP-105).
+16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, em seções pelas categorias, na ordem definida pela Lídia (RN26), com nome, descrição, preço, foto com texto alternativo, os **selos de alérgenos** com o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar." (RN24), as **formas de pagamento** que a loja aceita, sempre com "Pagamento na retirada" (RN25), e o contato da Lídia. No topo, **busca** pelos produtos, **modo escuro** e o botão **Compartilhar** (ZAP-100, ZAP-105). No rodapé, os links para os **Termos de uso** e a **Política de privacidade**, que abrem sem login (RN27).
 17. **Montagem do pedido** pelo cliente: produtos, quantidade, observação de cada item (sem recheio e cobertura, RN26), observações do pedido, data e hora de retirada, com pelo menos 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23), e a **forma de pagamento**, obrigatória, entre as aceitas (RN25).
-18. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
+18. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD, numa caixa só com o aceite dos Termos de uso e da Política de privacidade (RN16, RN27). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
 
 ### 5.3 Dados iniciais (seed)
 - Estabelecimento: **Casa Belt**.
@@ -194,7 +194,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 
 | User story | Requisitos funcionais |
 |---|---|
-| **US1** — Como Lídia, quero fazer login, para acessar de forma segura minhas informações e pedidos. | **RF01** Login com e-mail e senha. **RF02** Validar credenciais e bloquear acesso com dados incorretos. |
+| **US1** — Como Lídia, quero fazer login, para acessar de forma segura minhas informações e pedidos. | **RF01** Login com e-mail e senha, com o aceite da versão vigente dos Termos de uso e da Política de privacidade (RN27). **RF02** Validar credenciais e bloquear acesso com dados incorretos. |
 | **US2** — Como Lídia, quero cadastrar as informações do estabelecimento, para manter meus dados registrados. | **RF03** Cadastro de nome, descrição, contato e formas de pagamento aceitas do Casa Belt (RN25). **RF04** Edição posterior dessas informações. |
 | **US3** — Como Lídia, quero cadastrar meus produtos, para manter o cardápio atualizado. | **RF05** Cadastro de produtos com nome completo, categoria, preço por kg, foto e alérgenos (RN24), e das categorias do cardápio, na ordem definida pela Lídia (RN26). **RF06** Edição e exclusão de produtos (exclusão lógica). |
 | **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído, Entregue e Recusado), com filtro de status; em "Todos", Entregue e Recusado ficam ocultos (RN04). **RF08** Detalhes do pedido ao selecionar um card, com a forma de pagamento (RN25). |
@@ -204,7 +204,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | **US8** — Como Lídia, quero mover o pedido para Em produção e Concluído, para acompanhar o andamento e avisar o cliente que o pedido está pronto. | **RF15** Mover o pedido para "Em produção", "Concluído" e "Entregue", com a volta de uma etapa para corrigir um clique errado (RN03). **RF16** Preparar a mensagem de pronto para retirada via WhatsApp. |
 | **US9** — Como cliente, quero ver o cardápio pelo link, para conhecer sabores e preços sem precisar de login. | **RF17** Cardápio público pelo `slug`, só com produtos ativos, organizado pelas categorias na ordem da Lídia (RN26), com busca pelos produtos, modo escuro e botão de compartilhar o link (ZAP-100), e as formas de pagamento aceitas (RN25). **RF18** Exibir o contato da Lídia. |
 | **US10** — Como cliente, quero montar meu pedido, para encomendar sem depender de troca de mensagens. | **RF19** Escolher produtos, quantidade, observação de cada item, observações e a forma de pagamento, entre as aceitas (RN25). **RF20** Escolher a data e a hora de retirada, com 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23). |
-| **US11** — Como cliente, quero enviar meu pedido, para que a Lídia avalie se pode atender. | **RF21** Identificar com nome e WhatsApp, com consentimento (RN16). **RF22** Registrar o pedido como Novo e avisar que ainda não está confirmado. **RF23** Limitar os envios e descartar os automáticos. |
+| **US11** — Como cliente, quero enviar meu pedido, para que a Lídia avalie se pode atender. | **RF21** Identificar com nome e WhatsApp, com consentimento, que inclui o aceite dos Termos de uso e da Política de privacidade (RN16, RN27). **RF22** Registrar o pedido como Novo e avisar que ainda não está confirmado. **RF23** Limitar os envios e descartar os automáticos. |
 | **US12** — Como Lídia, quero anonimizar os dados de um cliente, para atender ao pedido de exclusão. | **RF24** Anonimizar o cliente sem apagar o histórico (RN17). |
 
 **Adições depois da documentação entregue em sala** (formalizadas na `ZAP-83`):
@@ -216,6 +216,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 - **RF05 e RF17** passam a ter os **alérgenos** do produto: a Lídia marca a lista fixa no cadastro, e o cardápio público mostra os selos (história `ZAP-128`, correção do formato na `ZAP-197`, 17/11/2026). A equipe não criou um RF próprio.
 - **RF03, RF04, RF08, RF13, RF17 e RF19** passam a ter as **formas de pagamento**: a Lídia escolhe as que aceita, o cardápio mostra só essas, e o pedido grava a forma combinada (história `ZAP-190`, 17/11/2026). Também sem RF próprio.
 - **RF05, RF06, RF13, RF17 e RF19** passam a ter as **categorias** do cardápio, cadastradas e ordenadas pela Lídia, o **nome único** do produto, sem o campo sabor, e o **fim de recheio e cobertura** no pedido, com a personalização na observação do item (história `ZAP-136`, 14/11/2026, RN26). A equipe não criou um RF próprio.
+- **RF01 e RF21** passam a ter o **aceite dos Termos de uso e da Política de privacidade**: a Lídia aceita no login, e o cliente, no envio do pedido, junto do consentimento (história `ZAP-143`, 14/11/2026, RN27). A equipe não criou um RF próprio.
 - **RF11 e RF12** passam a valer também para o **cancelamento** de pedidos Confirmados e Em produção (`ZAP-64`).
 - **RF10, RF12 e RF16:** o botão "Enviar no WhatsApp" continua disponível para **reenviar** a mensagem, e o painel mostra só a mensagem da etapa atual, com as anteriores guardadas para consulta (`ZAP-64`, `ZAP-51`).
 
@@ -240,8 +241,8 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN13 | Preço do produto > 0. | DER |
 | RN14 | Excluir um produto é **lógico** (`ativo = FALSE`): ele some do cardápio, mas o histórico continua. | RF06 |
 | RN15 | Toda foto de produto exige **texto alternativo**. | NBR 5.9.1 |
-| RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. | LGPD |
-| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. O cliente pede pelo WhatsApp da Lídia, e ela anonimiza no painel, o que fica bloqueado se houver pedido em aberto (Novo, Confirmado ou Em produção); Concluído, Entregue e Recusado contam como encerrados. O nome vira "Cliente anonimizado", o telefone vira `0` + id do cliente completado com zeros, em 13 dígitos, e nome e telefone também saem de `mensagem_whatsapp`, de `log_auditoria.detalhes` e de `pedido.motivo_recusa`, que vai para a mensagem de recusa. As observações do pedido e do item não mudam. Depois de anonimizado, o cliente nunca volta a ter pedido em aberto: o pedido Concluído dele não pode voltar para Em produção. | LGPD / ZAP-64 / ZAP-18 / ZAP-115 / ZAP-60 |
+| RN16 | Um cliente só é gravado com `consentimento_lgpd = TRUE` e `consentimento_em` preenchido. O cliente novo também guarda em `consentimento_versao` a versão dos Termos de uso e da Política de privacidade vigente quando foi gravado (RN27); os clientes de antes dos termos ficam com a versão nula. | LGPD / ZAP-145 / ZAP-146 |
+| RN17 | Excluir os dados de um cliente é feito por **anonimização** (`anonimizado_em`), sem apagar o histórico de pedidos. Faz parte da entrega final. O cliente pede pelo WhatsApp da Lídia, e ela anonimiza no painel, o que fica bloqueado se houver pedido em aberto (Novo, Confirmado ou Em produção); Concluído, Entregue e Recusado contam como encerrados. O nome vira "Cliente anonimizado", o telefone vira `0` + id do cliente completado com zeros, em 13 dígitos, e nome e telefone também saem de `mensagem_whatsapp`, de `log_auditoria.detalhes` e de `pedido.motivo_recusa`, que vai para a mensagem de recusa. As observações do pedido e do item não mudam. Depois de anonimizado, o cliente nunca volta a ter pedido em aberto: o pedido Concluído dele não pode voltar para Em produção. A Política de privacidade explica ao cliente como pedir a exclusão e por que ela espera o pedido em aberto terminar (RN27). | LGPD / ZAP-64 / ZAP-18 / ZAP-115 / ZAP-60 / ZAP-144 |
 | RN18 | O telefone do cliente é único por estabelecimento. | DER |
 | RN19 | Não há delivery: o pedido tem `data_retirada`, com a data e a hora da retirada (RN23), e o pagamento é presencial, na retirada. O sistema não processa nem confirma pagamento; guarda só a **forma combinada** (RN25). | Comunidade / ZAP-190 |
 | RN20 | A mensagem copia o telefone do cliente no momento em que é gerada (`telefone_destino`). | DER |
@@ -251,6 +252,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN24 | **Alérgenos do produto.** A Lídia marca, no cadastro e na edição, os alérgenos de uma lista fixa: glúten, leite e derivados, ovos, soja, amendoim, castanhas e nozes, e gergelim (`GLUTEN`, `LEITE`, `OVOS`, `SOJA`, `AMENDOIM`, `CASTANHAS`, `GERGELIM`). Os que não estão na lista vão num texto livre de até 300 caracteres. Nenhum é obrigatório: sem o glúten marcado, o produto não contém glúten. O detalhe do produto no cardápio público mostra um selo, com ícone e nome, para cada alérgeno marcado e para o texto livre, e sempre o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar.". Não há selo "Não contém glúten" nem "Pode conter traços de…": a cozinha usa farinha de trigo, e o aviso cobre a contaminação cruzada. Código fora da lista é recusado na API e no banco. A informação vale para pedidos novos; o pedido antigo não guarda cópia dela. | CDC / ZAP-128 / ZAP-129 / ZAP-197 |
 | RN25 | **Formas de pagamento.** Lista fixa: Dinheiro, Pix, Cartão de crédito, Cartão de débito e Vale-refeição (VR) (`DINHEIRO`, `PIX`, `CREDITO`, `DEBITO`, `VR`). A loja aceita pelo menos uma; todas vêm marcadas no começo, e a Lídia muda na tela Estabelecimento. O cardápio público mostra só as aceitas. Todo pedido novo, do portal ou do painel, tem uma forma, entre as que a loja aceita no momento do pedido. Como o preço (RN10), a forma fica gravada no pedido: se a loja deixar de aceitá-la, os pedidos que já existem não mudam, e na edição a forma que já estava pode ficar. Pedidos de antes da regra ficam sem forma ("Não informada"). A mensagem de confirmação diz a forma: "O pagamento é feito na retirada, por Pix." ("em dinheiro" para Dinheiro); sem forma, a frase antiga. Validado na tela, no backend e no banco. | RF03 / RF13 / RF19 / ZAP-190 |
 | RN26 | **Categorias do cardápio e nome único do produto.** Todo produto pertence a uma **categoria** da loja, obrigatória no cadastro e na edição. A Lídia cria, renomeia, ordena e exclui as categorias na tela "Categorias": o nome é obrigatório, tem até 60 caracteres e não se repete entre as categorias ativas da loja, sem diferenciar maiúsculas; a categoria nova entra no fim da lista. A **ordem** é a da Lídia, que arrasta as categorias ou usa o teclado, e vale em todas as listas: cardápio público (seções, abas e janela "Categorias"), lista de produtos do painel e escolha de produtos no formulário de pedido; dentro da categoria, a ordem é por nome. Categoria com produto não excluído **não pode ser excluída**: a tela explica que é preciso mover os produtos antes; a exclusão é lógica, como a do produto (RN14). No cardápio público, só aparecem as categorias com produto no cardápio. O produto tem um **nome completo** (ex.: "Bolo de brigadeiro de chocolate"), sem o campo sabor: cada sabor é um produto, com preço, foto e descrição próprios. O item do pedido **não tem recheio nem cobertura**: os bolos vêm prontos, e a personalização vai na observação do item, num produto personalizável (ex.: "Bolo personalizado"); se ela mudar o preço, a Lídia combina pelo WhatsApp antes de confirmar. Os recheios e coberturas dos pedidos antigos foram para a observação do item, sem perder nada. | RF05 / RF06 / RF13 / RF17 / RF19 / ZAP-136 |
+| RN27 | **Termos de uso e Política de privacidade.** Os dois textos ficam versionados no repositório (`docs/termos-de-uso.md` e `docs/politica-de-privacidade.md`), com a versão e a data no topo, e abrem **sem login** nas páginas `/termos` e `/privacidade`. A versão vigente (número inteiro maior que 0) e a data ficam na configuração do backend (`zappi.termos.versao` e `zappi.termos.data`), lidas pelas telas na rota pública `GET /api/publico/termos`. **Painel:** a Lídia só entra depois de aceitar a versão vigente. A caixa "Li e concordo com os Termos de uso e a Política de privacidade" vai junto com o login, e o servidor grava o aceite em `aceite_termos` (versão, data, IP e navegador) e `TERMOS_ACEITOS` no log, na mesma transação do login. Sem o aceite da versão vigente, nem na requisição nem já gravado, o login responde `TERMOS_PENDENTES`, sem token; isso só acontece depois da senha certa, para não revelar se o e-mail existe. O navegador guarda só um lembrete da versão aceita (`localStorage`), para a caixa não aparecer em todo login no mesmo aparelho; a prova do aceite fica no servidor. Em outro aparelho, ou quando a versão sobe, a caixa volta. Cada aceite é um registro novo, como histórico. No rodapé da caixinha da conta, os links "Termos de uso · Política de privacidade" abrem os textos na mesma aba, com "Você aceitou a versão N em DD/MM/AAAA" e o botão "Voltar ao painel". **Portal do Cliente:** uma caixa só, junto do consentimento (RN16): o pedido só é enviado com ela marcada, e o cliente novo fica gravado com a versão vigente no servidor. O cliente que já existe mantém a versão do primeiro consentimento. Os textos foram escritos pela equipe em linguagem simples e não substituem uma revisão jurídica se o sistema for usado como negócio. | US1 / US11 / RF01 / RF21 / LGPD / CDC / ISO 5.34 / ISO 8.16 / ZAP-143 |
 
 ---
 
@@ -263,12 +265,16 @@ O foco é **CDC (Lei nº 8.078/1990)** e **LGPD (Lei nº 13.709/2018)**. Aspecto
 | CDC | Informação clara sobre os produtos | Cardápio com o nome completo do produto, descrição, preço por kg e foto, sem informação enganosa |
 | CDC | Transparência na comunicação automatizada | Mensagem termina com "Mensagem gerada pelo Zappi" (textos em `docs/mensagens-whatsapp.md`) |
 | CDC | Canal de atendimento | Contato direto com a Lídia (`estabelecimento.telefone_whatsapp`) |
-| LGPD | Consentimento | Consentimento registrado antes de gravar nome e telefone |
-| LGPD | Finalidade específica | Dados usados só para processar e acompanhar pedidos; nada de compartilhar com terceiros |
+| LGPD | Consentimento | Consentimento registrado antes de gravar nome e telefone, numa caixa só com o aceite dos Termos de uso e da Política de privacidade, e a versão aceita guardada no cliente (`cliente.consentimento_versao`, RN16, RN27) |
+| LGPD | Transparência sobre o tratamento | **Política de privacidade** (`docs/politica-de-privacidade.md`, página `/privacidade`, sem login, ZAP-144): quem cuida dos dados (a loja é a controladora dos dados do cliente, e o Zappi, o operador; o Zappi é o controlador dos dados de acesso da Lídia), quais dados são guardados e para quê, o que fica no navegador, onde ficam os servidores, os serviços de terceiros, por quanto tempo os dados ficam guardados, os direitos do titular e como pedir (RN27) |
+| LGPD | Evidência do aceite | Aceite da Lídia gravado no servidor a cada login com a caixa marcada, com versão, data, IP e navegador (`aceite_termos`), e `TERMOS_ACEITOS` no log; a versão aceita pelo cliente fica no cadastro dele (RN27) |
+| LGPD | Finalidade específica | Dados usados só para processar e acompanhar pedidos; o Zappi não vende os dados, não usa para propaganda e não passa de uma loja para outra. Os serviços externos listados na política (Google Maps, Google Fonts, ViaCEP e BrasilAPI) não recebem nome, WhatsApp nem pedido do cliente |
+| LGPD | Localização dos dados | Render e Supabase, com servidores nos Estados Unidos: há transferência internacional, informada na política (seção 5 dela), com HTTPS e o banco acessível só pelo backend (seção 14, item 10, ZAP-144) |
 | LGPD | Segurança no armazenamento | Acesso restrito e dados segregados por estabelecimento |
-| LGPD | Direito de exclusão | Anonimização a pedido do titular, feito pelo WhatsApp da Lídia. O consentimento informa: "Para apagar seus dados, é só pedir à Lídia pelo WhatsApp." |
+| LGPD | Direito de exclusão | Anonimização a pedido do titular, feito pelo WhatsApp da Lídia (RN17). A política explica como pedir e por que a exclusão espera o pedido em aberto terminar |
 | CDC | Informação clara sobre os riscos do produto (alérgenos) | Selos de alérgenos no cardápio e o aviso para falar com a loja antes de encomendar (RN24). A Lei nº 10.674/2003 (glúten) e a RDC Anvisa nº 727/2022, que substituiu a RDC nº 26/2015 (alergênicos), tratam de alimentos industrializados e embalados; para a encomenda artesanal, a informação é boa prática do CDC, não obrigação de rotulagem (confirmado com a professora na ZAP-129) |
 | CDC | Informação clara sobre o pedido | O Portal do Cliente avisa, antes do envio e depois dele: "Seu pedido ainda não está confirmado. A Lídia vai avaliar e responder pelo WhatsApp." |
+| CDC | Informação clara sobre as regras de uso | **Termos de uso** (`docs/termos-de-uso.md`, página `/termos`, sem login, ZAP-144): regras do painel e do portal, com o pedido valendo só depois da confirmação da loja, a retirada sem entrega, o pagamento na retirada e a antecedência mínima (RN22, RN27) |
 
 ---
 
@@ -280,14 +286,16 @@ O foco é **CDC (Lei nº 8.078/1990)** e **LGPD (Lei nº 13.709/2018)**. Aspecto
 | 5.16 Gestão de identidade | E-mail único como identificador da conta | `usuario.email` UNIQUE |
 | 5.17 Informações de autenticação | Senha com **mín. 8 caracteres, letras, números e ao menos 1 caractere especial** | Validação na aplicação |
 | 8.24 Uso de criptografia | Senhas em hash (nunca em texto puro); comunicação via HTTPS | BCrypt; HTTPS/TLS gerenciado pelo Render; TLS com o Supabase |
-| 5.34 Privacidade e dados pessoais | Dados de clientes segregados e com acesso restrito | `estabelecimento_id` em tudo; RLS no Supabase; acesso ao banco só pelo backend |
-| 8.16 Monitoramento | Logs de login e de ações administrativas | Tabela `log_auditoria` |
+| 5.34 Privacidade e dados pessoais | Dados de clientes segregados e com acesso restrito; transparência sobre o tratamento | `estabelecimento_id` em tudo; RLS no Supabase; acesso ao banco só pelo backend; Termos de uso e Política de privacidade aceitos nos dois portais (RN27) |
+| 8.16 Monitoramento | Logs de login, do aceite dos termos e das ações administrativas | Tabelas `log_auditoria` e `aceite_termos` |
 
 Autenticação por **token JWT** nas requisições depois do login. O token vale **8 horas**, sem refresh token: ao expirar, a Lídia faz login de novo. No navegador, ele fica no `sessionStorage`: continua ao recarregar a página e some ao fechar a aba. Ele vai no header `Authorization: Bearer`, e a chave de assinatura fica em variável de ambiente, nunca no código.
 
 **Bloqueio de login (RF02):** 5 falhas seguidas para o mesmo e-mail bloqueiam novos logins por 15 minutos. A contagem usa os registros `LOGIN_FALHA` do `log_auditoria` desde o último `LOGIN_SUCESSO`, sem alterar o DER. A mensagem é em linguagem simples e não revela se o e-mail existe.
 
-Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ESTABELECIMENTO_EDITADO`, `PRODUTO_CRIADO`, `PRODUTO_EDITADO`, `PRODUTO_EXCLUIDO`, `CATEGORIA_CRIADA`, `CATEGORIA_EDITADA` (o nome ou a ordem), `CATEGORIA_EXCLUIDA`, `PEDIDO_CRIADO`, `PEDIDO_EDITADO`, `PEDIDO_CONFIRMADO`, `PEDIDO_RECUSADO`, `PEDIDO_STATUS_ALTERADO`, `CLIENTE_ANONIMIZADO` (sem o nome e o telefone antigos). Em `PEDIDO_EDITADO`, o campo `detalhes` guarda o que mudou. Nas ações de categoria, `detalhes` guarda o antes e o depois (ZAP-136), e a categoria do produto entra no retrato de `PRODUTO_CRIADO` e `PRODUTO_EDITADO`. Cada registro guarda data, hora, IP de origem e user agent.
+**Aceite dos termos (RN27):** depois da senha certa, o login só emite o token com o aceite da versão vigente, vindo na requisição ou já gravado; senão, responde `TERMOS_PENDENTES`. O aceite vai para `aceite_termos` e para o log na mesma transação do login: se algo falhar, nada fica gravado.
+
+Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `TERMOS_ACEITOS` (com a versão aceita em `detalhes`, e o IP e o navegador como nos outros registros), `ESTABELECIMENTO_EDITADO`, `PRODUTO_CRIADO`, `PRODUTO_EDITADO`, `PRODUTO_EXCLUIDO`, `CATEGORIA_CRIADA`, `CATEGORIA_EDITADA` (o nome ou a ordem), `CATEGORIA_EXCLUIDA`, `PEDIDO_CRIADO`, `PEDIDO_EDITADO`, `PEDIDO_CONFIRMADO`, `PEDIDO_RECUSADO`, `PEDIDO_STATUS_ALTERADO`, `CLIENTE_ANONIMIZADO` (sem o nome e o telefone antigos). Em `PEDIDO_EDITADO`, o campo `detalhes` guarda o que mudou. Nas ações de categoria, `detalhes` guarda o antes e o depois (ZAP-136), e a categoria do produto entra no retrato de `PRODUTO_CRIADO` e `PRODUTO_EDITADO`. Cada registro guarda data, hora, IP de origem e user agent.
 
 ---
 
@@ -299,8 +307,8 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | 5.1.1 Indicador de foco visível | 2.4.7 (AA) | Borda destacada nos campos ao receber foco pelo teclado (começando pelo login) |
 | 5.1.4 Ordem de foco previsível | 2.4.3 (A) | Cadastro de produto: nome → categoria → vendido por → preço → descrição → alérgenos → foto → "Salvar" (ZAP-139). Categorias: a ordem muda arrastando ou pelo teclado, na mesma alça (Espaço pega, setas movem, Espaço solta, Esc desfaz), com o foco na categoria movida e cada passo anunciado para leitores de tela (ZAP-136). Cadastro de pedido: cliente → itens → data de retirada → hora de retirada → observações → "Salvar" |
 | 5.9.1 Texto alternativo | 1.1.1 (A) | Toda foto de produto com texto alternativo (`foto_texto_alternativo`) |
-| 5.12.12 Nível de linguagem | 3.1.5 (AAA) | Mensagens do WhatsApp em linguagem simples, sem termos técnicos |
-| 5.3.1 Rótulos ou instruções | 3.3.2 (A) | Todo campo de formulário com rótulo visível |
+| 5.12.12 Nível de linguagem | 3.1.5 (AAA) | Mensagens do WhatsApp, Termos de uso e Política de privacidade em linguagem simples, sem termos técnicos (RN27) |
+| 5.3.1 Rótulos ou instruções | 3.3.2 (A) | Todo campo de formulário com rótulo visível, inclusive a caixa de aceite dos termos no login e no pedido, que explica o motivo e recebe o foco quando falta marcar (RN27) |
 
 ---
 
@@ -313,7 +321,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | Acesso | Navegador (computador ou celular) | Sistema web, sem instalar aplicativo |
 | Hospedagem | **Render** (plano gratuito) | Frontend como Static Site e backend como Web Service (Docker); deploy automático a cada merge na `main`. O Docker Compose fica só no ambiente local |
 | Endereço e HTTPS | Render | Subdomínio gratuito `*.onrender.com`; HTTPS/TLS gerenciado, com HTTP redirecionando para HTTPS; regra de reescrita (`/*` → `/index.html`) para as rotas do React |
-| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos e categorias, Kanban com filtro de status, cadastro e edição de pedidos, botão "Enviar no WhatsApp". Portal do Cliente: cardápio público e montagem do pedido |
+| Frontend | **React 19 + Vite** | Painel da Lídia: login, estabelecimento, produtos e categorias, Kanban com filtro de status, cadastro e edição de pedidos, botão "Enviar no WhatsApp". Portal do Cliente: cardápio público e montagem do pedido. Nos dois: páginas públicas dos Termos de uso e da Política de privacidade (`/termos` e `/privacidade`, RN27) |
 | Backend | **Java 21 + Spring Boot 4** (build com **Maven**, com Maven Wrapper) | API REST (JSON); regras de negócio; upload de fotos; geração das mensagens e links `wa.me`; isolamento por estabelecimento; CORS liberado só para o endereço do frontend |
 | Persistência | **Spring Data JPA** + **Flyway** | Acesso ao banco; migrações em SQL puro em `backend/src/main/resources/db/migration`, só para frente |
 | Segurança | **Spring Security** | Login, BCrypt, JWT, política de senha |
@@ -379,6 +387,7 @@ Ações a registrar em `log_auditoria.acao`: `LOGIN_SUCESSO`, `LOGIN_FALHA`, `ES
 | produto — item_pedido | 1 : N | Um produto aparece em vários pedidos |
 | pedido — mensagem_whatsapp | 1 : N | Cada decisão gera uma mensagem |
 | estabelecimento / usuario — log_auditoria | 0..1 : N | Pode ser nulo em falha de login |
+| usuario — aceite_termos | 1 : N | Cada aceite dos termos é um registro novo, como histórico (RN27, ZAP-145) |
 
 ### 13.2 Tabelas
 
@@ -423,6 +432,18 @@ Acesso ao painel (Lídia). A Romilda e os clientes não têm usuário.
 | ultimo_login_em | TIMESTAMPTZ | Não | | Último login bem-sucedido |
 | criado_em | TIMESTAMPTZ | Sim | | Padrão now() |
 | atualizado_em | TIMESTAMPTZ | Sim | | |
+
+#### aceite_termos
+Aceite dos Termos de uso e da Política de privacidade pela Lídia, gravado junto com o login (RN27, ISO 5.34 e 8.16). Cada aceite é um registro novo: marcar a caixa de novo, em outro aparelho ou numa versão nova, guarda mais uma prova, sem apagar as anteriores. **Tabela nova**, fora do dicionário da Atividade #14 (V7, ZAP-145, ZAP-83).
+
+| Coluna | Tipo | Obr. | Chave | Observação |
+|---|---|---|---|---|
+| id | BIGINT | Sim | PK | IDENTITY |
+| usuario_id | BIGINT | Sim | FK | → usuario.id |
+| versao | INTEGER | Sim | | Versão aceita (`zappi.termos.versao` no momento do login). Maior que 0 (`ck_aceite_termos_versao`) |
+| aceito_em | TIMESTAMPTZ | Sim | | Padrão now() |
+| ip_origem | VARCHAR(45) | Não | | IPv4 e IPv6 |
+| user_agent | VARCHAR(255) | Não | | Navegador |
 
 #### unidade_medida
 Tabela de domínio. Valores fixos: 1-KG (Quilograma, aceita fração) e 2-UN (Unidade, não aceita fração).
@@ -478,6 +499,7 @@ Consumidor. Dados pessoais protegidos pela LGPD.
 | telefone_whatsapp | VARCHAR(13) | Sim | UK* | *Único por estabelecimento (estabelecimento_id + telefone_whatsapp) |
 | consentimento_lgpd | BOOLEAN | Sim | | Deve ser TRUE |
 | consentimento_em | TIMESTAMPTZ | Sim | | Evidência do aceite |
+| consentimento_versao | INTEGER | Não | | Versão dos Termos de uso e da Política de privacidade vigente quando o cliente foi gravado (RN16, RN27). Nula nos clientes de antes dos termos. Maior que 0 (`ck_cliente_consentimento_versao`). **Coluna nova** (V7, ZAP-145) |
 | anonimizado_em | TIMESTAMPTZ | Não | | Direito de exclusão (LGPD) |
 | criado_em | TIMESTAMPTZ | Sim | | Padrão now() |
 | atualizado_em | TIMESTAMPTZ | Sim | | |
@@ -564,6 +586,7 @@ Trilha de auditoria (ISO 8.16).
 - `CHECK` das formas de pagamento (ZAP-191): em `estabelecimento`, pelo menos uma e só DINHEIRO, PIX, CREDITO, DEBITO e VR (`ck_estabelecimento_formas_pagamento`); em `pedido`, nula ou uma delas (`ck_pedido_forma_pagamento`).
 - `ON DELETE CASCADE` em `item_pedido.pedido_id` e `mensagem_whatsapp.pedido_id`.
 - Categorias (ZAP-136, V6): índice único `uk_categoria_nome_ativa` em `categoria (estabelecimento_id, lower(nome)) WHERE ativo`, e `produto.categoria_id NOT NULL` com FK para `categoria`.
+- Termos (ZAP-145, V7): `CHECK (versao > 0)` em `aceite_termos` (`ck_aceite_termos_versao`), com o índice `idx_aceite_termos_usuario (usuario_id, aceito_em)` para achar o último aceite, e `CHECK (consentimento_versao IS NULL OR consentimento_versao > 0)` em `cliente` (`ck_cliente_consentimento_versao`).
 - Consistência de tenant (decisão da ZAP-64): `UNIQUE (id, estabelecimento_id)` em `cliente` e FK composta `(cliente_id, estabelecimento_id)` em `pedido`, referenciando `cliente (id, estabelecimento_id)`. O banco recusa um pedido com cliente de outro estabelecimento.
 - RLS habilitado em todas as tabelas (somente o backend acessa).
 
@@ -593,7 +616,7 @@ Trilha de auditoria (ISO 8.16).
    - bloqueio após falhas de login (RF02): **5 falhas seguidas bloqueiam por 15 minutos**;
    - ainda em aberto: quem será dono das contas do Render e do Supabase, e a validação do plano gratuito do Render (ZAP-86).
 9. **Criar e editar pedidos.** **Decidido (ZAP-64):** a Lídia pode **criar** pedidos (botão "Novo pedido" no quadro) e **editar** pedidos, com a edição limitada pelo status (RN21). Os produtos vêm do cardápio, o total é calculado pelo sistema, os itens antigos mantêm o preço (RN10) e toda criação e edição vai para o log. Virou a US7 (história `ZAP-87`).
-10. **Região dos servidores e LGPD.** O Render não tem região em São Paulo. Avaliar com a equipe uma nota na seção 9 sobre a localização dos dados.
+10. **Região dos servidores e LGPD.** **Decidido (ZAP-144, Política de privacidade):** o Render não tem região em São Paulo, e os dados ficam no Render e no Supabase, com servidores nos Estados Unidos. A política informa a transferência internacional (seção 5 dela), e a seção 9 tem a linha "Localização dos dados".
 11. **Portal do Cliente.** **Decidido (ZAP-18):**
     - **antecedência mínima:** 7 dias corridos pelo portal (RN22), confirmado pela Lídia. Abaixo do calendário, o portal mostra "Precisa para antes de 7 dias? Fale com a Lídia pelo WhatsApp", com link para o WhatsApp dela;
     - **limite de pedidos por data:** sem limite automático; a Lídia recusa o que não couber, pelo fluxo de recusa com motivo. **Confirmado** (`ZAP-57`);
@@ -718,6 +741,9 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Nome do produto | Dois campos: nome, com o tipo ("Bolo"), e sabor ("Brigadeiro de chocolate"), juntados pela tela | **Nome único e completo** (ex.: "Bolo de brigadeiro de chocolate"), com até 150 caracteres, sem a coluna `sabor` (RN26; 14/11/2026, ZAP-136, ZAP-83). Os nomes que já existiam foram montados pela mesma regra da tela. Motivo: tira a informação repetida e os nomes estranhos em produtos que não são bolos ("Salgado de cento de coxinha"); cada sabor continua sendo um produto, porque o preço varia por sabor |
 | Recheio e cobertura | Campos próprios no item do pedido: no portal, só em produtos por KG; no painel, em todos os itens (ZAP-18, seção 14, item 11) | **Saem do sistema** (RN26; 14/11/2026, ZAP-136, ZAP-83): a personalização vai na observação do item, num produto personalizável ("Bolo personalizado"), com uma dica só em todos os produtos. As colunas `item_pedido.recheio` e `item_pedido.cobertura` saíram, e os valores antigos foram para o começo da observação, que passou a 600 caracteres no banco (V6). Motivo: os bolos do cardápio vêm prontos, e os campos não faziam sentido para o cliente nem em salgados |
 | Ordem das categorias | Os pedidos mudam de coluna só por botões, sem arrastar (ZAP-64); o protótipo das categorias tinha "Subir" e "Descer" | **Arrastar**, com alternativa completa pelo teclado e cada passo anunciado para leitores de tela, **só na tela Categorias** (14/11/2026, validação do protótipo da ZAP-139, ZAP-136). Os pedidos continuam com botões. Motivo: na lista curta de categorias, arrastar é mais rápido que vários cliques em "Subir" e "Descer", e o teclado garante o acesso (NBR 17225 5.1.1 e 5.1.4) |
+| Termos de uso e política de privacidade | Não existiam: só o cliente dava o consentimento LGPD (RN16), sem um texto para consultar, e a Lídia entrava só com e-mail e senha | **Termos de uso e Política de privacidade** escritos pela equipe, versionados no repositório e abertos sem login em `/termos` e `/privacidade` (RN27; 14/11/2026, ZAP-143, ZAP-83). A Lídia aceita na tela de login, e o aceite fica no servidor, com versão, data, IP e navegador; o cliente aceita na mesma caixa do consentimento, e a versão fica no cadastro dele. Tabela nova `aceite_termos` e coluna nova `cliente.consentimento_versao` (V7, ZAP-145); ação nova `TERMOS_ACEITOS` no log. Motivo: exigência nova do projeto, para dar transparência sobre o uso dos dados nos dois portais (LGPD) e informar as regras do pedido (CDC) |
+| Consultar os termos no painel | Item "Termos e privacidade" acima de "Sair", no menu da conta (proposta inicial da ZAP-143) | **Dois links pequenos no rodapé da caixinha da conta**, "Termos de uso · Política de privacidade", no modelo do menu da conta do Google (ajuste de 14/11/2026, ZAP-147). Cada link abre o texto com a versão aceita e a data. Motivo: ajuste do grupo na ZAP-143, seguindo o modelo do menu da conta do Google |
+| Localização dos dados (LGPD) | Em aberto (seção 14, item 10): avaliar uma nota sobre a região dos servidores | **Informada na Política de privacidade** (ZAP-144): Render e Supabase, com servidores nos Estados Unidos, e transferência internacional com as proteções da LGPD. Motivo: o Render não tem região no Brasil, e o titular precisa saber onde ficam os dados |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
