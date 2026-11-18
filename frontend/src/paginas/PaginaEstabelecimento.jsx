@@ -417,13 +417,10 @@ export function PaginaEstabelecimento() {
               <span className={classes.icone}><IconCash size={24} aria-hidden /></span>
               Formas de pagamento
             </h2>
-            <fieldset className={classes.grupo} aria-describedby={`pagamento-dica${erros.formasPagamento ? ' pagamento-erro' : ''}`} aria-invalid={erros.formasPagamento ? true : undefined}>
+            <fieldset className={classes.grupo} aria-describedby={erros.formasPagamento ? 'pagamento-erro' : undefined} aria-invalid={erros.formasPagamento ? true : undefined}>
               <legend className={classes.rotulo}>
                 Formas que a loja aceita <span className={classes.obrigatorio}>(escolha pelo menos uma)</span>
               </legend>
-              <p id="pagamento-dica" className={classes.dica}>
-                O cliente escolhe uma delas ao fazer o pedido. O pagamento é sempre na retirada.
-              </p>
               <div className={classes.formas}>
                 {FORMAS_PAGAMENTO.map(({ codigo, nome }, indice) => (
                   <Checkbox

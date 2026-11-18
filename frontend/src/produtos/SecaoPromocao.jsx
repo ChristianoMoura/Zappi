@@ -164,7 +164,6 @@ export function SecaoPromocao({ produto, aoMudar, aoAvisar }) {
         </form>
       ) : (
         <>
-          <p className={classes.dica}>Sem promoção. Com o desconto, o cardápio mostra o preço novo e o antigo riscado.</p>
           <Button ref={botao} variant="outline" onClick={abrir} leftSection={<IconDiscount size={22} aria-hidden />}>
             Aplicar desconto
           </Button>
