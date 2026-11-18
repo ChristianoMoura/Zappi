@@ -34,7 +34,7 @@ export function lerBlocos(markdown) {
   }
 
   markdown
-    .replace(/\r\n/g, '\n')
+    .replaceAll('\r\n', '\n')
     .split('\n')
     .forEach((conteudo, indice) => {
       const linha = indice + 1
@@ -75,21 +75,51 @@ export function lerBlocos(markdown) {
 // { tipo: 'link', texto, destino, externo, posicao }. A posição é onde o pedaço começa na linha e
 // serve de chave na tela. O negrito pode ter um link dentro? Não nos textos de hoje; se aparecer, o
 // link fica como texto, sem quebrar a página.
+//
+// A leitura é feita com indexOf, sem uma expressão regular única: a regex que juntava os três
+// casos podia ficar lenta (backtracking), e o SonarCloud barrou o PR por isso.
 export function lerTrechos(linha) {
   const trechos = []
-  const padrao = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g
   let inicio = 0
-  for (const achado of linha.matchAll(padrao)) {
-    const posicao = achado.index
-    if (posicao > inicio) trechos.push({ tipo: 'texto', texto: linha.slice(inicio, posicao), posicao: inicio })
-    if (achado[1] !== undefined) trechos.push({ tipo: 'negrito', texto: achado[1], posicao })
-    else if (achado[2] !== undefined) trechos.push({ tipo: 'codigo', texto: achado[2], posicao })
-    else {
-      const destino = PAGINA_DO_ARQUIVO[achado[4]] ?? achado[4]
-      trechos.push({ tipo: 'link', texto: achado[3], destino, externo: /^https?:\/\//.test(destino), posicao })
+  let posicao = 0
+  while (posicao < linha.length) {
+    const achado = lerMarcacao(linha, posicao)
+    if (achado) {
+      if (posicao > inicio) trechos.push({ tipo: 'texto', texto: linha.slice(inicio, posicao), posicao: inicio })
+      trechos.push({ ...achado.trecho, posicao })
+      posicao = achado.fim
+      inicio = posicao
+    } else {
+      posicao += 1
     }
-    inicio = posicao + achado[0].length
   }
   if (inicio < linha.length) trechos.push({ tipo: 'texto', texto: linha.slice(inicio), posicao: inicio })
   return trechos
+}
+
+// Lê a marcação que começa na posição: **negrito**, `código` ou [texto](destino), sempre com
+// algum conteúdo dentro. Devolve o trecho e onde a marcação termina, ou nulo se ali não começa
+// nenhuma (aí o caractere fica como texto).
+function lerMarcacao(linha, posicao) {
+  if (linha.startsWith('**', posicao)) {
+    const fim = linha.indexOf('*', posicao + 2)
+    if (fim <= posicao + 2 || !linha.startsWith('**', fim)) return null
+    return { trecho: { tipo: 'negrito', texto: linha.slice(posicao + 2, fim) }, fim: fim + 2 }
+  }
+  if (linha[posicao] === '`') {
+    const fim = linha.indexOf('`', posicao + 1)
+    if (fim <= posicao + 1) return null
+    return { trecho: { tipo: 'codigo', texto: linha.slice(posicao + 1, fim) }, fim: fim + 1 }
+  }
+  if (linha[posicao] === '[') {
+    const fimTexto = linha.indexOf(']', posicao + 1)
+    if (fimTexto <= posicao + 1 || linha[fimTexto + 1] !== '(') return null
+    const fimDestino = linha.indexOf(')', fimTexto + 2)
+    if (fimDestino <= fimTexto + 2) return null
+    const arquivo = linha.slice(fimTexto + 2, fimDestino)
+    const destino = PAGINA_DO_ARQUIVO[arquivo] ?? arquivo
+    const externo = destino.startsWith('https://') || destino.startsWith('http://')
+    return { trecho: { tipo: 'link', texto: linha.slice(posicao + 1, fimTexto), destino, externo }, fim: fimDestino + 1 }
+  }
+  return null
 }

@@ -86,9 +86,15 @@ export function PaginaTextoLegal({ documento }) {
 
   useEffect(() => {
     let ativo = true
-    buscarTermosAceitos(autenticado ? token : null).then((resposta) => {
-      if (ativo) setAceite(resposta)
-    })
+    // O serviço já devolve nulo quando algo dá errado; o catch é só uma garantia: sem a resposta,
+    // a página continua sem a frase do aceite
+    buscarTermosAceitos(autenticado ? token : null)
+      .then((resposta) => {
+        if (ativo) setAceite(resposta)
+      })
+      .catch(() => {
+        if (ativo) setAceite(null)
+      })
     return () => {
       ativo = false
     }
@@ -126,9 +132,10 @@ export function PaginaTextoLegal({ documento }) {
           <Fragment key={bloco.linha}>
             <Bloco bloco={bloco} />
             {ordem === 1 && aceite && (
-              <p className={classes.aceite} role="status">
+              // <output> já é um aviso (papel "status") para o leitor de tela, como pede o SonarCloud
+              <output className={classes.aceite}>
                 Você aceitou a versão {aceite.versao} em {dataDoAceite(aceite.aceitoEm)}.
-              </p>
+              </output>
             )}
           </Fragment>
         ))}
