@@ -13,12 +13,12 @@ import { useTituloPagina } from './useTituloPagina'
 // e o botão "Voltar ao painel"; sem login, o "Voltar" leva para a página de antes, se houver.
 
 function Trechos({ linha }) {
-  return lerTrechos(linha).map((trecho, i) => {
-    if (trecho.tipo === 'negrito') return <strong key={i}>{trecho.texto}</strong>
-    if (trecho.tipo === 'codigo') return <code key={i}>{trecho.texto}</code>
+  return lerTrechos(linha).map((trecho) => {
+    if (trecho.tipo === 'negrito') return <strong key={trecho.posicao}>{trecho.texto}</strong>
+    if (trecho.tipo === 'codigo') return <code key={trecho.posicao}>{trecho.texto}</code>
     if (trecho.tipo === 'link' && trecho.externo) {
       return (
-        <a key={i} href={trecho.destino} target="_blank" rel="noopener noreferrer">
+        <a key={trecho.posicao} href={trecho.destino} target="_blank" rel="noopener noreferrer">
           {trecho.texto}
           <span className={classes.somenteLeitor}> (abre em outra aba)</span>
         </a>
@@ -26,12 +26,12 @@ function Trechos({ linha }) {
     }
     if (trecho.tipo === 'link') {
       return (
-        <Link key={i} to={trecho.destino}>
+        <Link key={trecho.posicao} to={trecho.destino}>
           {trecho.texto}
         </Link>
       )
     }
-    return <Fragment key={i}>{trecho.texto}</Fragment>
+    return <Fragment key={trecho.posicao}>{trecho.texto}</Fragment>
   })
 }
 
@@ -55,9 +55,9 @@ function Bloco({ bloco }) {
   if (bloco.tipo === 'lista') {
     return (
       <ul className={bloco.letras ? classes.letras : undefined}>
-        {bloco.itens.map((item, i) => (
-          <li key={i}>
-            <Trechos linha={item} />
+        {bloco.itens.map((item) => (
+          <li key={item.linha}>
+            <Trechos linha={item.texto} />
           </li>
         ))}
       </ul>
@@ -122,10 +122,10 @@ export function PaginaTextoLegal({ documento }) {
 
       {/* O título e a versão vêm primeiro; logo depois, quando a Lídia aceitou */}
       <main className={classes.texto}>
-        {lerBlocos(texto).map((bloco, i) => (
-          <Fragment key={i}>
+        {lerBlocos(texto).map((bloco, ordem) => (
+          <Fragment key={bloco.linha}>
             <Bloco bloco={bloco} />
-            {i === 1 && aceite && (
+            {ordem === 1 && aceite && (
               <p className={classes.aceite} role="status">
                 Você aceitou a versão {aceite.versao} em {dataDoAceite(aceite.aceitoEm)}.
               </p>

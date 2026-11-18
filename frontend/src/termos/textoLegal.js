@@ -17,70 +17,79 @@ export const DOCUMENTOS = {
 const PAGINA_DO_ARQUIVO = { 'termos-de-uso.md': '/termos', 'politica-de-privacidade.md': '/privacidade' }
 
 // Divide o Markdown em blocos: { tipo: 'titulo', nivel, texto } | 'paragrafo' | 'resumo' | 'linha'
-// | { tipo: 'lista', itens, letras }. Linhas seguidas do mesmo parágrafo viram um só.
+// | { tipo: 'lista', itens: [{ texto, linha }], letras }. Linhas seguidas do mesmo parágrafo viram um
+// só. Cada bloco e cada item guarda a linha do arquivo onde começa: ela não muda com a lista e
+// serve de chave na tela.
 export function lerBlocos(markdown) {
   const blocos = []
-  let paragrafo = []
+  let paragrafo = null
   let lista = null
   const fecharParagrafo = () => {
-    if (paragrafo.length) blocos.push({ tipo: 'paragrafo', texto: paragrafo.join(' ') })
-    paragrafo = []
+    if (paragrafo) blocos.push({ tipo: 'paragrafo', linha: paragrafo.linha, texto: paragrafo.partes.join(' ') })
+    paragrafo = null
   }
   const fecharLista = () => {
     if (lista) blocos.push(lista)
     lista = null
   }
 
-  for (const linha of markdown.replace(/\r\n/g, '\n').split('\n')) {
-    const texto = linha.trim()
-    const titulo = texto.match(/^(#{1,3}) (.*)$/)
-    if (!texto) {
-      fecharParagrafo()
-      fecharLista()
-    } else if (titulo) {
-      fecharParagrafo()
-      fecharLista()
-      blocos.push({ tipo: 'titulo', nivel: titulo[1].length, texto: titulo[2] })
-    } else if (texto === '---') {
-      fecharParagrafo()
-      fecharLista()
-      blocos.push({ tipo: 'linha' })
-    } else if (texto.startsWith('> ')) {
-      fecharParagrafo()
-      fecharLista()
-      blocos.push({ tipo: 'resumo', texto: texto.slice(2) })
-    } else if (texto.startsWith('- ')) {
-      fecharParagrafo()
-      // Itens que já começam com (a), (i)... não levam a bolinha
-      lista ??= { tipo: 'lista', itens: [], letras: texto.startsWith('- (') }
-      lista.itens.push(texto.slice(2))
-    } else {
-      fecharLista()
-      paragrafo.push(texto)
-    }
-  }
+  markdown
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .forEach((conteudo, indice) => {
+      const linha = indice + 1
+      const texto = conteudo.trim()
+      const titulo = texto.match(/^(#{1,3}) (.*)$/)
+      if (!texto) {
+        fecharParagrafo()
+        fecharLista()
+      } else if (titulo) {
+        fecharParagrafo()
+        fecharLista()
+        blocos.push({ tipo: 'titulo', linha, nivel: titulo[1].length, texto: titulo[2] })
+      } else if (texto === '---') {
+        fecharParagrafo()
+        fecharLista()
+        blocos.push({ tipo: 'linha', linha })
+      } else if (texto.startsWith('> ')) {
+        fecharParagrafo()
+        fecharLista()
+        blocos.push({ tipo: 'resumo', linha, texto: texto.slice(2) })
+      } else if (texto.startsWith('- ')) {
+        fecharParagrafo()
+        // Itens que já começam com (a), (i)... não levam a bolinha
+        lista ??= { tipo: 'lista', linha, itens: [], letras: texto.startsWith('- (') }
+        lista.itens.push({ texto: texto.slice(2), linha })
+      } else {
+        fecharLista()
+        paragrafo ??= { linha, partes: [] }
+        paragrafo.partes.push(texto)
+      }
+    })
   fecharParagrafo()
   fecharLista()
   return blocos
 }
 
-// Divide uma linha em pedaços: { tipo: 'texto' | 'negrito' | 'codigo', texto } ou
-// { tipo: 'link', texto, destino, externo }. O negrito pode ter um link dentro? Não nos textos de
-// hoje; se aparecer, o link fica como texto, sem quebrar a página.
+// Divide uma linha em pedaços: { tipo: 'texto' | 'negrito' | 'codigo', texto, posicao } ou
+// { tipo: 'link', texto, destino, externo, posicao }. A posição é onde o pedaço começa na linha e
+// serve de chave na tela. O negrito pode ter um link dentro? Não nos textos de hoje; se aparecer, o
+// link fica como texto, sem quebrar a página.
 export function lerTrechos(linha) {
   const trechos = []
   const padrao = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g
   let inicio = 0
   for (const achado of linha.matchAll(padrao)) {
-    if (achado.index > inicio) trechos.push({ tipo: 'texto', texto: linha.slice(inicio, achado.index) })
-    if (achado[1] !== undefined) trechos.push({ tipo: 'negrito', texto: achado[1] })
-    else if (achado[2] !== undefined) trechos.push({ tipo: 'codigo', texto: achado[2] })
+    const posicao = achado.index
+    if (posicao > inicio) trechos.push({ tipo: 'texto', texto: linha.slice(inicio, posicao), posicao: inicio })
+    if (achado[1] !== undefined) trechos.push({ tipo: 'negrito', texto: achado[1], posicao })
+    else if (achado[2] !== undefined) trechos.push({ tipo: 'codigo', texto: achado[2], posicao })
     else {
       const destino = PAGINA_DO_ARQUIVO[achado[4]] ?? achado[4]
-      trechos.push({ tipo: 'link', texto: achado[3], destino, externo: /^https?:\/\//.test(destino) })
+      trechos.push({ tipo: 'link', texto: achado[3], destino, externo: /^https?:\/\//.test(destino), posicao })
     }
-    inicio = achado.index + achado[0].length
+    inicio = posicao + achado[0].length
   }
-  if (inicio < linha.length) trechos.push({ tipo: 'texto', texto: linha.slice(inicio) })
+  if (inicio < linha.length) trechos.push({ tipo: 'texto', texto: linha.slice(inicio), posicao: inicio })
   return trechos
 }
