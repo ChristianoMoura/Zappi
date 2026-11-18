@@ -145,6 +145,31 @@ describe('Edição de pedido (ZAP-91, RF14, RN21)', () => {
     expect(editarPedido).not.toHaveBeenCalled()
   })
 
+  // O filtro do quadro (ZAP-179) vai junto para a edição e volta com ela (ZAP-180)
+  test.each([
+    ['cancelar', 'Cancelar'],
+    ['salvar', 'Salvar alterações'],
+  ])('com o filtro em Confirmado, %s a edição volta para o quadro ainda filtrado', async (_acao, botao) => {
+    const usuario = userEvent.setup()
+    const roteador = renderizarComRotas(rotas, '/pedidos?status=2')
+    await usuario.click(await screen.findByRole('button', { name: /Pedido 11,/ }))
+    const detalhes = await screen.findByRole('dialog', { name: 'Pedido #11' })
+
+    await usuario.click(within(detalhes).getByRole('link', { name: 'Editar pedido' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Editar pedido #11' })).toBeVisible()
+    expect(roteador.state.location.search).toBe('?status=2')
+
+    await usuario.click(screen.getByRole('button', { name: botao }))
+
+    expect(await screen.findByRole('dialog', { name: 'Pedido #11' })).toBeInTheDocument()
+    expect(roteador.state.location.pathname).toBe('/pedidos')
+    expect(roteador.state.location.search).toBe('?status=2')
+    expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveValue('2')
+    // Só a coluna Confirmado na tela (o painel aberto também tem um título de nível 2)
+    expect(screen.getByRole('group', { name: 'Pedidos da coluna Confirmado, 1 pedido' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 2, name: /^Novo/ })).not.toBeInTheDocument()
+  })
+
   test('avisa quando não consegue salvar', async () => {
     const usuario = userEvent.setup()
     editarPedido.mockRejectedValue(new Error('falhou'))

@@ -90,6 +90,26 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4)
     })
 
+    test.each(['99', 'abc', ''])('valor inválido no endereço (?status=%s) abre em "Todos" (ZAP-180)', async (valor) => {
+      await abrirQuadro(`/pedidos?status=${valor}`)
+
+      expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveValue('')
+      expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent.replace(/\d+$/, ''))).toEqual(['Novo', 'Confirmado', 'Em produção', 'Concluído'])
+      expect(screen.queryByText('Rita Gomes')).not.toBeInTheDocument()
+    })
+
+    test('voltando para "Todos" pelo filtro, o endereço fica sem status e o resultado é anunciado (ZAP-180)', async () => {
+      const usuario = userEvent.setup()
+      const roteador = renderizarQuadro('/pedidos?status=2')
+      await screen.findByRole('heading', { level: 1, name: 'Pedidos' })
+
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' }), '')
+
+      expect(roteador.state.location.search).toBe('')
+      expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4)
+      expect(screen.getByText('Mostrando todos os pedidos, menos os entregues e os recusados.')).toBeInTheDocument()
+    })
+
     test('abre os detalhes do pedido e devolve o foco ao card ao fechar (RF08)', async () => {
       const usuario = userEvent.setup()
       await abrirQuadro()

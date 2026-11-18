@@ -67,6 +67,27 @@ describe('Recusar e cancelar pedido (ZAP-54, RF11, RN05)', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })).toHaveFocus())
   })
 
+  test('com o filtro em Confirmado, cancelar mantém o painel e o filtro; ao fechar, o foco vai para o filtro (ZAP-180)', async () => {
+    const usuario = userEvent.setup()
+    const detalhes = await abrirPedido(usuario, 11, '/pedidos?status=2')
+    const janela = await abrirJanela(usuario, detalhes, 'Cancelar pedido', 'Cancelar pedido #11')
+
+    await usuario.type(within(janela).getByRole('textbox', { name: /Motivo/ }), 'Faltou ingrediente.')
+    await usuario.click(within(janela).getByRole('button', { name: 'Cancelar pedido' }))
+
+    // O painel continua aberto com o aviso, e o filtro não muda sozinho para Recusado
+    expect(await within(detalhes).findByText(/Pedido cancelado e movido para a coluna Recusado/)).toBeVisible()
+    expect(screen.getByRole('dialog', { name: 'Pedido #11' })).toBe(detalhes)
+    const filtro = screen.getByRole('combobox', { name: 'Filtrar pedidos por status' })
+    expect(filtro).toHaveValue('2')
+
+    // O card saiu de Confirmado: ao fechar, o foco vai para o filtro, e não se perde
+    await usuario.click(within(detalhes).getByRole('button', { name: 'Fechar detalhes' }))
+    await waitFor(() => expect(filtro).toHaveFocus())
+    expect(screen.queryByRole('button', { name: /Pedido 11,/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Nenhum pedido em Confirmado.')).toBeVisible()
+  })
+
   test('não recusa sem motivo e explica o que falta', async () => {
     const usuario = userEvent.setup()
     const detalhes = await abrirPedido(usuario, 12)
