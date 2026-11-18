@@ -76,8 +76,10 @@
 }
 
 /* ---------- Cabeçalho ---------- */
+/* A caixa branca cobre só a beirada de baixo da capa: a capa mais alta deixa aparecer o que a
+   loja colocou nela, como o nome e o contato */
 .capa {
-  height: 120px;
+  height: 170px;
   background: #d9cfc3;
   overflow: hidden;
 }
@@ -1037,7 +1039,7 @@
   }
 
   .capa {
-    height: 160px;
+    height: 280px;
   }
 
   .lista,
