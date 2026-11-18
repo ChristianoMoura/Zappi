@@ -31,6 +31,25 @@ export function esquecerTermosVigentes() {
   consulta = null
 }
 
+// Último aceite da Lídia, para as páginas /termos e /privacidade (ZAP-148):
+//
+//   GET /api/autenticacao/termos-aceitos (com token) → 200 { "versao": 1, "aceitoEm": "2026-11-17T21:30:00Z" }
+//                                                    → 204 sem aceite
+//
+// Sem token, sem aceite, sem a rota ou sem conexão, devolve nulo e a página só não mostra a frase.
+// Não usa o chamarApi: as páginas são públicas, e um token vencido não pode mandar para o login.
+export async function buscarTermosAceitos(token) {
+  if (!token) return null
+  try {
+    const resposta = await fetch('/api/autenticacao/termos-aceitos', { headers: { Authorization: `Bearer ${token}` } })
+    if (resposta.status !== 200) return null
+    const dados = await resposta.json()
+    return Number.isInteger(dados?.versao) && dados.aceitoEm ? { versao: dados.versao, aceitoEm: dados.aceitoEm } : null
+  } catch {
+    return null
+  }
+}
+
 export function lerVersaoAceita() {
   try {
     const guardada = Number(localStorage.getItem(CHAVE_LEMBRETE))
