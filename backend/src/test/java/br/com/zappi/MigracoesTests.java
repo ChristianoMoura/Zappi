@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -91,39 +93,65 @@ class MigracoesTests {
 	}
 
 	@Test
-	void criaGlutenEAlergenosDoProdutoComoOpcionais() {
+	void criaAListaDeAlergenosEOTextoLivreNoLugarDoContemGluten() {
 		List<Map<String, Object>> colunas = jdbc.queryForList("""
-				select column_name, data_type, character_maximum_length, is_nullable, column_default
+				select column_name, data_type, udt_name, character_maximum_length, is_nullable, column_default
 				from information_schema.columns
-				where table_name = 'produto' and column_name in ('contem_gluten', 'outros_alergenos')
+				where table_name = 'produto' and column_name in ('alergenos', 'contem_gluten', 'outros_alergenos')
 				order by column_name
 				""");
 
-		assertThat(colunas).hasSize(2);
-		assertThat(colunas.get(0)).containsEntry("column_name", "contem_gluten")
-			.containsEntry("data_type", "boolean")
-			.containsEntry("is_nullable", "YES")
-			.containsEntry("column_default", null);
-		assertThat(colunas.get(1)).containsEntry("column_name", "outros_alergenos")
-			.containsEntry("data_type", "character varying")
+		// O contem_gluten da V5 sai na V12 (ZAP-197): o glúten é o código GLUTEN da lista
+		assertThat(colunas).extracting(coluna -> coluna.get("column_name"))
+			.containsExactly("alergenos", "outros_alergenos");
+		assertThat(colunas.get(0)).containsEntry("data_type", "ARRAY")
+			.containsEntry("udt_name", "_varchar")
+			.containsEntry("is_nullable", "NO")
+			.containsEntry("column_default", "'{}'::character varying[]");
+		assertThat(colunas.get(1)).containsEntry("data_type", "character varying")
 			.containsEntry("character_maximum_length", 300)
 			.containsEntry("is_nullable", "YES");
 	}
 
 	@Test
-	void produtoSemGlutenInformadoFicaComoNaoInformado() {
-		long estabelecimento = criarEstabelecimento("confeitaria-a");
+	void produtoNovoComecaSemAlergenos() {
+		Map<String, Object> produto = jdbc.queryForMap(
+				"select array_length(alergenos, 1) as quantos, outros_alergenos from produto where id = ?",
+				criarProduto(criarEstabelecimento("confeitaria-a")));
 
-		Map<String, Object> produto = jdbc.queryForMap("""
+		assertThat(produto).containsEntry("quantos", null).containsEntry("outros_alergenos", null);
+	}
+
+	@Test
+	void aceitaTodosOsAlergenosDaLista() {
+		long produto = criarProduto(criarEstabelecimento("confeitaria-a"));
+
+		assertThat(jdbc.update(
+				"update produto set alergenos = '{GLUTEN,LEITE,OVOS,SOJA,AMENDOIM,CASTANHAS,GERGELIM}' where id = ?",
+				produto))
+			.isEqualTo(1);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "{GLUTEN,MOSTARDA}", "{gluten}", "{GLUTEN,NULL}", "{\"\"}" })
+	void recusaAlergenoForaDaLista(String lista) {
+		long produto = criarProduto(criarEstabelecimento("confeitaria-a"));
+
+		assertThatThrownBy(
+				() -> jdbc.update("update produto set alergenos = ?::varchar[] where id = ?", lista, produto))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("ck_produto_alergenos");
+	}
+
+	private long criarProduto(long estabelecimento) {
+		return jdbc.queryForObject("""
 				with categoria as (
 				    insert into categoria (estabelecimento_id, nome, ordem) values (?, 'Bolos', 1) returning id
 				)
 				insert into produto (estabelecimento_id, categoria_id, unidade_medida_id, nome, preco)
 				select ?, categoria.id, 1, 'Bolo de brigadeiro', 100.00 from categoria
-				returning contem_gluten, outros_alergenos
-				""", estabelecimento, estabelecimento);
-
-		assertThat(produto).containsEntry("contem_gluten", null).containsEntry("outros_alergenos", null);
+				returning id
+				""", Long.class, estabelecimento, estabelecimento);
 	}
 
 	@Test

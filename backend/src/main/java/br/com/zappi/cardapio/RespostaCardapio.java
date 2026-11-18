@@ -28,9 +28,12 @@ public record RespostaCardapio(LojaDoCardapio estabelecimento, List<RespostaCate
 	 * Produto ativo do cardápio (RN14). {@code foto} é o endereço público da imagem, sempre com
 	 * o texto alternativo quando existe (RN15). O nome é o nome completo (ZAP-136). {@code preco}
 	 * é o preço normal, e {@code precoPromocional} o com desconto, ou nulo sem promoção (ZAP-152).
+	 * {@code alergenos} são os códigos da lista fixa, na ordem dela, e {@code outrosAlergenos} o
+	 * texto livre, ou nulo, para os selos do cardápio (ZAP-197).
 	 */
 	public record ProdutoDoCardapio(Long id, String nome, RespostaCategoria categoria, String unidade, BigDecimal preco,
-			BigDecimal precoPromocional, String descricao, String foto, String textoAlternativo) {
+			BigDecimal precoPromocional, String descricao, String foto, String textoAlternativo, List<String> alergenos,
+			String outrosAlergenos) {
 	}
 
 }
