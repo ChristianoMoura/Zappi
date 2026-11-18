@@ -3,21 +3,30 @@ package br.com.zappi.notificacao;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -31,15 +40,18 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.zappi.TestcontainersConfiguration;
+import br.com.zappi.pedido.PedidoRepositorio;
 import br.com.zappi.seguranca.ServicoToken;
 import br.com.zappi.seguranca.UsuarioAutenticado;
 import jakarta.persistence.EntityManager;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Caixa de notificações do painel (ZAP-174, ZAP-172): aviso de novo pedido do portal, avisos de
- * retirada próxima sem repetir e as três rotas, só com os dados do próprio estabelecimento. A
- * matriz completa de testes fica na ZAP-176.
+ * Caixa de notificações do painel (ZAP-174, ZAP-172, ZAP-176): aviso de novo pedido do portal,
+ * avisos de retirada próxima sem repetir (com o relógio controlado, no horário de São Paulo), as
+ * três rotas, só com os dados do próprio estabelecimento, e nenhum dado pessoal (RN17). Os
+ * momentos de cada status ficam em {@link MomentosDaNotificacaoTests}, e o desfazer junto com o
+ * pedido, em {@link NovoPedidoRollbackTests}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -66,6 +78,12 @@ class NotificacoesTests {
 
 	@Autowired
 	private EntityManager entityManager;
+
+	@Autowired
+	private NotificacaoRepositorio notificacoes;
+
+	@Autowired
+	private PedidoRepositorio pedidos;
 
 	private long casaBelt;
 
@@ -152,15 +170,114 @@ class NotificacoesTests {
 	}
 
 	@Test
-	void recusadoOuComRetiradaQueJaPassouNaoAvisa() {
+	void pedidoDoPortalRecusadoPelasRegrasNaoAvisa() throws Exception {
+		// Retirada amanhã: o portal exige 7 dias de antecedência (RN22)
+		mockMvc
+			.perform(post("/api/cardapio/casa-belt/pedidos").contentType(MediaType.APPLICATION_JSON)
+				.content(json.writeValueAsString(pedido("Carla Nova", "5511988887777", hoje().plusDays(1).atTime(15, 0)))))
+			.andExpect(status().isBadRequest());
+
+		assertThat(jdbc.queryForObject("select count(*) from notificacao", Integer.class)).isZero();
+	}
+
+	@Test
+	void entregueRecusadoOuComRetiradaQueJaPassouNaoAvisa() {
 		LocalDate amanha = hoje().plusDays(1);
 		long recusado = pedidoGravado(10, 5, amanha.atTime(15, 0));
 		long passou = pedidoGravado(11, 2, amanha.atTime(9, 0));
+		long entregue = pedidoGravado(12, 6, amanha.atTime(15, 0));
 
 		servico.gerarRetiradasProximas(casaBelt, amanha.atTime(13, 0));
 
 		assertThat(momentos(recusado)).isEmpty();
 		assertThat(momentos(passou)).isEmpty();
+		assertThat(momentos(entregue)).isEmpty();
+	}
+
+	@Test
+	void relogioDoServidorEmUtcSegueOHorarioDeSaoPaulo() {
+		LocalDate dia = hoje().plusDays(10);
+		long confirmado = pedidoGravado(10, 2, dia.atTime(15, 0));
+
+		// 7h59 em São Paulo são 10h59 em UTC: ainda não é hora do aviso do dia
+		assertThat(servicoAs(dia.atTime(7, 59)).contarNaoVistas(lidia())).isZero();
+		assertThat(momentos(confirmado)).isEmpty();
+
+		assertThat(servicoAs(dia.atTime(8, 0)).contarNaoVistas(lidia())).isEqualTo(1);
+		assertThat(momentos(confirmado)).containsExactly("NO_DIA");
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = { 2, 3, 4 })
+	void pedidoConfirmadoEmProducaoOuConcluidoAvisaNoDiaEDuasHorasAntesUmaVezSo(int status) {
+		LocalDate dia = hoje().plusDays(10);
+		long pedido = pedidoGravado(10, status, dia.atTime(15, 0));
+
+		consultar(dia.minusDays(1).atTime(12, 0), dia.atTime(7, 59));
+		assertThat(momentos(pedido)).isEmpty();
+
+		consultar(dia.atTime(8, 0), dia.atTime(8, 1), dia.atTime(12, 59));
+		assertThat(momentos(pedido)).containsExactly("NO_DIA");
+
+		// Várias consultas seguidas, como o sino faz a cada minuto, não duplicam avisos
+		consultar(dia.atTime(13, 0), dia.atTime(13, 0), dia.atTime(13, 1), dia.atTime(14, 30));
+		assertThat(momentos(pedido)).containsExactlyInAnyOrder("NO_DIA", "DUAS_HORAS");
+		assertThat(servicoAs(dia.atTime(14, 31)).contarNaoVistas(lidia())).isEqualTo(2);
+		assertThat(textos(dia.atTime(14, 31))).containsExactlyInAnyOrder("Pedido #10 é retirado hoje às 15h",
+				"Pedido #10 é retirado às 15h, daqui a 2 horas");
+
+		// Depois da retirada, nada de novo
+		consultar(dia.atTime(15, 30));
+		assertThat(momentos(pedido)).hasSize(2);
+	}
+
+	@Test
+	void pedidoNovoAvisaNaVesperaENoDiaComOAindaNaoConfirmado() {
+		LocalDate dia = hoje().plusDays(10);
+		long novo = pedidoGravado(10, 1, dia.atTime(15, 0));
+
+		consultar(dia.minusDays(2).atTime(12, 0), dia.minusDays(1).atTime(7, 59));
+		assertThat(momentos(novo)).isEmpty();
+
+		consultar(dia.minusDays(1).atTime(8, 0), dia.minusDays(1).atTime(20, 0));
+		assertThat(momentos(novo)).containsExactly("VESPERA");
+		assertThat(textos(dia.minusDays(1).atTime(20, 0)))
+			.containsExactly("Pedido #10 ainda não foi confirmado e é retirado amanhã às 15h");
+
+		// No dia, o aviso do dia; o de 2 horas antes não é para pedido Novo
+		consultar(dia.atTime(8, 0), dia.atTime(13, 0), dia.atTime(14, 0));
+		assertThat(momentos(novo)).containsExactlyInAnyOrder("VESPERA", "NO_DIA");
+		assertThat(servicoAs(dia.atTime(14, 0)).contarNaoVistas(lidia())).isEqualTo(2);
+		// Lido no dia, os dois dizem "hoje"
+		assertThat(textos(dia.atTime(14, 0))).containsExactly(
+				"Pedido #10 ainda não foi confirmado e é retirado hoje às 15h",
+				"Pedido #10 ainda não foi confirmado e é retirado hoje às 15h");
+	}
+
+	@Test
+	void textoContinuaSemDadoPessoalDepoisDeAnonimizarOCliente() throws Exception {
+		// Pedido #1 da V2, da Ana Exemplo, com um aviso de cada tipo
+		long pedidoDaAna = jdbc.queryForObject("select id from pedido where estabelecimento_id = ? and numero = 1",
+				Long.class, casaBelt);
+		notificacaoNova(casaBelt, pedidoDaAna);
+		jdbc.update("insert into notificacao (estabelecimento_id, pedido_id, tipo, momento) values (?, ?, 2, 'NO_DIA')",
+				casaBelt, pedidoDaAna);
+		semDadosDaAna(comToken(get("/api/notificacoes")).andExpect(jsonPath("$", hasSize(2))));
+
+		// A anonimização só vale sem pedido em aberto (RN17)
+		for (String acao : List.of("confirmar", "iniciar-producao", "concluir", "anonimizar-cliente")) {
+			comToken(post("/api/pedidos/1/" + acao)).andExpect(status().isOk());
+		}
+		entityManager.clear();
+
+		semDadosDaAna(comToken(get("/api/notificacoes")).andExpect(jsonPath("$", hasSize(2)))
+			.andExpect(jsonPath("$[*].texto", containsInAnyOrder(startsWith("Novo pedido #1. Retirada: "),
+					startsWith("Pedido #1 é retirado ")))));
+		// Nem a tabela guarda nome ou telefone, antes ou depois
+		jdbc.queryForList("select * from notificacao where pedido_id = ?", pedidoDaAna)
+			.forEach(linha -> assertThat(linha.values()).allSatisfy(valor -> assertThat(String.valueOf(valor))
+				.doesNotContainIgnoringCase("Ana")
+				.doesNotContain("5511900000001")));
 	}
 
 	@Test
@@ -240,13 +357,42 @@ class NotificacoesTests {
 		return mockMvc.perform(requisicao.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDaLidia()));
 	}
 
+	/**
+	 * Serviço com o relógio parado em {@code saoPaulo}, mas no fuso UTC, como o servidor do Render:
+	 * o serviço é quem converte para o horário de São Paulo.
+	 */
+	private ServicoNotificacao servicoAs(LocalDateTime saoPaulo) {
+		return new ServicoNotificacao(notificacoes, pedidos,
+				Clock.fixed(saoPaulo.atZone(FUSO).toInstant(), ZoneOffset.UTC));
+	}
+
+	/** O sino pergunta as não vistas em cada um destes momentos. */
+	private void consultar(LocalDateTime... momentos) {
+		for (LocalDateTime momento : momentos) {
+			servicoAs(momento).contarNaoVistas(lidia());
+		}
+	}
+
+	private List<String> textos(LocalDateTime saoPaulo) {
+		return servicoAs(saoPaulo).listar(lidia()).stream().map(RespostaNotificacao::texto).toList();
+	}
+
+	/** Nem o nome nem o telefone da Ana aparecem na resposta. */
+	private static void semDadosDaAna(ResultActions resposta) throws Exception {
+		resposta.andExpect(content().string(not(containsStringIgnoringCase("Ana Exemplo"))))
+			.andExpect(content().string(not(containsString("5511900000001"))))
+			.andExpect(content().string(not(containsString("Cliente anonimizado"))));
+	}
+
 	/** Pedido gravado direto no banco, com o status e a retirada do teste. */
 	private long pedidoGravado(int numero, int status, LocalDateTime retirada) {
 		return jdbc.queryForObject("""
 				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, valor_total,
-				motivo_recusa, nome_cliente)
-				values (?, ?, ?, ?, ?, 100.00, ?, (select nome from cliente where id = ?)) returning id
-				""", Long.class, casaBelt, ana, numero, status, retirada, status == 5 ? "Sem agenda" : null, ana);
+				motivo_recusa, entregue_em, nome_cliente)
+				values (?, ?, ?, ?, ?, 100.00, ?, case when ? = 6 then now() end, (select nome from cliente where id = ?))
+				returning id
+				""", Long.class, casaBelt, ana, numero, status, retirada, status == 5 ? "Sem agenda" : null, status,
+				ana);
 	}
 
 	private long notificacaoNova(long loja, long pedido) {
@@ -272,8 +418,12 @@ class NotificacoesTests {
 	}
 
 	private String tokenDaLidia() {
+		return servicoToken.gerar(lidia());
+	}
+
+	private UsuarioAutenticado lidia() {
 		long lidia = jdbc.queryForObject("select id from usuario where email = 'lidia@casabelt.com'", Long.class);
-		return servicoToken.gerar(new UsuarioAutenticado(lidia, casaBelt));
+		return new UsuarioAutenticado(lidia, casaBelt);
 	}
 
 	private static LocalDate hoje() {

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { dataLocal, STATUS } from '../pedidos/regrasPedidos'
@@ -266,6 +266,46 @@ describe('PaginaPedidos (US4, RF07, RF08)', () => {
       expect(screen.getByRole('heading', { level: 2, name: /Entregue/ })).toBeVisible()
       expect(screen.getByRole('button', { name: 'Pedido 6, Lia Moraes, entregue em 15/01 às 10:30, R$ 200,00' })).toBeVisible()
       expect(screen.queryByRole('button', { name: /Pedido 8, Pedro Alves/ })).not.toBeInTheDocument()
+    })
+  })
+
+  // Clicar numa notificação do sino leva ao quadro com `state.abrir` (ZAP-175, ZAP-176)
+  describe('aberto por uma notificação', () => {
+    const pelaNotificacao = (numero) => ({ pathname: '/pedidos', state: { abrir: numero } })
+
+    test('no computador, abre os detalhes do pedido da notificação', async () => {
+      usarTela(true)
+      renderizarQuadro(pelaNotificacao(9))
+
+      expect(await screen.findByRole('dialog', { name: 'Pedido #9' })).toHaveTextContent('Beatriz Rocha')
+    })
+
+    test('no celular, abre os detalhes e a aba acompanha o status do pedido', async () => {
+      renderizarQuadro(pelaNotificacao(10))
+
+      expect(await screen.findByRole('dialog', { name: 'Pedido #10' })).toHaveTextContent('Carla Dias')
+      expect(screen.getByRole('tab', { name: 'Confirmado 1', selected: true })).toBeInTheDocument()
+    })
+
+    test('já no quadro, outra notificação busca os pedidos de novo e abre o pedido dela', async () => {
+      usarTela(true)
+      const roteador = renderizarQuadro(pelaNotificacao(9))
+      await screen.findByRole('dialog', { name: 'Pedido #9' })
+      const buscasAntes = buscarPedidos.mock.calls.length
+
+      await act(() => roteador.navigate('/pedidos', { state: { abrir: 12 } }))
+
+      expect(await screen.findByRole('dialog', { name: 'Pedido #12' })).toHaveTextContent('Ana Souza')
+      expect(buscarPedidos.mock.calls.length).toBe(buscasAntes + 1)
+    })
+
+    test('pedido que não está mais no quadro: mostra o quadro sem abrir nada', async () => {
+      usarTela(true)
+      renderizarQuadro(pelaNotificacao(99))
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Pedidos' })).toBeInTheDocument()
+      await waitFor(() => expect(screen.getByRole('button', { name: /Pedido 12, Ana Souza/ })).toBeVisible())
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
   })
 
