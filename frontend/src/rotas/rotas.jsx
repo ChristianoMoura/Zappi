@@ -9,6 +9,7 @@ import { PaginaFormularioPedido } from '../paginas/PaginaFormularioPedido'
 import { PaginaPedidos } from '../paginas/PaginaPedidos'
 import { PaginaProduto } from '../paginas/PaginaProduto'
 import { PaginaProdutos } from '../paginas/PaginaProdutos'
+import { PaginaTextoLegal } from '../paginas/PaginaTextoLegal'
 import { RotaProtegida } from './RotaProtegida'
 
 export const rotas = createBrowserRouter([
@@ -16,6 +17,9 @@ export const rotas = createBrowserRouter([
   // Portal do Cliente: cardápio público, sem login (RN02). Dentro dele: /informacoes (dados da loja),
   // /produto/:id (detalhes do produto) e /pedido (o pedido em montagem, ZAP-107).
   { path: '/cardapio/:slug/*', Component: PaginaCardapio },
+  // Termos de uso e política de privacidade, sem login, para os dois portais (ZAP-148)
+  { path: '/termos', element: <PaginaTextoLegal documento="termos" /> },
+  { path: '/privacidade', element: <PaginaTextoLegal documento="privacidade" /> },
   {
     Component: RotaProtegida,
     children: [

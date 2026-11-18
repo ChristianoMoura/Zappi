@@ -473,6 +473,42 @@
   height: 18px;
 }
 
+/* Termos e privacidade embaixo do "feito com o Zappi" (ZAP-148): cor de destaque nos dois temas,
+   com área de toque de 44 px de altura */
+.rodapePagina {
+  padding-bottom: 12px;
+}
+
+.rodapePagina .rodape {
+  padding-bottom: 4px;
+}
+
+.linksLegais {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 8px;
+  color: var(--secundario);
+  font-size: 0.85rem;
+}
+
+.linksLegais a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--destaque);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+
+.linksLegais a:focus-visible {
+  outline: 3px solid var(--destaque);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* Botão do WhatsApp flutuando sobre a lista, sem faixa em volta: só o botão recebe o toque,
    e o que estiver atrás dele continua clicável dos lados */
 .barraBaixo {

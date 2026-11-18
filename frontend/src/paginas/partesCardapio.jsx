@@ -1,4 +1,6 @@
 import { IconBrandWhatsapp, IconPhotoOff } from '@tabler/icons-react'
+import { Link } from 'react-router'
+import { useTermosVigentes } from '../autenticacao/useTermosVigentes'
 import zappiNomeCreme from '../assets/zappi-nome-creme.svg'
 import zappiNome from '../assets/zappi-nome.svg'
 import zappiSimboloCreme from '../assets/zappi-simbolo-creme.svg'
@@ -12,13 +14,25 @@ import classes from './PaginaCardapio.module.css'
 
 // Partes usadas pelo cardápio público, pelo detalhe do produto e pelo "Seu pedido"
 
+// Links para os termos e a privacidade (ZAP-148), só quando o backend responde a versão vigente:
+// o mesmo cuidado da caixa de aceite (ZAP-147)
 export function Rodape({ escuro }) {
+  const termos = useTermosVigentes()
   return (
-    <p className={classes.rodape}>
-      Cardápio feito com o
-      <img src={escuro ? zappiSimboloCreme : zappiSimbolo} alt="" />
-      <img src={escuro ? zappiNomeCreme : zappiNome} alt="Zappi" />
-    </p>
+    <footer className={classes.rodapePagina}>
+      <p className={classes.rodape}>
+        Cardápio feito com o
+        <img src={escuro ? zappiSimboloCreme : zappiSimbolo} alt="" />
+        <img src={escuro ? zappiNomeCreme : zappiNome} alt="Zappi" />
+      </p>
+      {termos && (
+        <nav aria-label="Termos e privacidade" className={classes.linksLegais}>
+          <Link to="/termos">Termos de uso</Link>
+          <span aria-hidden>·</span>
+          <Link to="/privacidade">Política de privacidade</Link>
+        </nav>
+      )}
+    </footer>
   )
 }
 
