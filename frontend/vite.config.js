@@ -18,5 +18,8 @@ export default defineConfig({
     setupFiles: './src/testes/configuracao.js',
     // Os formulários são grandes e os testes digitam campo por campo: 5 s (o padrão) fica no limite
     testTimeout: 20000,
+    // Os testes nunca usam a chave real do Google Maps, mesmo que o .env.local tenha a da equipe
+    // (ZAP-184, ZAP-187); quem precisa do mapa simula uma chave falsa com vi.stubEnv
+    env: { VITE_GOOGLE_MAPS_CHAVE: '' },
   },
 })
