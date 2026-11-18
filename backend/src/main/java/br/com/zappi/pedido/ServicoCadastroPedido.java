@@ -187,8 +187,9 @@ public class ServicoCadastroPedido {
 		Estabelecimento estabelecimento = bloquearEstabelecimento(estabelecimentoId);
 		Cliente cliente = clienteDoWhatsapp(estabelecimento, requisicao, agora);
 		Integer numero = pedidos.proximoNumero(estabelecimento.getId());
-		Pedido pedido = pedidos.save(new Pedido(estabelecimento, cliente, numero, requisicao.dataRetirada(),
-				requisicao.observacao(), formaPagamento, agora));
+		// Cada pedido guarda o nome informado nele, mesmo quando o WhatsApp já é cliente (ZAP-199)
+		Pedido pedido = pedidos.save(new Pedido(estabelecimento, cliente, requisicao.cliente().nome(), numero,
+				requisicao.dataRetirada(), requisicao.observacao(), formaPagamento, agora));
 
 		List<ItemPedido> itensDoPedido = new ArrayList<>();
 		for (ItemDaRequisicao item : itensDaRequisicao) {
@@ -299,22 +300,22 @@ public class ServicoCadastroPedido {
 	}
 
 	/**
-	 * Mesmo WhatsApp: é o mesmo cliente, e no pedido Novo o nome pode ser corrigido. Outro
-	 * WhatsApp: troca o cliente, só no pedido Novo. Depois da confirmação, o nome que vier é
-	 * ignorado, porque a mensagem já foi gerada para aquele cliente.
+	 * Mesmo WhatsApp: é o mesmo cliente, e no pedido Novo o nome pode ser corrigido, só neste
+	 * pedido (ZAP-199). Outro WhatsApp: troca o cliente, só no pedido Novo. Depois da
+	 * confirmação, o nome que vier é ignorado, porque a mensagem já foi gerada com ele.
 	 */
 	private void atualizarCliente(UsuarioAutenticado usuario, Pedido pedido, RequisicaoPedido requisicao,
 			OffsetDateTime agora) {
-		Cliente atual = pedido.getCliente();
-		if (requisicao.cliente().telefone().equals(atual.getTelefoneWhatsapp())) {
-			if (pedido.getStatus() == StatusPedido.NOVO && !requisicao.cliente().nome().equals(atual.getNome())) {
-				atual.renomear(requisicao.cliente().nome(), agora);
-				pedido.renomearCliente(requisicao.cliente().nome(), agora);
+		String nome = requisicao.cliente().nome();
+		if (requisicao.cliente().telefone().equals(pedido.getCliente().getTelefoneWhatsapp())) {
+			if (pedido.getStatus() == StatusPedido.NOVO && !nome.equals(pedido.getNomeCliente())) {
+				pedido.renomearCliente(nome, agora);
 			}
 			return;
 		}
 		pedido.exigirClienteTrocavel();
-		pedido.trocarCliente(clienteDoWhatsapp(bloquearEstabelecimento(usuario.estabelecimentoId()), requisicao, agora), agora);
+		pedido.trocarCliente(clienteDoWhatsapp(bloquearEstabelecimento(usuario.estabelecimentoId()), requisicao, agora),
+				nome, agora);
 	}
 
 	/**
@@ -380,16 +381,19 @@ public class ServicoCadastroPedido {
 	}
 
 	/**
-	 * O cliente com o mesmo WhatsApp no estabelecimento, como está, ou um cliente novo com o
-	 * consentimento registrado (RN16). Chamar com o estabelecimento bloqueado, para dois
+	 * O cliente com o mesmo WhatsApp no estabelecimento, com o nome trocado pelo último usado
+	 * (ZAP-199), ou um cliente novo com o consentimento registrado (RN16). Os pedidos anteriores
+	 * não mudam: cada um guarda o seu nome. Chamar com o estabelecimento bloqueado, para dois
 	 * cadastros do mesmo WhatsApp não criarem o cliente duas vezes.
 	 */
 	private Cliente clienteDoWhatsapp(Estabelecimento estabelecimento, RequisicaoPedido requisicao,
 			OffsetDateTime agora) {
-		return clientes.findByEstabelecimentoIdAndTelefoneWhatsapp(estabelecimento.getId(),
-				requisicao.cliente().telefone())
-			.orElseGet(() -> clientes.save(new Cliente(estabelecimento, requisicao.cliente().nome(),
-					requisicao.cliente().telefone(), termos.versaoVigente(), agora)));
+		String nome = requisicao.cliente().nome();
+		Optional<Cliente> existente = clientes.findByEstabelecimentoIdAndTelefoneWhatsapp(estabelecimento.getId(),
+				requisicao.cliente().telefone());
+		existente.filter(cliente -> !nome.equals(cliente.getNome())).ifPresent(cliente -> cliente.renomear(nome, agora));
+		return existente.orElseGet(() -> clientes.save(new Cliente(estabelecimento, nome,
+				requisicao.cliente().telefone(), termos.versaoVigente(), agora)));
 	}
 
 	private static ItemPedido novoItem(Pedido pedido, Produto produto, ItemDaRequisicao item) {

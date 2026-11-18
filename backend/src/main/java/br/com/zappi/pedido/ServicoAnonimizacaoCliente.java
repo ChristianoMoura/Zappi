@@ -3,6 +3,7 @@ package br.com.zappi.pedido;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,12 +64,14 @@ public class ServicoAnonimizacaoCliente {
 	 * <li>recusa se ele tiver pedido Novo, Confirmado ou Em produção;</li>
 	 * <li>em {@code cliente}, nome "Cliente anonimizado", telefone {@code 0} + id em 13 dígitos e
 	 * {@code anonimizado_em};</li>
-	 * <li>em {@code mensagem_whatsapp}, troca {@code telefone_destino} e tira o nome de
+	 * <li>em todos os pedidos dele, {@code nome_cliente} "Cliente anonimizado" (ZAP-199);</li>
+	 * <li>em {@code mensagem_whatsapp}, troca {@code telefone_destino} e tira os nomes de
 	 * {@code conteudo} (RN20);</li>
-	 * <li>tira o nome e o telefone de {@code pedido.motivo_recusa}, que vai para a mensagem;</li>
-	 * <li>tira o nome e o telefone de {@code log_auditoria.detalhes};</li>
+	 * <li>tira os nomes e o telefone de {@code pedido.motivo_recusa}, que vai para a mensagem;</li>
+	 * <li>tira os nomes e o telefone de {@code log_auditoria.detalhes};</li>
 	 * <li>registra {@code CLIENTE_ANONIMIZADO}, sem os dados antigos (ISO 27002 8.16).</li>
 	 * </ul>
+	 * "Os nomes" são todos os que o cliente usou: o do cadastro e o de cada pedido (ZAP-199).
 	 * Pedidos, itens, valores e observações não mudam. Pedido de outro estabelecimento é tratado
 	 * como inexistente (RN01, ISO 27002 5.34).
 	 *
@@ -91,11 +94,14 @@ public class ServicoAnonimizacaoCliente {
 			throw new ClienteComPedidoEmAbertoException();
 		}
 
-		String nome = cliente.getNome();
+		// Todos os nomes que o cliente usou: o do cadastro e o de cada pedido (ZAP-199)
+		Set<String> nomes = new LinkedHashSet<>();
+		nomes.add(cliente.getNome().trim());
+		doCliente.forEach(pedido -> nomes.add(pedido.getNomeCliente().trim()));
 		String telefone = cliente.getTelefoneWhatsapp();
 		OffsetDateTime agora = OffsetDateTime.now(ZoneOffset.UTC);
 		cliente.anonimizar(agora);
-		RemocaoDeDadosPessoais remocao = new RemocaoDeDadosPessoais(nome, telefone, cliente.getTelefoneWhatsapp());
+		RemocaoDeDadosPessoais remocao = new RemocaoDeDadosPessoais(nomes, telefone, cliente.getTelefoneWhatsapp());
 
 		// O motivo da recusa vai para a mensagem, então perde o nome do mesmo jeito; as
 		// observações descrevem a encomenda e ficam como estão (RN17)
@@ -113,8 +119,12 @@ public class ServicoAnonimizacaoCliente {
 		}
 		mensagens.flush();
 
-		int registrosDoLog = auditoria.substituirNosDetalhes(usuario.estabelecimentoId(), nome.trim(), telefone,
-				remocao::doLog);
+		// Um registro já limpo por um nome não é contado de novo pelo seguinte
+		int registrosDoLog = 0;
+		for (String nome : nomes) {
+			registrosDoLog += auditoria.substituirNosDetalhes(usuario.estabelecimentoId(), nome, telefone,
+					remocao::doLog);
+		}
 
 		auditoria.registrar(RegistroAuditoria.de(AcaoAuditoria.CLIENTE_ANONIMIZADO)
 			.estabelecimento(usuario.estabelecimentoId())

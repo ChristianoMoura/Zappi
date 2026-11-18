@@ -1,6 +1,9 @@
 package br.com.zappi.cliente;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +38,24 @@ class RemocaoDeDadosPessoaisTests {
 				"0000000000008");
 		assertThat(comParenteses.daMensagem("Olá, Zé! Zé (Tio) $1")).isEqualTo(
 				"Olá, Cliente anonimizado! Cliente anonimizado");
+	}
+
+	@Test
+	void tiraTodosOsNomesUsadosNosPedidos() {
+		// O mesmo WhatsApp com nomes diferentes em cada pedido (ZAP-199)
+		RemocaoDeDadosPessoais variosNomes = new RemocaoDeDadosPessoais(
+				List.of("Ana", "Ana Souza", "Beatriz Lima", " ana "), "5511900000001", "0000000000007");
+
+		assertThat(variosNomes.daMensagem("Olá, Beatriz! A Ana Souza e a Ana pediram o bolo."))
+			.isEqualTo("Olá, Cliente anonimizado! A Cliente anonimizado e a Cliente anonimizado pediram o bolo.");
+		assertThat(variosNomes.doLog("beatriz lima, Ana Souza, 5511900000001"))
+			.isEqualTo("Cliente anonimizado, Cliente anonimizado, 0000000000007");
+	}
+
+	@Test
+	void exigeAoMenosUmNome() {
+		assertThatThrownBy(() -> new RemocaoDeDadosPessoais(List.of(" "), "5511900000001", "0000000000007"))
+			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test

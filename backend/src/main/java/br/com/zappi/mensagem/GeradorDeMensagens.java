@@ -66,7 +66,7 @@ public class GeradorDeMensagens {
 
 				%s Qualquer dúvida, é só responder esta mensagem.
 
-				%s""".formatted(primeiroNome(pedido.getCliente().getNome()), pedido.getNumero(),
+				%s""".formatted(primeiroNome(pedido.getNomeCliente()), pedido.getNumero(),
 				pedido.getEstabelecimento().getNome(), linhasDosItens, moeda(pedido.getValorTotal()),
 				dataDeRetirada(pedido.getDataRetirada()), pagamento(pedido.getFormaPagamento()), ASSINATURA);
 	}
@@ -92,7 +92,7 @@ public class GeradorDeMensagens {
 				Se quiser combinar outra data ou outro pedido, é só responder esta mensagem.
 
 				%s
-				%s""".formatted(primeiroNome(pedido.getCliente().getNome()), pedido.getNumero(),
+				%s""".formatted(primeiroNome(pedido.getNomeCliente()), pedido.getNumero(),
 				dataDeRetirada(pedido.getDataRetirada()), pedido.getMotivoRecusa(), pedido.getEstabelecimento().getNome(),
 				ASSINATURA);
 	}
@@ -110,7 +110,7 @@ public class GeradorDeMensagens {
 				Qualquer dúvida, é só responder esta mensagem.
 
 				%s
-				%s""".formatted(primeiroNome(pedido.getCliente().getNome()), pedido.getNumero(),
+				%s""".formatted(primeiroNome(pedido.getNomeCliente()), pedido.getNumero(),
 				dataDeRetirada(pedido.getDataRetirada()), moeda(pedido.getValorTotal()),
 				pedido.getEstabelecimento().getNome(), ASSINATURA);
 	}
