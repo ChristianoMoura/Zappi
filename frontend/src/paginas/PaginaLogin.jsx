@@ -74,7 +74,7 @@ export function PaginaLogin() {
       novosErros.email = 'E-mail inválido.'
     }
     if (!senha) novosErros.senha = 'Digite sua senha.'
-    // Sem a caixa marcada, o login nem é enviado (RN26 proposta na ZAP-143)
+    // Sem a caixa marcada, o login nem é enviado (RN27, ZAP-143)
     if (pedeAceite && !aceite) novosErros.aceite = FALTA_ACEITE
 
     setErros(novosErros)

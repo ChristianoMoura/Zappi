@@ -31,7 +31,7 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Aceite dos Termos de uso e da Política de privacidade no login (ZAP-146, RN26, LGPD, ISO 27002
+ * Aceite dos Termos de uso e da Política de privacidade no login (ZAP-146, RN27, LGPD, ISO 27002
  * 5.34 e 8.16) e as rotas da versão vigente e da versão aceita. Como no {@code LoginTests}, os
  * registros são gravados de verdade e limpos no fim.
  */

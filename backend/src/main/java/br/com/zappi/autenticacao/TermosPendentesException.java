@@ -2,7 +2,7 @@ package br.com.zappi.autenticacao;
 
 /**
  * A Lídia acertou e-mail e senha, mas ainda não aceitou a versão vigente dos Termos de uso e da
- * Política de privacidade (RN26, ZAP-146). Só é lançada depois de conferir a senha, para não
+ * Política de privacidade (RN27, ZAP-146). Só é lançada depois de conferir a senha, para não
  * revelar se o e-mail existe. O login não emite token.
  */
 public class TermosPendentesException extends RuntimeException {

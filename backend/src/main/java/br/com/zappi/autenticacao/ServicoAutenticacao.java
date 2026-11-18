@@ -70,7 +70,7 @@ public class ServicoAutenticacao {
 	 * lança {@link CredenciaisInvalidasException}, sempre com a mesma mensagem. Com 5
 	 * falhas seguidas, lança {@link LoginBloqueadoException} por 15 minutos.
 	 *
-	 * <p>Com as credenciais certas, a Lídia precisa ter aceitado a versão vigente dos termos (RN26,
+	 * <p>Com as credenciais certas, a Lídia precisa ter aceitado a versão vigente dos termos (RN27,
 	 * ZAP-146): ou a requisição traz o aceite dessa versão, que é gravado junto com o login, ou o
 	 * aceite já está no servidor. Senão, lança {@link TermosPendentesException}, sem token. Isso só
 	 * acontece depois da senha certa, para não revelar se o e-mail existe.

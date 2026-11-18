@@ -27,7 +27,7 @@ import br.com.zappi.seguranca.UsuarioAutenticado;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Quando os textos mudam (RN26): com a versão 2 vigente, quem só aceitou a versão 1 volta a ser
+ * Quando os textos mudam (RN27): com a versão 2 vigente, quem só aceitou a versão 1 volta a ser
  * pendente, e o aceite da versão 1 não vale. O aceite antigo continua gravado, como histórico.
  */
 @SpringBootTest(properties = "zappi.termos.versao=2")

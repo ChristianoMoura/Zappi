@@ -24,7 +24,7 @@ O Zappi resolve a demanda escolhida pela própria Lídia: **organizar e gerir os
 
 O painel da **Lídia**, a única usuária com login.
 
-- Login com e-mail e senha
+- Login com e-mail e senha, com o aceite dos Termos de uso e da Política de privacidade
 - Cadastro e edição dos dados do estabelecimento
 - Cadastro, edição e exclusão lógica de produtos, com nome completo, categoria, foto e texto alternativo
 - Cadastro de categorias do cardápio, com a ordem definida pela Lídia (arrastando ou pelo teclado)
@@ -42,8 +42,9 @@ O cardápio público da Casa Belt, sem login.
 - Cardápio pelo link do estabelecimento, com produtos ativos, fotos, descrições e preços
 - Cardápio organizado pelas categorias, na ordem definida pela Lídia
 - Montagem do pedido: produtos, quantidade, observação de cada item (ex.: tema da festa ou frase no bolo), observações do pedido e data e horário de retirada
-- Identificação com nome e WhatsApp, com consentimento LGPD
+- Identificação com nome e WhatsApp, com consentimento LGPD e o aceite dos Termos de uso e da Política de privacidade, numa caixa só
 - O pedido entra na coluna **Novo** do quadro da Lídia
+- Termos de uso e Política de privacidade abertos sem login, em `/termos` e `/privacidade`, com links no rodapé do cardápio e na caixinha da conta do painel
 
 **Fora da entrega (futuro):** pagamento online, controle de estoque, relatórios financeiros e fidelização.
 
@@ -168,14 +169,15 @@ No Windows (PowerShell ou Prompt de Comando), use `mvnw.cmd` no lugar de `./mvnw
 
 O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actuator) e o driver do PostgreSQL. A configuração vem de variáveis de ambiente (`DB_URL`, `DB_USUARIO`, `DB_SENHA`, `CORS_ORIGENS`, `PORT`, `LIDIA_SENHA_HASH`, `JWT_CHAVE`, `SUPABASE_URL` e `SUPABASE_CHAVE_SECRETA`); o perfil `local` já traz os valores do banco do Docker Compose.
 
-**Acesso à API:** só a verificação de saúde (`/actuator/health`) e o login (`POST /api/autenticacao/login`, ZAP-31) são abertos. Todas as outras rotas exigem o token JWT no header `Authorization: Bearer <token>` e respondem `401` sem ele, com ele inválido ou expirado (8 horas). O token é assinado com a chave da variável `JWT_CHAVE` (Base64, 32 bytes ou mais; gere com `openssl rand -base64 32`). Ela é obrigatória em produção; localmente e nos testes, se estiver vazia, o backend gera uma chave aleatória a cada subida, e os tokens antigos deixam de valer ao reiniciar. Os controllers recebem quem fez a requisição com `@AuthenticationPrincipal UsuarioAutenticado usuario` e filtram os dados pelo `estabelecimentoId` do token, nunca por um id vindo da requisição.
+**Acesso à API:** só a verificação de saúde (`/actuator/health`), o login (`POST /api/autenticacao/login`, ZAP-31), a versão vigente dos termos (`GET /api/publico/termos`, ZAP-146) e as rotas do cardápio público (veja abaixo) são abertos. Todas as outras rotas exigem o token JWT no header `Authorization: Bearer <token>` e respondem `401` sem ele, com ele inválido ou expirado (8 horas). O token é assinado com a chave da variável `JWT_CHAVE` (Base64, 32 bytes ou mais; gere com `openssl rand -base64 32`). Ela é obrigatória em produção; localmente e nos testes, se estiver vazia, o backend gera uma chave aleatória a cada subida, e os tokens antigos deixam de valer ao reiniciar. Os controllers recebem quem fez a requisição com `@AuthenticationPrincipal UsuarioAutenticado usuario` e filtram os dados pelo `estabelecimentoId` do token, nunca por um id vindo da requisição.
 
 **Login (`POST /api/autenticacao/login`):**
 
 | Situação | Status | Corpo |
 |---|---|---|
-| Pedido | — | `{ "email": "lidia@casabelt.com", "senha": "..." }` |
-| E-mail e senha certos | `200` | `{ "token": "<jwt>", "nome": "Lídia" }` |
+| Pedido | — | `{ "email": "lidia@casabelt.com", "senha": "...", "aceiteTermos": true, "versaoTermos": 1 }` (os dois últimos só com a caixa dos termos marcada) |
+| E-mail e senha certos, com os termos aceitos | `200` | `{ "token": "<jwt>", "nome": "Lídia", "termosAceitos": { "versao": 1, "aceitoEm": "2026-11-17T21:30:00Z" } }` |
+| E-mail e senha certos, sem o aceite da versão vigente | `403` | `{ "codigo": "TERMOS_PENDENTES", "mensagem": "Para entrar, marque que você leu e concorda com os Termos de uso e a Política de privacidade." }` |
 | E-mail inexistente, senha errada ou usuária desativada | `401` | `{ "codigo": "CREDENCIAIS_INVALIDAS", "mensagem": "E-mail ou senha incorretos." }` |
 | Campos vazios, e-mail mal formado ou JSON inválido | `400` | `{ "codigo": "DADOS_INVALIDOS", "mensagem": "Confira os dados informados." }` |
 | 5 falhas com o mesmo e-mail em 15 minutos | `429` + header `Retry-After` (segundos) | `{ "codigo": "LOGIN_BLOQUEADO", "mensagem": "Muitas tentativas sem sucesso. Espere 15 minutos e tente novamente." }` |
@@ -183,6 +185,16 @@ O backend usa Java 21, Spring Boot 4 (Web, Data JPA, Security, Validation e Actu
 A resposta de erro é a mesma nos três casos do `401`, e leva o mesmo tempo, para não revelar quais e-mails estão cadastrados. O e-mail é comparado sem diferenciar maiúsculas e minúsculas. No login certo, o backend grava `usuario.ultimo_login_em`. Todas as respostas de erro da API seguem o formato `{ "codigo", "mensagem" }`.
 
 **Log de login (ZAP-33, ISO 27002 8.16):** toda tentativa com dados válidos fica no `log_auditoria`, com o e-mail informado (em minúsculas), o IP do navegador, o user agent e a data/hora. O `LOGIN_SUCESSO` leva o usuário e o estabelecimento. O `LOGIN_FALHA` é gravado mesmo com o erro e leva o motivo em `detalhes` (`EMAIL_INEXISTENTE`, `SENHA_INCORRETA` ou `USUARIO_INATIVO`); com e-mail inexistente, o usuário e o estabelecimento ficam nulos. O motivo fica só no log: a API responde sempre o mesmo `401`. A senha nunca é gravada.
+
+**Termos de uso e Política de privacidade (ZAP-143, ZAP-146, RN27):** os textos ficam em [docs/termos-de-uso.md](docs/termos-de-uso.md) e [docs/politica-de-privacidade.md](docs/politica-de-privacidade.md), e a tela usa a cópia em `frontend/src/termos/textos/`. A versão vigente fica em `zappi.termos.versao` (inteiro maior que 0) e a data em `zappi.termos.data`, no `application.yml`; o backend não sobe com versão zero ou sem data.
+
+- `GET /api/publico/termos`, **sem login**, responde `{ "versao": 1, "data": "2026-11-14" }`. O login, o cardápio e as páginas `/termos` e `/privacidade` usam essa rota para saber se mostram a caixa de aceite e os links.
+- No login, `aceiteTermos` e `versaoTermos` são opcionais e só valem juntos, com a versão vigente. Com eles, o backend grava o aceite em `aceite_termos` (versão, data, IP e navegador) e o `TERMOS_ACEITOS` no `log_auditoria`, com a versão em `detalhes`, na mesma transação do login. Sem eles, vale o aceite da versão vigente que já estiver gravado. Sem nenhum dos dois, a resposta é `403 TERMOS_PENDENTES`, sem token e sem `LOGIN_SUCESSO`. Esse código só aparece com a senha certa: senha errada, e-mail inexistente e usuária desativada continuam com o `401` de sempre.
+- `GET /api/autenticacao/termos-aceitos`, com o token, devolve o último aceite da usuária (`{ "versao", "aceitoEm" }`), mesmo de uma versão antiga, ou `204` sem nenhum. As páginas `/termos` e `/privacidade` usam essa rota para a frase "Você aceitou a versão N em DD/MM/AAAA".
+- O navegador guarda só a versão aceita em `localStorage` (`zappi.termos-aceitos`), para a caixa não aparecer em todo login no mesmo aparelho. A prova do aceite fica no servidor.
+- No pedido, pelo portal ou pelo painel, o cliente novo é gravado com `consentimento_versao` igual à versão vigente no servidor. O `versaoTermos` que o portal envia não é usado pelo backend.
+
+**Para publicar uma versão nova dos textos:** atualize os dois arquivos em `docs/` e a cópia em `frontend/src/termos/textos/`, com a versão e a data no topo, e suba `zappi.termos.versao` e `zappi.termos.data` no `application.yml`. Depois do deploy, a Lídia volta a ver a caixa no próximo login, e os clientes novos ficam com a versão nova.
 
 **Bloqueio de login (ZAP-85, RF02):** 5 falhas com o mesmo e-mail nos últimos 15 minutos, desde o último login certo, bloqueiam novas tentativas com esse e-mail. Durante o bloqueio, nem a senha certa entra, porque ela nem é conferida, e o acesso volta sozinho 15 minutos depois das falhas. A contagem usa os `LOGIN_FALHA` do `log_auditoria`, sem mudar o banco. Cada tentativa recusada também vai para o log (`LOGIN_FALHA` com motivo `LOGIN_BLOQUEADO`), mas não conta para o bloqueio: insistir não prolonga a espera. O bloqueio vale para qualquer e-mail digitado, cadastrado ou não, para não revelar quais existem.
 
@@ -341,7 +353,7 @@ Para conferir: o mapa aparece no site do Render e no `localhost`, e a mesma chav
 ## Requisitos não funcionais
 
 - **Segurança (ABNT NBR ISO/IEC 27002:2022):** acesso só com login, senhas em hash BCrypt, política de senha forte, HTTPS, dados separados por estabelecimento e trilha de auditoria.
-- **Privacidade (LGPD):** consentimento antes de gravar dados de clientes, uso só para processar pedidos e direito de exclusão por anonimização.
+- **Privacidade (LGPD):** consentimento antes de gravar dados de clientes, Termos de uso e Política de privacidade aceitos nos dois portais (com o aceite da Lídia registrado no servidor), uso só para processar pedidos e direito de exclusão por anonimização.
 - **Consumidor (CDC):** informação clara sobre os produtos e identificação das mensagens geradas pelo Zappi.
 - **Acessibilidade (ABNT NBR 17225:2025 / WCAG 2.2):** contraste mínimo de 4,5:1, foco visível, rótulos em todos os campos, texto alternativo nas fotos e linguagem simples.
 - **Usabilidade:** interface pensada para uma usuária de 54 anos, com poucos passos, botões grandes e bom funcionamento no celular.
