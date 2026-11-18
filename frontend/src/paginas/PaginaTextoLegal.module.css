@@ -135,7 +135,10 @@
   padding: 10px 14px;
 }
 
+/* <output> nasce em linha: aqui vira um bloco, como o parágrafo do texto */
 .aceite {
+  display: block;
+  margin: 0 0 10px;
   background: #ffffff;
   border: 1px solid #d9cbbe;
   border-radius: 12px;
