@@ -2,9 +2,12 @@ import { Alert, Button, Modal } from '@mantine/core'
 import { IconAlertCircle, IconAlertTriangle, IconUserX } from '@tabler/icons-react'
 import { useEffect, useRef } from 'react'
 import classes from './QuadroPedidos.module.css'
+import { telefoneTela } from './regrasPedidos'
 
 // Confirmação antes de apagar os dados do cliente (ZAP-116, RN17, LGPD). O título não leva o nome
-// porque, ao dar certo, o nome muda enquanto a janela ainda está fechando.
+// porque, ao dar certo, o nome muda enquanto a janela ainda está fechando. Cada pedido guarda o seu
+// nome (ZAP-199/202) e o apagar vale para todos os pedidos do número, então o texto cita o WhatsApp
+// e avisa dos pedidos com outro nome.
 export function JanelaAnonimizar({ pedido, aberta, aoFechar, aoConfirmar, enviando, erro }) {
   const erroRef = useRef(null)
 
@@ -27,7 +30,7 @@ export function JanelaAnonimizar({ pedido, aberta, aoFechar, aoConfirmar, envian
       {!pedido.cliente.anonimizado && (
         <div className={classes.formMotivo}>
           <p className={classes.explicacaoMotivo}>
-            O nome e o WhatsApp de {pedido.cliente.nome} serão apagados de todos os pedidos. Os pedidos e os valores continuam no histórico, com o nome “Cliente anonimizado”.
+            O nome e o WhatsApp de {pedido.cliente.nome} (+55 {telefoneTela(pedido.cliente.telefone)}) serão apagados de todos os pedidos desse número, mesmo dos que estão com outro nome. Os pedidos e os valores continuam no histórico, com o nome “Cliente anonimizado”.
           </p>
           <p className={`${classes.lembrete} ${classes.lembreteAlerta}`}>
             <IconAlertTriangle size={22} aria-hidden />

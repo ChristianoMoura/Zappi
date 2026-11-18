@@ -7,10 +7,9 @@ import { IconeFormaPagamento } from '../comum/IconeFormaPagamento'
 import { JanelaAnonimizar } from './JanelaAnonimizar'
 import { JanelaMotivo } from './JanelaMotivo'
 import { JanelaVoltar } from './JanelaVoltar'
-import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataHoraTexto as dataHora, dataRetiradaCurta, mensagensDaEtapa, moeda, podeAnonimizar, podeCancelar, podeEditar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, totalPedido, VOLTA } from './regrasPedidos'
+import { AVANCO, avisoDeProntoEnviado, COLUNAS, dataHoraTexto as dataHora, dataRetiradaCurta, mensagensDaEtapa, moeda, podeAnonimizar, podeCancelar, podeEditar, podeRecusar, quantidadeTexto, retiraHoje, STATUS, subtotal, telefoneTela, totalPedido, VOLTA } from './regrasPedidos'
 import classes from './QuadroPedidos.module.css'
 
-const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
 
 const EtiquetaMensagem = ({ mensagem }) =>
   mensagem.status === 'Enviada' ? (

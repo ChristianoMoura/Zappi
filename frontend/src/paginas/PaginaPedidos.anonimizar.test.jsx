@@ -45,7 +45,7 @@ describe('Apagar os dados do cliente (ZAP-116, RN17)', () => {
     const usuario = userEvent.setup()
     const { detalhes, janela } = await abrirJanela(usuario, 8)
 
-    expect(within(janela).getByText(/O nome e o WhatsApp de Pedro Alves serão apagados de todos os pedidos/)).toBeVisible()
+    expect(within(janela).getByText(/O nome e o WhatsApp de Pedro Alves \(\+55 \(11\) 98765-0000\) serão apagados de todos os pedidos desse número, mesmo dos que estão com outro nome/)).toBeVisible()
     expect(within(janela).getByText(/Isso não pode ser desfeito/)).toBeVisible()
     await waitFor(() => expect(within(janela).getByRole('button', { name: 'Manter os dados' })).toHaveFocus())
     await usuario.click(within(janela).getByRole('button', { name: 'Manter os dados' }))
@@ -166,5 +166,30 @@ describe('Apagar os dados do cliente (ZAP-116, RN17)', () => {
 
     expect(within(detalhes).getByText('WhatsApp', { selector: 'dt' })).toBeVisible()
     expect(within(detalhes).getByText('(11) 98765-0000')).toBeVisible()
+  })
+})
+
+describe('apagar os dados quando o mesmo WhatsApp tem pedidos com nomes diferentes (ZAP-202)', () => {
+  const doPedro = pedidoDeTeste(8, STATUS.CONCLUIDO, 'Pedro Alves')
+  const doMesmoNumero = pedidoDeTeste(6, STATUS.CONCLUIDO, 'Pedro Henrique')
+  const lista = [doPedro, doMesmoNumero]
+
+  beforeEach(() => {
+    usarTela(true)
+    anonimizarCliente.mockReset().mockImplementation(async (numero) => anonimizar(lista.find((p) => p.numero === numero)))
+  })
+
+  afterEach(() => usarTela(false))
+
+  test('o pedido com outro nome do mesmo número também fica como "Cliente anonimizado"', async () => {
+    const usuario = userEvent.setup()
+    buscarPedidos.mockReset().mockResolvedValueOnce(lista).mockResolvedValueOnce(lista.map(anonimizar))
+    const { detalhes, janela } = await abrirJanela(usuario, 8)
+
+    await usuario.click(within(janela).getByRole('button', { name: 'Apagar os dados' }))
+    await within(detalhes).findByText(/Dados do cliente apagados/)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Pedido 6, Cliente anonimizado/, hidden: true })).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /Pedido 6, Pedro Henrique/, hidden: true })).not.toBeInTheDocument()
   })
 })

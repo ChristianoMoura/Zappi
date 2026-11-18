@@ -109,6 +109,9 @@ export const podeRecusarOuCancelar = (status) => podeRecusar(status) || podeCanc
 
 // Edição do pedido (RN21): Concluído, Entregue e Recusado não mudam; depois de confirmado, o cliente não troca
 export const podeEditar = (status) => [STATUS.NOVO, STATUS.CONFIRMADO, STATUS.EM_PRODUCAO].includes(status)
+// WhatsApp do cliente como a tela mostra: "(11) 98765-0000" (o pedido guarda 55 + DDD + número)
+export const telefoneTela = (telefone) => `(${telefone.slice(2, 4)}) ${telefone.slice(4, 9)}-${telefone.slice(9)}`
+
 export const podeTrocarCliente = (status) => status === STATUS.NOVO
 
 // Os dados do cliente só podem ser apagados com o pedido encerrado (RN17, ZAP-116, ZAP-169)
