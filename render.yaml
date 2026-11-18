@@ -55,6 +55,10 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "24"
+      # Chave da Maps Embed API do Google (ZAP-184), restrita ao site do Render e ao localhost.
+      # O Vite lê no build: depois de mudar, faça um deploy manual do Static Site.
+      - key: VITE_GOOGLE_MAPS_CHAVE
+        sync: false
     routes:
       # O front chama /api; o Render repassa para o backend sem mudar o endereço no navegador.
       - type: rewrite
