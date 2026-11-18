@@ -321,12 +321,12 @@ describe('formas de pagamento (ZAP-190, ZAP-193)', () => {
     expect(screen.queryByRole('checkbox', { name: 'Pix' })).not.toBeInTheDocument()
   })
 
-  test('mostra as cinco formas num grupo com legenda e explicação, como vieram do backend', async () => {
+  test('mostra as cinco formas num grupo com legenda, como vieram do backend', async () => {
     buscarEstabelecimento.mockReset().mockResolvedValue({ ...casaBelt, formasPagamento: ['PIX', 'DINHEIRO'] })
     await abrirTela()
 
     expect(screen.getByRole('heading', { level: 2, name: 'Formas de pagamento' })).toBeVisible()
-    expect(grupo()).toHaveAccessibleDescription(/O cliente escolhe uma delas ao fazer o pedido. O pagamento é sempre na retirada./)
+    expect(screen.queryByText(/O cliente escolhe uma delas/)).not.toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Dinheiro' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Pix' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Cartão de crédito' })).not.toBeChecked()
