@@ -203,9 +203,10 @@ class NotificacoesTests {
 				values (?, 'Cliente de outra loja', '5511933334444', true, now()) returning id
 				""", Long.class, outraLoja);
 		long pedidoDeOutraLoja = jdbc.queryForObject("""
-				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, valor_total)
-				values (?, ?, 1, 1, ?, 100.00) returning id
-				""", Long.class, outraLoja, cliente, hoje().plusDays(7).atTime(15, 0));
+				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, valor_total,
+				nome_cliente)
+				values (?, ?, 1, 1, ?, 100.00, (select nome from cliente where id = ?)) returning id
+				""", Long.class, outraLoja, cliente, hoje().plusDays(7).atTime(15, 0), cliente);
 		long daOutraLoja = notificacaoNova(outraLoja, pedidoDeOutraLoja);
 
 		comToken(get("/api/notificacoes")).andExpect(jsonPath("$", hasSize(0)));
@@ -243,9 +244,9 @@ class NotificacoesTests {
 	private long pedidoGravado(int numero, int status, LocalDateTime retirada) {
 		return jdbc.queryForObject("""
 				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, valor_total,
-				motivo_recusa)
-				values (?, ?, ?, ?, ?, 100.00, ?) returning id
-				""", Long.class, casaBelt, ana, numero, status, retirada, status == 5 ? "Sem agenda" : null);
+				motivo_recusa, nome_cliente)
+				values (?, ?, ?, ?, ?, 100.00, ?, (select nome from cliente where id = ?)) returning id
+				""", Long.class, casaBelt, ana, numero, status, retirada, status == 5 ? "Sem agenda" : null, ana);
 	}
 
 	private long notificacaoNova(long loja, long pedido) {

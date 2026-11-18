@@ -255,9 +255,10 @@ class RestricoesDoBancoTests {
 	private long criarPedido(long estabelecimento, long cliente, int numero, int status, String motivo) {
 		return jdbc.queryForObject("""
 				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, motivo_recusa,
-				                    valor_total)
-				values (?, ?, ?, ?, current_date + 7 + time '12:00', ?, 100.00) returning id
-				""", Long.class, estabelecimento, cliente, numero, status, motivo);
+				                    valor_total, nome_cliente)
+				values (?, ?, ?, ?, current_date + 7 + time '12:00', ?, 100.00, (select nome from cliente where id = ?))
+				returning id
+				""", Long.class, estabelecimento, cliente, numero, status, motivo, cliente);
 	}
 
 	private void criarItem(long pedido, long produto, String quantidade) {

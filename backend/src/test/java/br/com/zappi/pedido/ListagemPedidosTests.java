@@ -180,9 +180,10 @@ class ListagemPedidosTests {
 	/** Pedido com um item de bolo de brigadeiro (1 kg a R$ 100,00) e as datas da etapa. */
 	private void pedido(int numero, int status, long cliente, String retirada, String datas, String motivo) {
 		long id = jdbc.queryForObject("""
-				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, motivo_recusa, valor_total)
-				values (?, ?, ?, ?, %s, ?, 100.00) returning id
-				""".formatted(retirada), Long.class, casaBelt, cliente, numero, status, motivo);
+				insert into pedido (estabelecimento_id, cliente_id, numero, status, data_retirada, motivo_recusa, valor_total,
+				                    nome_cliente)
+				values (?, ?, ?, ?, %s, ?, 100.00, (select nome from cliente where id = ?)) returning id
+				""".formatted(retirada), Long.class, casaBelt, cliente, numero, status, motivo, cliente);
 		jdbc.update("update pedido set " + datas + " where id = ?", id);
 		jdbc.update("""
 				insert into item_pedido (pedido_id, produto_id, quantidade, preco_unitario, subtotal)

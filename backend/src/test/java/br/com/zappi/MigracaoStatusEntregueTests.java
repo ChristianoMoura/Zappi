@@ -113,7 +113,9 @@ class MigracaoStatusEntregueTests {
 
 	@Test
 	void recusaStatusDepoisDoEntregue() {
-		assertThatThrownBy(() -> pedido(6, 7, null)).isInstanceOf(DataIntegrityViolationException.class)
+		// Update, e não insert: o pedido gravado agora precisa das colunas das migrações seguintes (V14)
+		assertThatThrownBy(() -> jdbc.update(sql("update %s.pedido set status = 7 where id = ?"), concluido))
+			.isInstanceOf(DataIntegrityViolationException.class)
 			.hasMessageContaining("ck_pedido_status");
 	}
 

@@ -309,6 +309,7 @@ public class ServicoCadastroPedido {
 		if (requisicao.cliente().telefone().equals(atual.getTelefoneWhatsapp())) {
 			if (pedido.getStatus() == StatusPedido.NOVO && !requisicao.cliente().nome().equals(atual.getNome())) {
 				atual.renomear(requisicao.cliente().nome(), agora);
+				pedido.renomearCliente(requisicao.cliente().nome(), agora);
 			}
 			return;
 		}
