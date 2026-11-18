@@ -17,7 +17,7 @@ Estes são os textos que o Zappi prepara para o cliente ao confirmar, recusar ou
 
 | Campo | De onde vem | Formato | Exemplo |
 |---|---|---|---|
-| `{nome}` | `cliente.nome` | Só o primeiro nome | Ana |
+| `{nome}` | `pedido.nome_cliente` | Só o primeiro nome, o informado naquele pedido (RN18, ZAP-199) | Ana |
 | `{numero}` | `pedido.numero` | Número, sem o `#` | 12 |
 | `{estabelecimento}` | `estabelecimento.nome` | Como cadastrado | Casa Belt |
 | `{itens}` | `item_pedido` e `produto.nome` | Um item por linha: `- {produto} ({quantidade})`, com o nome completo do produto e a quantidade em kg ou un. Sem sabor, recheio nem cobertura (ZAP-136) | - Bolo de brigadeiro de chocolate (2 kg) |
@@ -138,3 +138,4 @@ Mensagem gerada pelo Zappi
 | 10/11/2026 | Hora da retirada em `{data_retirada}` (ZAP-127) |
 | 15/11/2026 | A confirmação passa a dizer a forma de pagamento combinada: "O pagamento é feito na retirada, por Pix." (decisão da equipe na ZAP-190). Dinheiro fica "em dinheiro", que soa natural. Pedido sem forma mantém a frase antiga. Implementado em 17/11/2026 (ZAP-192) |
 | 15/11/2026 | O endereço da loja passa a aparecer no cardápio público (decisão do grupo na ZAP-183, RN31). As mensagens continuam sem o endereço, e a regra "Sem endereço" passa a explicar que ele está no cardápio. Registrado em 18/11/2026 (ZAP-188) |
+| 17/11/2026 | `{nome}` passa a vir do pedido (`pedido.nome_cliente`), e não do cadastro do cliente: dois pedidos do mesmo WhatsApp com nomes diferentes recebem, cada um, o seu nome (decisão da equipe na ZAP-199, implementado na ZAP-201). Os textos não mudam. Registrado em 18/11/2026 (ZAP-203) |
