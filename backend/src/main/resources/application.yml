@@ -48,7 +48,7 @@ zappi:
     validade: 8h
   termos:
     # Versão vigente dos Termos de uso e da Política de privacidade (ZAP-146). A cada mudança nos
-    # textos, suba a versão (inteiro maior que 0) e a data: a Lídia volta a aceitar no login (RN26).
+    # textos, suba a versão (inteiro maior que 0) e a data: a Lídia volta a aceitar no login (RN27).
     versao: 1
     data: "2026-11-14"
   armazenamento:

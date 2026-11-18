@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Versão vigente dos Termos de uso e da Política de privacidade ({@code zappi.termos}, ZAP-146).
  * Os textos ficam versionados no repositório (ZAP-144); a cada mudança, sobe a versão e a data
- * aqui, e a Lídia volta a ser perguntada no login (RN26).
+ * aqui, e a Lídia volta a ser perguntada no login (RN27).
  *
  * @param versao número inteiro maior que 0, que cresce a cada versão dos textos
  * @param data dia em que a versão passou a valer

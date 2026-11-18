@@ -14,7 +14,7 @@ import br.com.zappi.auditoria.RegistroAuditoria;
 import br.com.zappi.auditoria.ServicoAuditoria;
 
 /**
- * Versão vigente dos Termos de uso e da Política de privacidade e o aceite da Lídia (ZAP-146, RN26,
+ * Versão vigente dos Termos de uso e da Política de privacidade e o aceite da Lídia (ZAP-146, RN27,
  * LGPD, ISO 27002 5.34 e 8.16). O aceite fica no servidor, com versão, data, IP e navegador, e
  * também no log de auditoria.
  */
