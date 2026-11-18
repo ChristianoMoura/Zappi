@@ -49,6 +49,18 @@ describe('páginas de termos e privacidade (ZAP-148)', () => {
     expect(document.title).toBe('Termos de uso · Zappi')
   })
 
+  test('sem login, /privacidade também abre, com a versão e a data no topo (ZAP-149)', async () => {
+    const fetchSimulado = respostaDoAceite(200, { versao: 1, aceitoEm: '2026-11-17T21:30:00Z' })
+    renderizarComRotas(rotas, '/privacidade')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Política de privacidade do Zappi' })).toBeVisible()
+    expect(screen.getByText(/Versão 1 · Última alteração: 17 de novembro de 2026/)).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Voltar ao painel/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Você aceitou a versão/)).not.toBeInTheDocument()
+    expect(fetchSimulado).not.toHaveBeenCalled()
+    expect(document.title).toBe('Política de privacidade · Zappi')
+  })
+
   test('sem página anterior, não mostra o "Voltar"; vindo de outra página, ele volta para ela', async () => {
     respostaDoAceite(204, null)
     const usuario = userEvent.setup()

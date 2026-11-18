@@ -191,4 +191,28 @@ describe('termos no rodapé da caixinha da conta (ZAP-147)', () => {
     await usuario.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
   })
+
+  test('cada link abre a página na mesma aba, e o ponto entre eles fica fora do leitor de tela (ZAP-149)', async () => {
+    const usuario = userEvent.setup()
+    buscarTermosVigentes.mockResolvedValue({ versao: 1, data: '2026-11-14' })
+    const roteador = renderizarComRotas(
+      [...rotas, ...['/termos', '/privacidade'].map((caminho) => ({ path: caminho, element: <h1>{caminho}</h1> }))],
+      '/pedidos',
+    )
+
+    for (const [nome, caminho] of [['Termos de uso', '/termos'], ['Política de privacidade', '/privacidade']]) {
+      await roteador.navigate('/pedidos')
+      await within(await screen.findByRole('button', { name: 'Minha conta' })).findByText('CB')
+      await usuario.click(botaoConta())
+      const menuConta = await screen.findByRole('menu')
+      const link = await within(menuConta).findByRole('menuitem', { name: nome })
+      expect(link).not.toHaveAttribute('target')
+      expect(within(menuConta).getByText('·')).toHaveAttribute('aria-hidden', 'true')
+
+      await usuario.click(link)
+
+      expect(roteador.state.location.pathname).toBe(caminho)
+      expect(await screen.findByRole('heading', { name: caminho })).toBeVisible()
+    }
+  })
 })

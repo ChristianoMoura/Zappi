@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { dataMinima } from '../cardapio/regrasPedidoCliente'
 import { buscarCardapio, EnviosDemaisError, enviarPedido, PedidoRecusadoError } from '../cardapio/servicoCardapio'
+import { buscarTermosVigentes } from '../autenticacao/servicoTermos'
 import { renderizarComRotas } from '../testes/renderizarComRotas'
 import { PaginaCardapio } from './PaginaCardapio'
 
@@ -12,6 +13,9 @@ vi.mock('../cardapio/servicoCardapio', async (importarOriginal) => ({
   buscarCardapio: vi.fn(),
   enviarPedido: vi.fn(),
 }))
+
+// A versão vigente dos termos é simulada; sem ela (nulo), a caixa fica sem os links (ZAP-147)
+vi.mock('../autenticacao/servicoTermos', async (importarOriginal) => ({ ...(await importarOriginal()), buscarTermosVigentes: vi.fn(async () => null) }))
 
 const CARDAPIO = {
   estabelecimento: { nome: 'Casa Belt', slug: 'casa-belt', descricao: '', whatsapp: '5511900000000', logo: '', capa: '' },
@@ -193,6 +197,35 @@ describe('montagem do pedido no cardápio público (ZAP-107)', () => {
     expect(screen.getByText(/às 15h30/)).toBeVisible()
     expect(screen.getByText('O pagamento é na retirada. Não há entrega.')).toBeVisible()
     expect(guardado().itens).toEqual([])
+  })
+
+  test('com os termos no backend, só a caixa vazia já impede o envio; marcada, a versão vai junto (ZAP-149, RN16)', async () => {
+    buscarTermosVigentes.mockResolvedValue({ versao: 1, data: '2026-11-14' })
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: dataMinima(), hora: '15:30', observacao: '' }))
+    enviarPedido.mockResolvedValue(7)
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    const caixa = await screen.findByRole('checkbox', { name: /Li e concordo com os Termos de uso e a Política de privacidade/ })
+    // Os links ficam no próprio rótulo da caixa (além do rodapé do cardápio)
+    const rotulo = caixa.closest('label')
+    expect(await within(rotulo).findByRole('link', { name: 'Termos de uso' })).toHaveAttribute('href', '/termos')
+    expect(within(rotulo).getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade')
+    await usuario.type(screen.getByRole('textbox', { name: 'Nome' }), 'Ana Souza')
+    await usuario.type(screen.getByRole('textbox', { name: 'WhatsApp' }), '11987654321')
+
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
+
+    expect(screen.getByText('Marque a caixa para enviar o pedido.')).toBeVisible()
+    expect(caixa).toHaveFocus()
+    expect(enviarPedido).not.toHaveBeenCalled()
+
+    await usuario.click(caixa)
+    await usuario.click(screen.getByRole('button', { name: /Enviar pedido/ }))
+
+    expect(enviarPedido).toHaveBeenCalledWith('casa-belt', expect.objectContaining({ consentimentoLgpd: true, versaoTermos: 1 }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Pedido enviado!' })).toBeVisible()
+    buscarTermosVigentes.mockImplementation(async () => null)
   })
 
   test('o limite de envios mostra a mensagem do backend e mantém o pedido (ZAP-110, ZAP-112)', async () => {
