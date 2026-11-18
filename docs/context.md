@@ -142,7 +142,7 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 
 1. Login da Lídia (e-mail e senha).
 2. Cadastro e edição das informações do estabelecimento (Casa Belt).
-3. Cadastro, edição e exclusão lógica de produtos (nome, sabor, unidade, preço, descrição e foto com texto alternativo).
+3. Cadastro, edição e exclusão lógica de produtos (nome, sabor, unidade, preço, descrição, foto com texto alternativo e **alérgenos**: lista fixa, com o glúten, e texto livre para os demais, RN24).
 4. Upload da foto do produto para o Supabase Storage.
 5. Quadro **Kanban** de pedidos com as colunas Novo, Confirmado, Em produção, Concluído, Entregue e Recusado, e um **filtro de status**: em "Todos", Entregue e Recusado ficam ocultos; escolhendo um status, só os pedidos dele aparecem (RN04).
 6. Detalhes do pedido ao abrir um card.
@@ -159,7 +159,7 @@ A entrega final de **22/11/2026** é o sistema real, com o **Portal do Administr
 
 **Portal do Cliente** (épico `ZAP-2`; requisitos e regras definidos na `ZAP-18`, seção 14, item 11)
 
-16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo e o contato da Lídia. No topo, **busca** pelos produtos, **modo escuro** e o botão **Compartilhar** (ZAP-100, ZAP-105).
+16. **Cardápio público** pelo link do estabelecimento (`slug`, ex.: casa-belt), sem login: só produtos ativos, com nome, sabor, descrição, preço, foto com texto alternativo, os **selos de alérgenos** com o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar." (RN24) e o contato da Lídia. No topo, **busca** pelos produtos, **modo escuro** e o botão **Compartilhar** (ZAP-100, ZAP-105).
 17. **Montagem do pedido** pelo cliente: produtos, quantidade, recheio e cobertura (opcionais, só em produtos vendidos por KG), observações e data e hora de retirada, com pelo menos 7 dias de antecedência na data (RN22) e a hora das 8h às 20h, de 30 em 30 minutos (RN23).
 18. **Identificação e envio:** nome e WhatsApp, gravados só com consentimento LGPD (RN16). O pedido entra no Kanban da Lídia como 1-Novo, com o número sequencial do estabelecimento.
 
@@ -196,7 +196,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 |---|---|
 | **US1** — Como Lídia, quero fazer login, para acessar de forma segura minhas informações e pedidos. | **RF01** Login com e-mail e senha. **RF02** Validar credenciais e bloquear acesso com dados incorretos. |
 | **US2** — Como Lídia, quero cadastrar as informações do estabelecimento, para manter meus dados registrados. | **RF03** Cadastro de nome, descrição e contato do Casa Belt. **RF04** Edição posterior dessas informações. |
-| **US3** — Como Lídia, quero cadastrar meus produtos, para manter o cardápio atualizado. | **RF05** Cadastro de produtos com nome, sabor, preço por kg e foto. **RF06** Edição e exclusão de produtos (exclusão lógica). |
+| **US3** — Como Lídia, quero cadastrar meus produtos, para manter o cardápio atualizado. | **RF05** Cadastro de produtos com nome, sabor, preço por kg, foto e alérgenos (RN24). **RF06** Edição e exclusão de produtos (exclusão lógica). |
 | **US4** — Como Lídia, quero ver os pedidos em um quadro Kanban, para acompanhar o status de cada um. | **RF07** Pedidos em Kanban por status (Novo, Confirmado, Em produção, Concluído, Entregue e Recusado), com filtro de status; em "Todos", Entregue e Recusado ficam ocultos (RN04). **RF08** Detalhes do pedido ao selecionar um card. |
 | **US5** — Como Lídia, quero confirmar um pedido, para informar ao cliente que ele será atendido. | **RF09** Mover o pedido para "Confirmado". **RF10** Preparar a mensagem de confirmação ao cliente via WhatsApp. |
 | **US6** — Como Lídia, quero recusar um pedido informando o motivo, para que o cliente entenda. | **RF11** Motivo obrigatório ao recusar. **RF12** Preparar a mensagem de recusa com o motivo via WhatsApp. |
@@ -213,6 +213,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 - **US7, RF13 e RF14** são novos (decisão da `ZAP-64`, item 14.9; história `ZAP-87`).
 - **US8, RF15 e RF16** numeram o escopo ampliado que já tinha sido aprovado sem RF (história `ZAP-60`).
 - **RF07 e RF15** passam a ter o status **Entregue** (`ZAP-60`, 14/11/2026), e o **RF07** ganha o filtro de status no lugar do filtro "Recusados" (`ZAP-28`, `ZAP-179`, 14/11/2026).
+- **RF05 e RF17** passam a ter os **alérgenos** do produto: a Lídia marca a lista fixa no cadastro, e o cardápio público mostra os selos (história `ZAP-128`, correção do formato na `ZAP-197`, 17/11/2026). A equipe não criou um RF próprio.
 - **RF11 e RF12** passam a valer também para o **cancelamento** de pedidos Confirmados e Em produção (`ZAP-64`).
 - **RF10, RF12 e RF16:** o botão "Enviar no WhatsApp" continua disponível para **reenviar** a mensagem, e o painel mostra só a mensagem da etapa atual, com as anteriores guardadas para consulta (`ZAP-64`, `ZAP-51`).
 
@@ -245,6 +246,7 @@ A ação extensionista de Empreendedorismo é um **treinamento presencial de 2 h
 | RN21 | **Edição de pedido por status.** 1-Novo: pode mudar tudo (cliente, itens, quantidades, data e hora de retirada e observações). 2-Confirmado e 3-Em produção: pode mudar itens, quantidades, data e hora de retirada e observações, mas não o cliente; a tela avisa que o cliente precisa ser avisado da mudança. 4-Concluído, 5-Recusado e 6-Entregue: não podem ser editados. Todo pedido cadastrado começa como 1-Novo, e os produtos são escolhidos do cardápio (só ativos). | RF13 / RF14 / ZAP-64 / ZAP-60 |
 | RN22 | **Antecedência mínima.** Pelo Portal do Cliente, a data de retirada deve ser de pelo menos 7 dias corridos após o envio do pedido, contados no horário de São Paulo e validados também no backend. No Portal do Administrador, a Lídia pode escolher hoje ou uma data futura, inclusive ao editar pedidos que vieram do portal. O horário segue a RN23. | RF20 / ZAP-18 |
 | RN23 | **Horário de retirada.** A retirada tem data e hora: das 8h às 20h, de 30 em 30 minutos, no horário de São Paulo, nos dois portais. A data e hora não pode ser antes de agora; na edição, a que já estava no pedido pode ficar, se não foi mudada. Validado na tela, no backend e no banco. | ZAP-127 |
+| RN24 | **Alérgenos do produto.** A Lídia marca, no cadastro e na edição, os alérgenos de uma lista fixa: glúten, leite e derivados, ovos, soja, amendoim, castanhas e nozes, e gergelim (`GLUTEN`, `LEITE`, `OVOS`, `SOJA`, `AMENDOIM`, `CASTANHAS`, `GERGELIM`). Os que não estão na lista vão num texto livre de até 300 caracteres. Nenhum é obrigatório: sem o glúten marcado, o produto não contém glúten. O detalhe do produto no cardápio público mostra um selo, com ícone e nome, para cada alérgeno marcado e para o texto livre, e sempre o aviso "Tem alergia? Fale com a loja pelo WhatsApp antes de encomendar.". Não há selo "Não contém glúten" nem "Pode conter traços de…": a cozinha usa farinha de trigo, e o aviso cobre a contaminação cruzada. Código fora da lista é recusado na API e no banco. A informação vale para pedidos novos; o pedido antigo não guarda cópia dela. | CDC / ZAP-128 / ZAP-129 / ZAP-197 |
 
 ---
 
@@ -261,6 +263,7 @@ O foco é **CDC (Lei nº 8.078/1990)** e **LGPD (Lei nº 13.709/2018)**. Aspecto
 | LGPD | Finalidade específica | Dados usados só para processar e acompanhar pedidos; nada de compartilhar com terceiros |
 | LGPD | Segurança no armazenamento | Acesso restrito e dados segregados por estabelecimento |
 | LGPD | Direito de exclusão | Anonimização a pedido do titular, feito pelo WhatsApp da Lídia. O consentimento informa: "Para apagar seus dados, é só pedir à Lídia pelo WhatsApp." |
+| CDC | Informação clara sobre os riscos do produto (alérgenos) | Selos de alérgenos no cardápio e o aviso para falar com a loja antes de encomendar (RN24). A Lei nº 10.674/2003 (glúten) e a RDC Anvisa nº 727/2022, que substituiu a RDC nº 26/2015 (alergênicos), tratam de alimentos industrializados e embalados; para a encomenda artesanal, a informação é boa prática do CDC, não obrigação de rotulagem (confirmado com a professora na ZAP-129) |
 | CDC | Informação clara sobre o pedido | O Portal do Cliente avisa, antes do envio e depois dele: "Seu pedido ainda não está confirmado. A Lídia vai avaliar e responder pelo WhatsApp." |
 
 ---
@@ -438,6 +441,8 @@ Item do cardápio (RF05/RF06).
 | preco | NUMERIC(10,2) | Sim | | Por unidade de medida. Ex.: 100,00 por KG. > 0 |
 | foto_caminho | VARCHAR(255) | Não | | Caminho no bucket `produtos`. Ex.: 1/bolo-chocolate.jpg |
 | foto_texto_alternativo | VARCHAR(150) | Não | | Obrigatório quando há foto (NBR 5.9.1) |
+| alergenos | VARCHAR(20)[] | Sim | | Coluna nova (V12, ZAP-197). Códigos da lista fixa, sem repetir e na ordem dela; vazia por padrão. Ex.: {GLUTEN,LEITE,OVOS}. Só aceita os códigos da RN24 (`ck_produto_alergenos`) |
+| outros_alergenos | VARCHAR(300) | Não | | Coluna nova (V5, ZAP-130). Texto livre com os alérgenos que não estão na lista. Ex.: canela |
 | ativo | BOOLEAN | Sim | | Exclusão lógica (RF06) |
 | criado_em | TIMESTAMPTZ | Sim | | Padrão now() |
 | atualizado_em | TIMESTAMPTZ | Sim | | |
@@ -686,7 +691,7 @@ Sugestão inicial de ordem. Cada item é um plano a ser detalhado e aprovado no 
 | Compartilhar o cardápio | Não previsto | **Botão "Compartilhar"** no topo do cardápio e no detalhe do produto (ZAP-105, ZAP-83, testes na ZAP-189). No celular, abre o compartilhar do aparelho com o link da página; no computador, copia o link e avisa ("Link do cardápio copiado."). Motivo: aprovado no protótipo do cardápio (layout H), para o cliente mandar o cardápio ou um produto para outra pessoa |
 | Pedidos ocultos no quadro | Recusados ocultos por padrão, com o interruptor "Mostrar recusados" (RN04, ZAP-46); as outras colunas sempre à vista | **Filtro de status** ("Mostrar"), com "Todos" e uma opção por status, com a quantidade de pedidos (14/11/2026, ZAP-28, ZAP-179, ZAP-83). Em "Todos", Entregue e Recusado ficam ocultos; escolhendo um status, só os pedidos dele aparecem, em grade no computador e em lista no celular. O filtro fica no endereço (`?status=3`), e o backend não muda. Motivo: pedido da equipe, para a Lídia ver só os pedidos de uma etapa quando precisar |
 | Fim do pedido | Concluído era o último status (RN03, cinco status), e o sistema não registrava a retirada | **Status 6-Entregue** e coluna "Entregue" no quadro (14/11/2026, ZAP-60, ZAP-83). "Marcar como entregue" no pedido Concluído grava `entregue_em`, e "Voltar para concluído" corrige um engano. Entregue não pode ser editado nem cancelado e conta como encerrado na anonimização (RN17). No banco, `ck_pedido_status` aceita de 1 a 6 e entra a coluna `pedido.entregue_em` (ZAP-167); o Recusado continua 5. Motivo: a Lídia precisa controlar quais pedidos foram de fato retirados e quando |
-| Alérgenos do produto | Sem campos no dicionário da Atividade #14; a ZAP-131 criou `contem_gluten` (sim, não ou nulo = "não informado", obrigatório na API) e o texto livre `outros_alergenos`, enquanto a tela (ZAP-132) marcava uma lista fixa. Com os dois formatos diferentes, nenhum produto podia ser salvo | **Lista fixa `alergenos`** em `produto` (`VARCHAR(20)[]`, vazia por padrão), com GLUTEN, LEITE, OVOS, SOJA, AMENDOIM, CASTANHAS e GERGELIM, mais o texto livre `outros_alergenos` para os demais (17/11/2026, ZAP-197, ZAP-83). A API recebe e devolve `alergenos` na ordem da lista, recusa código fora dela e o cardápio público passa a mostrar os selos. A coluna `contem_gluten` saiu: quem tinha glúten passou a ter GLUTEN. Lista vazia é "nenhum alérgeno da lista", e a tela só mostra selos do que está marcado, sem dizer "não contém glúten". Motivo: o formato da tela cobre os alérgenos mais comuns da confeitaria, e o glúten fica como um deles |
+| Alérgenos do produto | Sem campos no dicionário da Atividade #14; a ZAP-131 criou `contem_gluten` (sim, não ou nulo = "não informado", obrigatório na API) e o texto livre `outros_alergenos`, enquanto a tela (ZAP-132) marcava uma lista fixa. Com os dois formatos diferentes, nenhum produto podia ser salvo | **Lista fixa `alergenos`** em `produto` (`VARCHAR(20)[]`, vazia por padrão), com GLUTEN, LEITE, OVOS, SOJA, AMENDOIM, CASTANHAS e GERGELIM, mais o texto livre `outros_alergenos` para os demais (RN24; 17/11/2026, ZAP-197, ZAP-83). A API recebe e devolve `alergenos` na ordem da lista, recusa código fora dela e o cardápio público passa a mostrar os selos. A coluna `contem_gluten` saiu: quem tinha glúten passou a ter GLUTEN. Lista vazia é "nenhum alérgeno da lista", e a tela só mostra selos do que está marcado, sem dizer "não contém glúten". Motivo: o formato da tela cobre os alérgenos mais comuns da confeitaria, e o glúten fica como um deles |
 
 ### Alternativas avaliadas (Atividades #3 e #4)
 - **Hipóteses descartadas:**
