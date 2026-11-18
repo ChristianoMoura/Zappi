@@ -7,9 +7,10 @@ import br.com.zappi.categoria.RespostaCategoria;
 
 /**
  * Cardápio público da loja (ZAP-104), com os nomes de campo que a tela do cardápio usa
- * (ZAP-105). Só dados públicos: nada de e-mail, dados de clientes ou dados internos do painel
- * (LGPD). O endereço da loja passou a ser público na ZAP-183 (decisão da equipe em 15/11/2026,
- * registrada na ZAP-83), para o cliente saber onde retirar.
+ * (ZAP-105). Só dados públicos: nada de dados de clientes, do e-mail de login da Lídia ou de
+ * dados internos do painel (LGPD). O endereço da loja passou a ser público na ZAP-183 (decisão da
+ * equipe em 15/11/2026), para o cliente saber onde retirar, e o e-mail de contato da loja na
+ * ZAP-204 (registro na ZAP-83 em 17/11/2026), como canal de atendimento (CDC).
  *
  * <p>{@code categorias} vem na ordem definida pela Lídia, só com as que têm produto no cardápio,
  * e os produtos vêm na mesma ordem: categoria, nome e id (ZAP-136, ZAP-140).
@@ -25,10 +26,12 @@ public record RespostaCardapio(LojaDoCardapio estabelecimento, List<RespostaCate
 	 * {@code cep}, {@code logradouro}, {@code numero}, {@code complemento}, {@code bairro},
 	 * {@code cidade} e {@code uf} são o endereço de retirada, como está agora na tela
 	 * Estabelecimento, para o mapa do cardápio (ZAP-183, ZAP-185); os vazios vêm nulos.
+	 * {@code emailContato} é o e-mail de contato da loja salvo na tela Estabelecimento, ou nulo sem
+	 * ele (ZAP-204); nunca o e-mail de login, que fica em outra tabela.
 	 */
-	public record LojaDoCardapio(String nome, String slug, String descricao, String whatsapp, String logo,
-			String capa, boolean destacarPromocoes, List<String> formasPagamento, String cep, String logradouro,
-			String numero, String complemento, String bairro, String cidade, String uf) {
+	public record LojaDoCardapio(String nome, String slug, String descricao, String whatsapp, String emailContato,
+			String logo, String capa, boolean destacarPromocoes, List<String> formasPagamento, String cep,
+			String logradouro, String numero, String complemento, String bairro, String cidade, String uf) {
 	}
 
 	/**
