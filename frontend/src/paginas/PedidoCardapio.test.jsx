@@ -418,6 +418,8 @@ describe('data de retirada e pedido guardado no "Seu pedido" (ZAP-108)', () => {
     const erro = screen.getByText('Escolha uma data a partir de 17/11/2026. A loja precisa de pelo menos 7 dias para preparar a encomenda.')
     expect(erro).toBeVisible()
     expect(screen.getByLabelText('Data')).toHaveFocus()
+    // O erro fica ligado ao campo: o leitor de tela ouve o motivo (ZAP-107, NBR 17225 5.3.3)
+    expect(screen.getByLabelText('Data')).toHaveAccessibleDescription(erro.textContent)
     // O resumo da retirada só aparece com uma data válida
     expect(screen.queryByText(/^Retirada:/)).not.toBeInTheDocument()
     expect(enviarPedido).not.toHaveBeenCalled()
@@ -471,5 +473,27 @@ describe('data de retirada e pedido guardado no "Seu pedido" (ZAP-108)', () => {
     expect(screen.getByLabelText('Hora')).toHaveValue('15:30')
     expect(screen.getByRole('textbox', { name: 'Observação do pedido' })).toHaveValue('Festa da Ana')
     expect(screen.getByRole('region', { name: 'Total' })).toHaveTextContent('R$ 150,00')
+  })
+})
+
+describe('erro da data ligado ao campo (ZAP-107, NBR 17225 5.3.3)', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test('sem data, o erro aparece, o foco vai para o campo e o leitor de tela ouve o motivo', async () => {
+    buscarCardapio.mockResolvedValue(structuredClone(CARDAPIO))
+    localStorage.setItem('zappi.pedido.casa-belt', JSON.stringify({ itens: [{ chave: 1, produtoId: 1, quantidade: 1 }], data: '', hora: '15:30', observacao: '' }))
+    window.scrollTo = vi.fn()
+    const usuario = userEvent.setup()
+    abrir('/cardapio/casa-belt/pedido')
+
+    await usuario.click(await screen.findByRole('button', { name: /Enviar pedido/ }))
+
+    const data = screen.getByRole('button', { name: 'Data' })
+    expect(data).toHaveFocus()
+    expect(data).toHaveAttribute('aria-invalid', 'true')
+    expect(data).toHaveAccessibleDescription('Escolha a data de retirada.')
   })
 })

@@ -308,6 +308,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 12px;
+  /* O erro da data fica embaixo dela (ZAP-107); a hora não estica junto */
+  align-items: start;
 }
 
 .dica {
