@@ -305,3 +305,29 @@ describe('endereço e mapa da retirada (ZAP-186)', () => {
     expect(within(retirada).getByRole('link', { name: /Abrir no Google Maps/ })).toBeVisible()
   })
 })
+
+describe('e-mail no contato de "Informações da loja"', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  test('mostra o e-mail da loja embaixo do WhatsApp, com link para escrever', async () => {
+    const cardapio = structuredClone(CARDAPIO)
+    cardapio.estabelecimento.emailContato = 'contato@casabelt.com'
+    buscarCardapio.mockResolvedValue(cardapio)
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const contato = await screen.findByRole('region', { name: 'Contato' })
+    expect(within(contato).getByText('WhatsApp: (11) 90000-0000')).toBeVisible()
+    expect(within(contato).getByRole('link', { name: 'contato@casabelt.com' })).toHaveAttribute('href', 'mailto:contato@casabelt.com')
+  })
+
+  test('sem e-mail cadastrado (ou sem o campo na API), não mostra a linha', async () => {
+    buscarCardapio.mockResolvedValue(structuredClone(CARDAPIO))
+    abrir('/cardapio/casa-belt/informacoes')
+
+    const contato = await screen.findByRole('region', { name: 'Contato' })
+    expect(within(contato).queryByText(/E-mail/)).not.toBeInTheDocument()
+  })
+})
