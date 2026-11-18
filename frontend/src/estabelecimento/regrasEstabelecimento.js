@@ -1,5 +1,6 @@
 // Regras dos campos do estabelecimento (ZAP-26, tabela `estabelecimento` do context.md).
 // O backend (ZAP-36) valida de novo; aqui as regras servem para avisar a Lídia antes de salvar.
+import { emailValido } from '../comum/email'
 
 export const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
 
@@ -58,7 +59,8 @@ export function validarEstabelecimento(dados) {
   if (!whatsapp) erros.whatsapp = 'Digite o WhatsApp com DDD.'
   else if (whatsapp.length !== 11) erros.whatsapp = 'O WhatsApp precisa ter DDD e 9 números. Ex.: (11) 90000-0000'
 
-  if (dados.emailContato && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.emailContato)) {
+  // Opcional; preenchido, precisa ter formato de e-mail (mesma regra do login)
+  if (String(dados.emailContato ?? '').trim() && !emailValido(dados.emailContato)) {
     erros.emailContato = 'E-mail inválido.'
   }
 

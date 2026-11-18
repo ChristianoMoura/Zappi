@@ -7,13 +7,13 @@ import ilustracao2000 from '../assets/ilustracao-login-2000.webp'
 import ilustracao2800 from '../assets/ilustracao-login-2800.webp'
 import logo from '../assets/zappi-logo.svg'
 import { useAutenticacao } from '../autenticacao/AutenticacaoContexto'
+import { emailValido } from '../comum/email'
 import { CredenciaisInvalidasError, LoginBloqueadoError, TermosPendentesError } from '../autenticacao/servicoAutenticacao'
 import { guardarVersaoAceita, lerVersaoAceita } from '../autenticacao/servicoTermos'
 import { useTermosVigentes } from '../autenticacao/useTermosVigentes'
 import classes from './PaginaLogin.module.css'
 import { useTituloPagina } from './useTituloPagina'
 
-const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const FALTA_ACEITE = 'Para entrar, marque que leu e concorda com os Termos de uso e a Política de privacidade.'
 
@@ -70,7 +70,7 @@ export function PaginaLogin() {
     const novosErros = {}
     const emailLimpo = email.trim()
     if (!emailLimpo) novosErros.email = 'Digite seu e-mail.'
-    else if (!EMAIL_VALIDO.test(emailLimpo)) {
+    else if (!emailValido(emailLimpo)) {
       novosErros.email = 'E-mail inválido.'
     }
     if (!senha) novosErros.senha = 'Digite sua senha.'
