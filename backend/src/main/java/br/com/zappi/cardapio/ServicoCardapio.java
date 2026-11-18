@@ -49,8 +49,9 @@ public class ServicoCardapio {
 		Estabelecimento loja = estabelecimentos.findBySlugAndAtivoTrue(slug)
 			.orElseThrow(EstabelecimentoNaoEncontradoException::new);
 		LojaDoCardapio dadosDaLoja = new LojaDoCardapio(loja.getNome(), loja.getSlug(), loja.getDescricao(),
-				loja.getTelefoneWhatsapp(), fotosDaLoja.enderecoPublico(loja.getLogoCaminho()),
-				fotosDaLoja.enderecoPublico(loja.getCapaCaminho()), loja.isDestacarPromocoes(),
+				loja.getTelefoneWhatsapp(), semVazio(loja.getEmailContato()),
+				fotosDaLoja.enderecoPublico(loja.getLogoCaminho()), fotosDaLoja.enderecoPublico(loja.getCapaCaminho()),
+				loja.isDestacarPromocoes(),
 				loja.getFormasPagamento(), semVazio(loja.getCep()), semVazio(loja.getLogradouro()),
 				semVazio(loja.getNumero()), semVazio(loja.getComplemento()), semVazio(loja.getBairro()),
 				semVazio(loja.getCidade()), semVazio(loja.getUf()));
@@ -69,7 +70,10 @@ public class ServicoCardapio {
 		return new RespostaCardapio(dadosDaLoja, List.copyOf(categorias.values()), doCardapio);
 	}
 
-	/** Campo do endereço em branco vai como nulo, para a tela saber que ele falta (ZAP-185). */
+	/**
+	 * Campo do endereço ou do e-mail de contato em branco vai como nulo, para a tela saber que ele
+	 * falta e esconder a linha (ZAP-185, ZAP-204).
+	 */
 	private static String semVazio(String texto) {
 		return texto == null || texto.isBlank() ? null : texto.trim();
 	}

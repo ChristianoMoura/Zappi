@@ -9,7 +9,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -139,8 +142,9 @@ class CardapioPublicoTests {
 	}
 
 	@Test
-	void mostraOEnderecoDeRetiradaMasNaoOEmailNemDadosInternos() throws Exception {
-		// O endereço passou a ser público na ZAP-183 (ZAP-185); o e-mail continua fora (LGPD)
+	void mostraOEnderecoEOEmailDeContatoMasNaoOEmailDeLoginNemDadosInternos() throws Exception {
+		// O endereço passou a ser público na ZAP-183 (ZAP-185) e o e-mail de contato na ZAP-204; o
+		// e-mail de login da Lídia continua fora de qualquer rota pública (LGPD)
 		jdbc.update("""
 				update estabelecimento set email_contato = 'lidia@exemplo.com', cep = '01001000',
 				       logradouro = 'Rua de Teste', numero = '10', complemento = 'Casa 2', bairro = 'Centro',
@@ -157,14 +161,57 @@ class CardapioPublicoTests {
 			.andExpect(jsonPath("$.estabelecimento.bairro").value("Centro"))
 			.andExpect(jsonPath("$.estabelecimento.cidade").value("São Paulo"))
 			.andExpect(jsonPath("$.estabelecimento.uf").value("SP"))
-			.andExpect(jsonPath("$.estabelecimento.emailContato").doesNotExist())
+			.andExpect(jsonPath("$.estabelecimento.emailContato").value("lidia@exemplo.com"))
 			.andExpect(jsonPath("$.estabelecimento.id").doesNotExist())
 			.andExpect(jsonPath("$.estabelecimento.ativo").doesNotExist())
 			.andExpect(jsonPath("$.produtos[0].ativo").doesNotExist())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		assertThat(corpo).doesNotContain("lidia@exemplo.com", "Exemplo");
+		assertThat(corpo).doesNotContain(emailDeLogin(), "Exemplo");
+	}
+
+	@Test
+	void semEmailDeContatoOCampoVemNulo() throws Exception {
+		jdbc.update("update estabelecimento set email_contato = null where id = ?", casaBelt);
+
+		String corpo = mockMvc.perform(get(CASA_BELT))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.estabelecimento.emailContato").value(nullValue()))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		// Sem o de contato, o de login não entra no lugar dele
+		assertThat(corpo).doesNotContain(emailDeLogin());
+	}
+
+	@Test
+	void pedidoPeloPortalNaoDevolveOEmailDeLogin() throws Exception {
+		Map<String, Object> pedido = new LinkedHashMap<>();
+		pedido.put("cliente", Map.of("nome", "Carla Nova", "telefone", "5511988887777"));
+		pedido.put("consentimentoLgpd", true);
+		pedido.put("dataRetirada",
+				LocalDate.now(ZoneId.of("America/Sao_Paulo")).plusDays(8).atTime(12, 0).toString());
+		pedido.put("itens", List.of(Map.of("produtoId", produto("Bolo de brigadeiro de chocolate"), "quantidade", 1)));
+		pedido.put("formaPagamento", "PIX");
+
+		String corpo = mockMvc.perform(post(CASA_BELT + "/pedidos").contentType(MediaType.APPLICATION_JSON)
+			.content(json.writeValueAsString(pedido)))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		assertThat(corpo).doesNotContain(emailDeLogin(), "@");
+	}
+
+	private String emailDeLogin() {
+		return jdbc.queryForObject("select email from usuario where estabelecimento_id = ? order by id limit 1",
+				String.class, casaBelt);
+	}
+
+	private long produto(String nome) {
+		return jdbc.queryForObject("select id from produto where estabelecimento_id = ? and nome = ?", Long.class,
+				casaBelt, nome);
 	}
 
 	@Test
@@ -187,11 +234,12 @@ class CardapioPublicoTests {
 	}
 
 	@Test
-	void trocarOEnderecoNoPainelMudaOCardapioNaHora() throws Exception {
+	void trocarOEnderecoEOEmailNoPainelMudaOCardapioNaHora() throws Exception {
 		Map<String, Object> dados = new LinkedHashMap<>();
 		dados.put("nome", "Casa Belt");
 		dados.put("slug", "casa-belt");
 		dados.put("whatsapp", "5511900000000");
+		dados.put("emailContato", "encomendas@casabelt.com");
 		dados.put("cep", "04001-000");
 		dados.put("logradouro", "Rua Nova");
 		dados.put("numero", "45");
@@ -206,6 +254,7 @@ class CardapioPublicoTests {
 
 		mockMvc.perform(get(CASA_BELT))
 			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.estabelecimento.emailContato").value("encomendas@casabelt.com"))
 			.andExpect(jsonPath("$.estabelecimento.cep").value("04001000"))
 			.andExpect(jsonPath("$.estabelecimento.logradouro").value("Rua Nova"))
 			.andExpect(jsonPath("$.estabelecimento.numero").value("45"))
