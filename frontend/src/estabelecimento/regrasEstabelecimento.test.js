@@ -53,6 +53,15 @@ describe('regras do estabelecimento (ZAP-26)', () => {
     expect(erros.bairro).toBe('Use no máximo 80 caracteres.')
   })
 
+  test('e-mail: opcional, mas os de formato errado que passavam antes agora dão erro', () => {
+    for (const emailContato of ['lucas@gmail.com.', 'lucas@gmail..com', 'lucas@gmail', 'lucas@gmail.c']) {
+      expect(validarEstabelecimento({ ...valido, emailContato }).emailContato, emailContato).toBe('E-mail inválido.')
+    }
+    expect(validarEstabelecimento({ ...valido, emailContato: '' }).emailContato).toBeUndefined()
+    expect(validarEstabelecimento({ ...valido, emailContato: '   ' }).emailContato).toBeUndefined()
+    expect(validarEstabelecimento({ ...valido, emailContato: 'contato@casabelt.com.br' }).emailContato).toBeUndefined()
+  })
+
   test('formas de pagamento: pelo menos uma, só quando a tela tem a seção (ZAP-193)', () => {
     expect(validarEstabelecimento(valido).formasPagamento).toBeUndefined()
     expect(validarEstabelecimento({ ...valido, formasPagamento: ['PIX'] }).formasPagamento).toBeUndefined()
